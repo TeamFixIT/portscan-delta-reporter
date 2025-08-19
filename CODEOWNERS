@@ -1,0 +1,25 @@
+# CODEOWNERS
+
+# Each section defines who reviews what parts of the repo.
+
+# Syntax: <file or directory> <GitHub usernames or teams>
+
+# Backend code
+
+/backend/ @andrew @joey
+
+# Frontend code
+
+/frontend/ @sarah @alex
+
+# Documentation
+
+/docs/ @jared
+
+# DevOps / CI config
+
+/.github/ @chris
+
+# Everything else defaults to these owners
+
+-           @teamfixit-admins
