@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  scanner:
+    build:
+      context: ..
+      dockerfile: test/Dockerfile
+    container_name: scanner
+    volumes:
+      - ../src:/app/src
+      - ../output:/app/output
+    networks:
+      - testnet
+    tty: true
+
+  target1:
+    image: linuxserver/openssh-server:latest
+    container_name: target1
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Perth
+      - PASSWORD_ACCESS=true
+      - USER_NAME=testuser
+      - USER_PASSWORD=testpass
+    ports:
+      - "2222:2222"
+    networks:
+      - testnet
+
+  target2:
+    image: nginx:latest
+    container_name: target2
+    ports:
+      - "8080:80"
+    networks:
+      - testnet
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3306:3306"
+    networks:
+      - testnet
+
+networks:
+  testnet:
+    driver: bridge

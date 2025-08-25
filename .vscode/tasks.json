@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Docker Image",
+      "type": "shell",
+      "command": "docker build -t network-scanner .",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Scanner (Docker)",
+      "type": "shell",
+      "command": "docker run --rm -v ${workspaceFolder}/scan_results:/app/scan_results network-scanner",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
