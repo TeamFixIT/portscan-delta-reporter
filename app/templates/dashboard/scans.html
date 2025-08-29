@@ -1,0 +1,60 @@
+{% extends 'base.html' %} {% block title %}Scans{% endblock %} {% block content %}
+<div class="scans-container">
+  <h2>My Scans</h2>
+  <a href="{{ url_for('dashboard.new_scan') }}" class="btn btn-primary">New Scan</a>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Target</th>
+        <th>Ports</th>
+        <th>Status</th>
+        <th>Last Updated</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for scan in scans %}
+      <tr>
+        <td><a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}">{{ scan.name }}</a></td>
+        <td>{{ scan.target }}</td>
+        <td>{{ scan.ports }}</td>
+        <td>{{ 'Active' if scan.is_active else 'Inactive' }}</td>
+        <td>{{ scan.updated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}">Edit</a> |
+          <form
+            method="post"
+            action="{{ url_for('dashboard.delete_scan', scan_id=scan.id) }}"
+            style="display: inline">
+            <button
+              type="submit"
+              class="btn btn-link btn-sm"
+              onclick="return confirm('Delete this scan?');">
+              Delete
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6">No scans found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if pagination.pages > 1 %}
+  <nav>
+    <ul class="pagination">
+      {% if pagination.has_prev %}
+      <li><a href="{{ url_for('dashboard.scans', page=pagination.prev_num) }}">&laquo; Prev</a></li>
+      {% endif %}
+      <li>Page {{ pagination.page }} of {{ pagination.pages }}</li>
+      {% if pagination.has_next %}
+      <li><a href="{{ url_for('dashboard.scans', page=pagination.next_num) }}">Next &raquo;</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

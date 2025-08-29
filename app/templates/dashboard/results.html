@@ -1,0 +1,83 @@
+{% extends 'base.html' %} {% block title %}Results{% endblock %} {% block content %}
+<div class="results-container">
+  <h2>Scan Results</h2>
+  <div class="status-filters">
+    <a
+      href="{{ url_for('dashboard.results') }}"
+      class="btn btn-sm {% if status_filter == '' %}btn-primary{% endif %}"
+      >All ({{ status_counts.all }})</a
+    >
+    <a
+      href="{{ url_for('dashboard.results', status='completed') }}"
+      class="btn btn-sm {% if status_filter == 'completed' %}btn-primary{% endif %}"
+      >Completed ({{ status_counts.completed }})</a
+    >
+    <a
+      href="{{ url_for('dashboard.results', status='failed') }}"
+      class="btn btn-sm {% if status_filter == 'failed' %}btn-primary{% endif %}"
+      >Failed ({{ status_counts.failed }})</a
+    >
+    <a
+      href="{{ url_for('dashboard.results', status='running') }}"
+      class="btn btn-sm {% if status_filter == 'running' %}btn-primary{% endif %}"
+      >Running ({{ status_counts.running }})</a
+    >
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Scan</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for result in results %}
+      <tr>
+        <td>{{ result.id }}</td>
+        <td>
+          <a href="{{ url_for('dashboard.view_scan', scan_id=result.scan_id) }}"
+            >{{ result.scan.name }}</a
+          >
+        </td>
+        <td>{{ result.status }}</td>
+        <td>{{ result.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="{{ url_for('dashboard.view_result', result_id=result.id) }}">View</a>
+          {% if result.status == 'completed' %} |
+          <a href="{{ url_for('dashboard.export_result', result_id=result.id) }}">Export</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5">No results found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if pagination.pages > 1 %}
+  <nav>
+    <ul class="pagination">
+      {% if pagination.has_prev %}
+      <li>
+        <a href="{{ url_for('dashboard.results', page=pagination.prev_num, status=status_filter) }}"
+          >&laquo; Prev</a
+        >
+      </li>
+      {% endif %}
+      <li>Page {{ pagination.page }} of {{ pagination.pages }}</li>
+      {% if pagination.has_next %}
+      <li>
+        <a href="{{ url_for('dashboard.results', page=pagination.next_num, status=status_filter) }}"
+          >Next &raquo;</a
+        >
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

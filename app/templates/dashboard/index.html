@@ -1,0 +1,45 @@
+{% extends 'base.html' %} {% block title %}Dashboard{% endblock %} {% block content %}
+<div class="dashboard-container">
+  <h2>Dashboard Overview</h2>
+  <div class="stats">
+    <div>Total Scans: {{ stats.total_scans }}</div>
+    <div>Active Scans: {{ stats.active_scans }}</div>
+    <div>Recent Results: {{ stats.recent_results_count }}</div>
+    <div>Success Rate: {{ stats.success_rate }}%</div>
+  </div>
+  <h3>Recent Scans</h3>
+  <ul>
+    {% for scan in recent_scans %}
+    <li>
+      <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}">{{ scan.name }}</a> ({{
+      scan.target }})
+    </li>
+    {% else %}
+    <li>No recent scans.</li>
+    {% endfor %}
+  </ul>
+  <h3>Recent Results</h3>
+  <ul>
+    {% for result in recent_results %}
+    <li>
+      <a href="{{ url_for('dashboard.view_result', result_id=result.id) }}"
+        >Result #{{ result.id }}</a
+      >
+      ({{ result.status }})
+    </li>
+    {% else %}
+    <li>No recent results.</li>
+    {% endfor %}
+  </ul>
+  {% if system_info %}
+  <h3>System Info</h3>
+  <ul>
+    <li>Hostname: {{ system_info.hostname }}</li>
+    <li>Local IP: {{ system_info.local_ip }}</li>
+    <li>CPU Cores: {{ system_info.cpu_cores }}</li>
+    <li>CPU Usage: {{ system_info.cpu_usage }}%</li>
+    <li>Memory Usage: {{ system_info.memory_usage }}%</li>
+  </ul>
+  {% endif %}
+</div>
+{% endblock %} Hello

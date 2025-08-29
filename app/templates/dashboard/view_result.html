@@ -1,0 +1,39 @@
+{% extends 'base.html' %} {% block title %}Scan Result{% endblock %} {% block content %}
+<div class="result-details-container">
+  <h2>Scan Result #{{ result.id }}</h2>
+  <p><strong>Status:</strong> {{ result.status }}</p>
+  <p>
+    <strong>Scan:</strong>
+    <a href="{{ url_for('dashboard.view_scan', scan_id=result.scan_id) }}"
+      >{{ result.scan.name }}</a
+    >
+  </p>
+  <p><strong>Created:</strong> {{ result.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+  {% if summary %}
+  <h3>Summary</h3>
+  <ul>
+    {% for key, value in summary.items() %}
+    <li>{{ key|capitalize }}: {{ value }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %} {% if detailed_results %}
+  <h3>Detailed Results</h3>
+  <ul>
+    {% for host in detailed_results %}
+    <li>
+      <strong>Host:</strong> {{ host.host }}<br />
+      <strong>Ports:</strong>
+      <ul>
+        {% for port in host.ports %}
+        <li>{{ port.port }}/{{ port.protocol }} - {{ port.state }} ({{ port.service }})</li>
+        {% endfor %}
+      </ul>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <a href="{{ url_for('dashboard.export_result', result_id=result.id) }}" class="btn btn-secondary"
+    >Export as JSON</a
+  >
+</div>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends 'base.html' %} {% block title %}Scan Details{% endblock %} {% block content %}
+<div class="scan-details-container">
+  <h2>Scan: {{ scan.name }}</h2>
+  <p><strong>Description:</strong> {{ scan.description or 'N/A' }}</p>
+  <p><strong>Target:</strong> {{ scan.target }}</p>
+  <p><strong>Ports:</strong> {{ scan.ports }}</p>
+  <p><strong>Status:</strong> {{ 'Active' if scan.is_active else 'Inactive' }}</p>
+  <p><strong>Scheduled:</strong> {{ 'Yes' if scan.is_scheduled else 'No' }}</p>
+  <p><strong>Interval:</strong> {{ scan.interval_minutes }} minutes</p>
+  <a href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}" class="btn btn-secondary"
+    >Edit Scan</a
+  >
+  <form
+    method="post"
+    action="{{ url_for('dashboard.delete_scan', scan_id=scan.id) }}"
+    style="display: inline">
+    <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this scan?');">
+      Delete
+    </button>
+  </form>
+  <form
+    method="post"
+    action="{{ url_for('dashboard.run_scan_now', scan_id=scan.id) }}"
+    style="display: inline">
+    <button type="submit" class="btn btn-primary" {% if not scan.is_active %}disabled{% endif %}>
+      Run Now
+    </button>
+  </form>
+  <h3 class="mt-4">Results</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for result in results %}
+      <tr>
+        <td>{{ result.id }}</td>
+        <td>{{ result.status }}</td>
+        <td>{{ result.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>
+          <a href="{{ url_for('dashboard.view_result', result_id=result.id) }}">View</a>
+          {% if result.status == 'completed' %} |
+          <a href="{{ url_for('dashboard.export_result', result_id=result.id) }}">Export</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="4">No results found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if pagination.pages > 1 %}
+  <nav>
+    <ul class="pagination">
+      {% if pagination.has_prev %}
+      <li>
+        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id, page=pagination.prev_num) }}"
+          >&laquo; Prev</a
+        >
+      </li>
+      {% endif %}
+      <li>Page {{ pagination.page }} of {{ pagination.pages }}</li>
+      {% if pagination.has_next %}
+      <li>
+        <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id, page=pagination.next_num) }}"
+          >Next &raquo;</a
+        >
+      </li>
+      {% endif %}
+    </ul>
+  </nav>
+  {% endif %}
+</div>
+{% endblock %}

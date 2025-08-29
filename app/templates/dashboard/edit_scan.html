@@ -1,0 +1,101 @@
+{% extends 'base.html' %} {% block title %}Edit Scan{% endblock %} {% block content %}
+<div class="edit-scan-container">
+  <h2>Edit Scan</h2>
+  <form
+    method="post"
+    action="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}"
+    id="edit-scan-form">
+    <div class="form-group">
+      <label for="name">Scan Name</label>
+      <input
+        type="text"
+        name="name"
+        id="name"
+        class="form-control"
+        value="{{ scan.name }}"
+        required
+        autofocus />
+    </div>
+    <div class="form-group">
+      <label for="description">Description</label>
+      <input
+        type="text"
+        name="description"
+        id="description"
+        class="form-control"
+        value="{{ scan.description or '' }}" />
+    </div>
+    <div class="form-group">
+      <label for="target">Target</label>
+      <input
+        type="text"
+        name="target"
+        id="target"
+        class="form-control"
+        value="{{ scan.target }}"
+        required />
+    </div>
+    <div class="form-group">
+      <label for="ports">Ports</label>
+      <input
+        type="text"
+        name="ports"
+        id="ports"
+        class="form-control"
+        value="{{ scan.ports }}"
+        required />
+    </div>
+    <div class="form-group">
+      <label for="scan_arguments">Scan Arguments</label>
+      <input
+        type="text"
+        name="scan_arguments"
+        id="scan_arguments"
+        class="form-control"
+        value="{{ scan.scan_arguments }}" />
+    </div>
+    <div class="form-group">
+      <label for="interval_minutes">Interval (minutes)</label>
+      <input
+        type="number"
+        name="interval_minutes"
+        id="interval_minutes"
+        class="form-control"
+        value="{{ scan.interval_minutes }}"
+        min="1"
+        max="10080" />
+    </div>
+    <div class="form-group">
+      <label for="is_scheduled">
+        <input
+          type="checkbox"
+          name="is_scheduled"
+          id="is_scheduled"
+          {%
+          if
+          scan.is_scheduled
+          %}checked{%
+          endif
+          %} />
+        Scheduled
+      </label>
+    </div>
+    <div class="form-group">
+      <label for="is_active">
+        <input
+          type="checkbox"
+          name="is_active"
+          id="is_active"
+          {%
+          if
+          scan.is_active
+          %}checked{%
+          endif
+          %} />
+        Active
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Update Scan</button>
+  </form>
+</div>
+{% endblock %}

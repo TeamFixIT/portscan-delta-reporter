@@ -1,0 +1,49 @@
+{% extends 'base.html' %} {% block title %}New Scan{% endblock %} {% block content %}
+<div class="new-scan-container">
+  <h2>Create New Scan</h2>
+  <form method="post" action="{{ url_for('dashboard.new_scan') }}" id="new-scan-form">
+    <div class="form-group">
+      <label for="name">Scan Name</label>
+      <input type="text" name="name" id="name" class="form-control" required autofocus />
+    </div>
+    <div class="form-group">
+      <label for="description">Description</label>
+      <input type="text" name="description" id="description" class="form-control" />
+    </div>
+    <div class="form-group">
+      <label for="target">Target</label>
+      <input type="text" name="target" id="target" class="form-control" required />
+    </div>
+    <div class="form-group">
+      <label for="ports">Ports</label>
+      <input type="text" name="ports" id="ports" class="form-control" required />
+    </div>
+    <div class="form-group">
+      <label for="scan_arguments">Scan Arguments</label>
+      <input
+        type="text"
+        name="scan_arguments"
+        id="scan_arguments"
+        class="form-control"
+        value="-sV" />
+    </div>
+    <div class="form-group">
+      <label for="interval_minutes">Interval (minutes)</label>
+      <input
+        type="number"
+        name="interval_minutes"
+        id="interval_minutes"
+        class="form-control"
+        value="60"
+        min="1"
+        max="10080" />
+    </div>
+    <div class="form-group">
+      <label for="is_scheduled">
+        <input type="checkbox" name="is_scheduled" id="is_scheduled" /> Scheduled
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Scan</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+# Do Not Update Development dependencies
+-r requirements.txt
+black==25.1.0
+flake8==7.3.0
