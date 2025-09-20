@@ -6,24 +6,20 @@
 
 # Backend code
 
-/backend/ @andrew @louis @jared
+/backend/ @AndrewPercy @Louisw123451 @JaredStanbrook
 
 # Frontend code
 
-/frontend/ @joey @numan @jared
+/frontend/ @J0WEE @youdontknowme11 @JaredStanbrook
 
 # Client agent
 
-/frontend/ @sol @jared
+/frontend/ @SolomonSSlee @JaredStanbrook
 
 # Documentation
 
-/docs/ @jared @joey
+/docs/ @JaredStanbrook @J0WEE
 
 # DevOps / CI config
 
-/.github/ @jared
-
-# Everything else defaults to these owners
-
-- @pdr-dev
+/.github/ @JaredStanbrook
