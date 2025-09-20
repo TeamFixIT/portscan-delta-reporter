@@ -28,7 +28,6 @@ server/venv/
 client/venv/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo

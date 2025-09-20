@@ -1,0 +1,32 @@
+{
+  "python.defaultInterpreterPath": "./server/venv/bin/python",
+  "python.terminal.activateEnvironment": false,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/venv": true,
+    "**/.pytest_cache": true,
+    "**/instance": true
+  },
+  "search.exclude": {
+    "**/venv": true,
+    "**/__pycache__": true,
+    "**/instance": true
+  },
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "git.ignoreLimitWarning": true,
+  "files.associations": {
+    "*.yml": "yaml",
+    "*.yaml": "yaml",
+    ".gitmessage": "git-commit"
+  },
+  "emmet.includeLanguages": {
+    "jinja-html": "html"
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

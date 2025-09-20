@@ -104,6 +104,40 @@ cp config.example.yml config.yml
 python client_agent.py
 ```
 
+### VS Code Integration
+
+**Quick Setup & Development:**
+
+1. **Install recommended extensions** (prompted when opening workspace)
+2. **Use Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+   - `Tasks: Run Task` → Select setup/start tasks
+   - `Python: Select Interpreter` → Choose venv interpreter
+
+**Available Tasks:**
+
+- **Setup Server Environment** - Create venv and install dependencies
+- **Setup Client Environment** - Create venv and install dependencies
+- **Start Server** - Launch Flask development server
+- **Start Client** - Launch scanning client agent
+- **Initialize Database** - Create database tables
+- **Run Tests** - Execute pytest for server/client
+- **Docker: Start/Stop Services** - Manage Docker containers
+
+**Debug Configurations:**
+
+- **Debug Server** - Flask app with breakpoints
+- **Debug Client** - Client agent with breakpoints
+- **Debug Server + Client** - Both components simultaneously
+
+**Usage:**
+
+```bash
+# Quick start via VS Code
+1. Open workspace in VS Code
+2. Press F5 or use Debug panel
+3. Select "Debug Server + Client" for full system debug
+```
+
 ---
 
 ## Folder Structure
