@@ -27,9 +27,14 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 3. **Commit changes**
 
-   - Write clear commit messages:
-     - Good: `feat(auth): add login form validation`
-     - Bad: `fixed stuff`
+   - Use the commit message template:
+   - Reference `.github/COMMIT_TEMPLATE.md`
+
+   - Follow the format: `<type>(<scope>): <subject>`
+     - **Good:** `feat(server): add user authentication with Flask-Login`
+     - **Good:** `fix(client): resolve MAC address detection on Pi4`
+     - **Good:** `docs: update README with installation instructions`
+     - **Bad:** `fixed stuff` or `Updated files`
 
 4. **Push branch**
 

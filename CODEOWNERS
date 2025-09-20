@@ -6,20 +6,24 @@
 
 # Backend code
 
-/backend/ @andrew @joey
+/backend/ @andrew @louis @jared
 
 # Frontend code
 
-/frontend/ @sarah @alex
+/frontend/ @joey @numan @jared
+
+# Client agent
+
+/frontend/ @sol @jared
 
 # Documentation
 
-/docs/ @jared
+/docs/ @jared @joey
 
 # DevOps / CI config
 
-/.github/ @chris
+/.github/ @jared
 
 # Everything else defaults to these owners
 
--           @teamfixit-admins
+- @pdr-dev

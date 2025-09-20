@@ -1,0 +1,41 @@
+# Server Requirements
+# Flask web application dependencies
+
+# Core Flask framework
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+Flask-Login==0.6.3
+Flask-WTF==1.1.1
+Flask-SocketIO==5.3.6
+
+# Database
+SQLAlchemy==2.0.21
+
+# Security
+Werkzeug==2.3.7
+cryptography==41.0.4
+
+# Utilities
+python-dotenv==1.0.0
+click==8.1.7
+Jinja2==3.1.2
+
+# For PDF report generation
+reportlab==4.0.4
+Pillow==10.0.0
+
+# For data processing
+pandas==2.1.1
+numpy==1.24.3
+
+# Network utilities
+python-nmap==0.7.1
+psutil==5.9.5
+netifaces==0.11.0
+
+# Development/testing
+pytest==7.4.2
+pytest-flask==1.2.0
+black==23.7.0
+flake8==6.0.0

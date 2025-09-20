@@ -1,0 +1,42 @@
+# Configuration example for Port Scanner Client Agent
+# Copy this file to config.yml and modify as needed
+
+server:
+  # URL of the central scanning server
+  url: "http://localhost:5000"
+
+  # Authentication token (if required)
+  # auth_token: "your-api-key-here"
+
+client:
+  # How often to check for new scan tasks (seconds)
+  check_interval: 30
+
+  # Maximum number of concurrent scans
+  max_concurrent_scans: 2
+
+  # Client identification (leave empty to auto-generate from MAC)
+  client_id: ""
+
+scanning:
+  # Default scan timeout (seconds)
+  default_timeout: 300
+
+  # Default nmap arguments
+  default_args: "-sS -O -sV"
+
+  # Network interface to use for scanning (leave empty for auto)
+  interface: ""
+
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  level: "INFO"
+
+  # Log file path (leave empty for console only)
+  file: "/var/log/portscan-client.log"
+
+  # Maximum log file size in MB
+  max_size: 10
+
+  # Number of backup files to keep
+  backup_count: 5

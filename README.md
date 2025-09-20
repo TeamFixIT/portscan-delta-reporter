@@ -22,7 +22,7 @@ PortScan Delta Reporter is a tool developed by **TeamFixIT** for Murdoch Univers
 - **Python** (backend logic)
 - **nmap / python-nmap** (port scanning)
 - **SQLite** (storing baseline + scan results)
-- **Flask** (optional web interface)
+- **Flask** (web interface)
 - **ReportLab / Pandas** (report generation)
 
 ---
@@ -43,32 +43,65 @@ This project is being built as part of an academic engagement with Murdoch Unive
 
 - Python 3.10+
 - `nmap` installed on system
-- Recommended: Virtual environment
+- Git
 
-### Installation
+### Quick Setup
+
+**For Server:**
 
 ```bash
-# Clone repository
-git clone https://github.com/your-username/portscan-delta-reporter.git
-cd portscan-delta-reporter
+cd server
+./setup.sh
+```
 
-# Set up virtual environment
-python -m venv venv
-source venv/bin/activate   # (Linux/macOS)
-venv\Scripts\activate      # (Windows)
+**For Client (Raspberry Pi):**
+
+```bash
+cd client
+./setup.sh
+```
+
+### Manual Installation
+
+**Server Setup:**
+
+```bash
+# Navigate to server directory
+cd server
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Initialize database
+python run.py init-db
+
+# Start server
+python run.py
 ```
 
-### Usage
+**Client Setup:**
 
 ```bash
-# Run initial baseline scan
-python main.py --init --targets targets.txt
+# Navigate to client directory
+cd client
 
-# Run a delta scan and generate report
-python main.py --scan --report pdf
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy and edit config
+cp config.example.yml config.yml
+# Edit config.yml with your server details
+
+# Start client
+python client_agent.py
 ```
 
 ---
@@ -76,14 +109,31 @@ python main.py --scan --report pdf
 ## Folder Structure
 
 ```
-portscan-delta-reporter/
-├── data/              # Baseline + scan results
-├── reports/           # Generated reports
-├── scripts/           # Core scan + compare logic
-├── web/               # Optional Flask web interface
-├── requirements.txt   # Dependencies
-├── main.py            # Entry point
-└── README.md          # Project documentation
+/ (root)
+├─ server/                        # Main server app (Flask)
+│  ├─ app/
+│  │  ├─ __init__.py
+│  │  ├─ models/                  # DB models (SQLAlchemy)
+│  │  ├─ routes/                  # REST + web routes
+│  │  ├─ templates/               # Jinja2/HTML templates for UI
+│  │  ├─ static/                  # CSS/JS
+│  │  ├─ utils/                   # helpers: validation, ip-clamp, delta
+│  ├─ migrations/                 # alembic/flyway (if needed)
+│  ├─ tests/
+│  └─ requirements.txt
+├─ client/                        # Pi4 scanning client
+│  ├─ client_agent.py
+│  ├─ config.example.yml
+│  ├─ utils/
+│  ├─ tests/
+│  └─ requirements.txt
+├─ infra/                         # k8s / systemd service files / docker-compose
+├─ docs/                          # design docs, API spec
+├─ output/                        # generated PDFs, reports
+├─ scan_results/                  # JSON blobs (or can be outside repo)
+├─ uploads/                       # uploaded files (if any)
+├─ .github/                       # CI workflows
+└─ README.md
 ```
 
 ---

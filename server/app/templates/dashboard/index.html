@@ -1,0 +1,95 @@
+{% extends "base.html" %} {% block title %}Dashboard - Port Scanner Delta Reporter{% endblock %} {%
+block content %}
+<div class="row">
+  <div class="col-md-12">
+    <h1>Dashboard</h1>
+    <p class="lead">Port Scanner Delta Reporter Control Panel</p>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <h5 class="card-title">Active Clients</h5>
+        <h2 class="text-primary">0</h2>
+        <a href="{{ url_for('dashboard.clients') }}" class="btn btn-outline-primary btn-sm"
+          >View Details</a
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <h5 class="card-title">Recent Scans</h5>
+        <h2 class="text-success">0</h2>
+        <a href="{{ url_for('dashboard.scans') }}" class="btn btn-outline-success btn-sm"
+          >View Scans</a
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <h5 class="card-title">Delta Reports</h5>
+        <h2 class="text-warning">0</h2>
+        <a href="{{ url_for('dashboard.reports') }}" class="btn btn-outline-warning btn-sm"
+          >View Reports</a
+        >
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body text-center">
+        <h5 class="card-title">Open Ports</h5>
+        <h2 class="text-info">0</h2>
+        <small class="text-muted">Last scan</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5>Recent Activity</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted">No recent activity to display.</p>
+        <small>Start by connecting some Raspberry Pi clients and running scans.</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5>System Status</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <span>Server Status:</span>
+          <span class="badge bg-success">Online</span>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between">
+          <span>Database:</span>
+          <span class="badge bg-success">Connected</span>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between">
+          <span>WebSocket:</span>
+          <span class="badge bg-success">Active</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

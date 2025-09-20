@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  portscan-server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///portscan.db
+    volumes:
+      - ../scan_results:/app/scan_results
+      - ../output:/app/output
+    restart: unless-stopped
+
+  portscan-db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: portscan
+      POSTGRES_USER: portscan
+      POSTGRES_PASSWORD: secure_password_here
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:

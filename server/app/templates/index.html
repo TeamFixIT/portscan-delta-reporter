@@ -1,0 +1,51 @@
+{% extends "base.html" %} {% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h1>Port Scanner Delta Reporter</h1>
+    <p class="lead">Network scanning and delta reporting system for Murdoch University</p>
+
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Automated Scanning</h5>
+            <p class="card-text">Distributed scanning across Raspberry Pi 4 clients</p>
+            <a href="{{ url_for('dashboard.clients') }}" class="btn btn-primary">View Clients</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Delta Reports</h5>
+            <p class="card-text">Track changes between scans with MAC-based host identification</p>
+            <a href="{{ url_for('dashboard.reports') }}" class="btn btn-primary">View Reports</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <h3>System Status</h3>
+    <div class="card">
+      <div class="card-body">
+        <h6 class="card-subtitle mb-2 text-muted">Server Status</h6>
+        <span class="badge bg-success">Online</span>
+
+        <hr />
+
+        <h6 class="card-subtitle mb-2 text-muted">Quick Actions</h6>
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('dashboard.scans') }}" class="btn btn-outline-primary btn-sm"
+            >View Scans</a
+          >
+          <a href="{{ url_for('dashboard.clients') }}" class="btn btn-outline-secondary btn-sm"
+            >Manage Clients</a
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
