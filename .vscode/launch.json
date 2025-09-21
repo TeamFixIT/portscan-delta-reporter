@@ -13,47 +13,9 @@
         "FLASK_ENV": "development",
         "FLASK_DEBUG": "1"
       },
-      "preLaunchTask": "Setup Server Environment"
-    },
-    {
-      "name": "Debug Client",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/client/client_agent.py",
-      "cwd": "${workspaceFolder}/client",
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "preLaunchTask": "Setup Client Environment"
-    },
-    {
-      "name": "Debug Server (No Setup)",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/server/run.py",
-      "cwd": "${workspaceFolder}/server",
-      "console": "integratedTerminal",
-      "justMyCode": false,
-      "env": {
-        "FLASK_ENV": "development",
-        "FLASK_DEBUG": "1"
-      }
-    },
-    {
-      "name": "Debug Client (No Setup)",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/client/client_agent.py",
-      "cwd": "${workspaceFolder}/client",
-      "console": "integratedTerminal",
-      "justMyCode": false
-    }
-  ],
-  "compounds": [
-    {
-      "name": "Debug Server + Client",
-      "configurations": ["Debug Server (No Setup)", "Debug Client (No Setup)"],
-      "stopAll": true,
-      "preLaunchTask": "Setup Server Environment"
+      "args": ["run", "--no-debugger", "--no-reload"],
+      "jinja": true,
+      "autoStartBrowser": true
     }
   ]
 }
