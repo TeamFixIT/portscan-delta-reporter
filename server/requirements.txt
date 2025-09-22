@@ -1,5 +1,6 @@
 # Server Requirements
 # Flask web application dependencies
+# Compatible with Python 3.8+ across Windows, macOS, and Linux
 
 # Core Flask framework
 Flask==2.3.3
@@ -9,12 +10,12 @@ Flask-Login==0.6.3
 Flask-WTF==1.1.1
 Flask-SocketIO==5.3.6
 
-# Database
-SQLAlchemy==2.0.21
+# Database - using compatible version range
+SQLAlchemy>=2.0.25,<2.1.0
 
 # Security
 Werkzeug==2.3.7
-cryptography==41.0.4
+cryptography>=41.0.4
 
 # Utilities
 python-dotenv==1.0.0
@@ -23,19 +24,19 @@ Jinja2==3.1.2
 
 # For PDF report generation
 reportlab==4.0.4
-Pillow==10.0.0
+Pillow>=10.0.0
 
-# For data processing
-pandas==2.1.1
-numpy==1.24.3
+# For data processing - Windows compatible versions
+pandas>=2.0.0,<2.3.0
+numpy>=1.24.0,<2.0.0
 
 # Network utilities
-python-nmap==0.7.1
-psutil==5.9.5
-netifaces==0.11.0
+python-nmap>=0.7.1
+psutil>=5.9.0
+netifaces>=0.11.0
 
 # Development/testing
-pytest==7.4.2
+pytest>=7.4.0,<8.0.0
 pytest-flask==1.2.0
-black==23.7.0
-flake8==6.0.0
+black>=23.0.0,<24.0.0
+flake8>=6.0.0,<7.0.0

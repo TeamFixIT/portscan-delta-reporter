@@ -41,29 +41,39 @@ This project is being built as part of an academic engagement with Murdoch Unive
 
 ### Prerequisites
 
-- Python 3.10+
-- `nmap` installed on system
-- Git
+- **Python 3.8+** (Python 3.10+ recommended)
+- **nmap** installed on system
+- **Git**
+- **For Windows**: Visual C++ Build Tools (see [Windows Setup Guide](WINDOWS_SETUP.md))
 
 ### Quick Setup
 
-**For Server:**
+**📱 For macOS/Linux/WSL:**
 
 ```bash
 cd server
 ./setup.sh
 ```
 
-**For Client (Raspberry Pi):**
+**🪟 For Windows:**
+
+```cmd
+cd server
+setup-windows.bat
+```
+
+**🔧 For Raspberry Pi/Client:**
 
 ```bash
 cd client
 ./setup.sh
 ```
 
-### Manual Installation
+### Cross-Platform Manual Installation
 
 **Server Setup:**
+
+**macOS/Linux/WSL:**
 
 ```bash
 # Navigate to server directory
@@ -83,6 +93,26 @@ python run.py init-db
 python run.py
 ```
 
+**Windows:**
+
+```cmd
+REM Navigate to server directory
+cd server
+
+REM Create and activate virtual environment
+python -m venv venv
+venv\Scripts\activate.bat
+
+REM Install dependencies
+pip install -r requirements.txt
+
+REM Initialize database
+python run.py init-db
+
+REM Start server
+python run.py
+```
+
 **Client Setup:**
 
 ```bash
@@ -91,13 +121,17 @@ cd client
 
 # Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # macOS/Linux
+# OR
+venv\Scripts\activate.bat  # Windows
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Copy and edit config
-cp config.example.yml config.yml
+cp config.example.yml config.yml  # macOS/Linux
+# OR
+copy config.example.yml config.yml  # Windows
 # Edit config.yml with your server details
 
 # Start client

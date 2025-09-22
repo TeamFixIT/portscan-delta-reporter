@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Web Server</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      .status {
+        background: #e8f5e8;
+        padding: 15px;
+        border-radius: 5px;
+      }
+      .info {
+        background: #f0f8ff;
+        padding: 10px;
+        margin: 10px 0;
+        border-left: 4px solid #007acc;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 Port Scanner Test Target</h1>
+      <div class="status">
+        <h2>✅ Web Server Status: ONLINE</h2>
+        <p>This is a test web server running on port 80 for port scanning validation.</p>
+      </div>
+
+      <div class="info">
+        <h3>Server Information</h3>
+        <ul>
+          <li><strong>Service:</strong> Nginx Web Server</li>
+          <li><strong>Container:</strong> target-web</li>
+          <li><strong>IP Address:</strong> 172.20.0.11</li>
+          <li><strong>Open Ports:</strong> 80 (HTTP), 443 (HTTPS)</li>
+          <li><strong>Purpose:</strong> Testing HTTP/HTTPS port detection</li>
+        </ul>
+      </div>
+
+      <div class="info">
+        <h3>Test Scenarios</h3>
+        <ul>
+          <li>Basic port scan discovery</li>
+          <li>Service version detection</li>
+          <li>HTTP banner grabbing</li>
+          <li>Web service enumeration</li>
+        </ul>
+      </div>
+
+      <footer style="margin-top: 30px; text-align: center; color: #666">
+        <p>Port Scanner Delta Reporter - Test Environment</p>
+      </footer>
+    </div>
+  </body>
+</html>

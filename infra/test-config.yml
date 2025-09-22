@@ -1,0 +1,77 @@
+# Test Configuration for Port Scanner Client Agent
+# This configuration is used in the Docker test environment
+
+server:
+  # URL of the central scanning server (Docker service name)
+  url: "http://server:5000"
+
+  # Authentication token (if required)
+  # auth_token: "test-api-key"
+
+client:
+  # How often to check for new scan tasks (seconds)
+  check_interval: 10 # Shorter interval for testing
+
+  # Maximum number of concurrent scans
+  max_concurrent_scans: 3
+
+  # Client identification (set for testing)
+  client_id: "rpi-test-client-001"
+
+scanning:
+  # Default scan timeout (seconds)
+  default_timeout: 120 # Shorter timeout for testing
+
+  # Default nmap arguments (faster scans for testing)
+  default_args: "-sS -T4 --max-retries 1"
+
+  # Network interface to use for scanning (leave empty for auto)
+  interface: ""
+
+  # Test network subnet to scan
+  test_subnet: "172.20.0.0/24"
+
+logging:
+  # Log level (DEBUG for testing)
+  level: "DEBUG"
+
+  # Log file path (container path)
+  file: "/var/log/portscan-client.log"
+
+  # Maximum log file size in MB
+  max_size: 5
+
+  # Number of backup files to keep
+  backup_count: 3
+
+# Test targets for development
+test_targets:
+  - name: "SSH Server"
+    ip: "172.20.0.10"
+    ports: "22,2222"
+    description: "OpenSSH server for testing SSH scans"
+
+  - name: "Web Server"
+    ip: "172.20.0.11"
+    ports: "80,443"
+    description: "Nginx web server for testing HTTP scans"
+
+  - name: "Database Server"
+    ip: "172.20.0.12"
+    ports: "3306"
+    description: "MySQL database for testing DB scans"
+
+  - name: "FTP Server"
+    ip: "172.20.0.13"
+    ports: "21,30000-30009"
+    description: "Pure-FTPd server for testing FTP scans"
+
+  - name: "Redis Cache"
+    ip: "172.20.0.14"
+    ports: "6379"
+    description: "Redis cache server for testing"
+
+  - name: "Multi-port Service"
+    ip: "172.20.0.15"
+    ports: "22,8080,8443,9000"
+    description: "Custom service with multiple open ports"

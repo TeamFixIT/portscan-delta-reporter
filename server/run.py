@@ -18,7 +18,7 @@ def init_db():
         db.create_all()
         print("Database initialized!")
 
-@app.cli.command('reset-db') 
+@app.cli.command('reset-db')
 def reset_db():
     """Reset the database (drop and recreate all tables)."""
     with app.app_context():
@@ -30,11 +30,12 @@ if __name__ == '__main__':
     # Create tables if they don't exist
     with app.app_context():
         db.create_all()
-    
+
     # Run the app with SocketIO support
     socketio.run(
         app,
         host='0.0.0.0',
         port=int(os.environ.get('PORT', 5000)),
-        debug=True
+        debug=True,
+        allow_unsafe_werkzeug=True
     )

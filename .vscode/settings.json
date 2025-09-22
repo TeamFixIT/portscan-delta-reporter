@@ -28,6 +28,8 @@
   "git.ignoreLimitWarning": true,
   "git.autofetch": true,
   "git.enableSmartCommit": true,
+  "git.enableCommitSigning": true,
+  "git.alwaysSignOff": true,
 
   "files.associations": {
     "*.yml": "yaml",

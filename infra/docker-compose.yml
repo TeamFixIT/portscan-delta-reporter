@@ -1,31 +1,137 @@
-version: "3.8"
-
 services:
-  portscan-server:
+  # Central server for development testing
+  server:
     build:
       context: ../server
-      dockerfile: Dockerfile
+      dockerfile: ../infra/server.dockerfile
+    container_name: portscan-server
     ports:
       - "5000:5000"
     environment:
-      - FLASK_ENV=production
-      - DATABASE_URL=sqlite:///portscan.db
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=sqlite:///portscan_dev.db
     volumes:
-      - ../scan_results:/app/scan_results
-      - ../output:/app/output
-    restart: unless-stopped
+      - ../server:/app
+    networks:
+      - testnet
+    command: python run.py
 
-  portscan-db:
-    image: postgres:15
+  # Raspberry Pi 4 client simulator
+  rpi-client:
+    build:
+      context: ../client
+      dockerfile: ../infra/client.dockerfile
+    container_name: rpi-client
+    depends_on:
+      - server
+    volumes:
+      - ../client:/app
+      - ./test-config.yml:/app/config.yml
+    networks:
+      - testnet
+    privileged: true # Needed for nmap scanning
+    command: tail -f /dev/null # Keep container running for manual testing
     environment:
-      POSTGRES_DB: portscan
-      POSTGRES_USER: portscan
-      POSTGRES_PASSWORD: secure_password_here
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
+      - PYTHONPATH=/app
 
-volumes:
-  postgres_data:
+  # Test target: SSH server (simulates a typical Linux server)
+  target-ssh:
+    image: linuxserver/openssh-server:latest
+    container_name: target-ssh
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - PASSWORD_ACCESS=true
+      - USER_NAME=testuser
+      - USER_PASSWORD=testpass123
+      - SUDO_ACCESS=false
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.10
+    expose:
+      - "2222"
+
+  # Test target: Web server (simulates a web application)
+  target-web:
+    image: nginx:alpine
+    container_name: target-web
+    volumes:
+      - ./test-web:/usr/share/nginx/html
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.11
+    expose:
+      - "80"
+      - "443"
+
+  # Test target: Database server (simulates a database)
+  target-db:
+    image: mysql:8.0
+    container_name: target-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass123
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.12
+    expose:
+      - "3306"
+
+  # Test target: FTP server
+  target-ftp:
+    image: stilliard/pure-ftpd:hardened
+    container_name: target-ftp
+    environment:
+      - PUBLICHOST=172.20.0.13
+      - FTP_USER_NAME=testuser
+      - FTP_USER_PASS=testpass123
+      - FTP_USER_HOME=/home/testuser
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.13
+    expose:
+      - "21"
+      - "30000-30009"
+
+  # Test target: Redis cache
+  target-redis:
+    image: redis:alpine
+    container_name: target-redis
+    command: redis-server --requirepass testpass123
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.14
+    expose:
+      - "6379"
+
+  # Test target: Custom multi-port service
+  target-multiport:
+    image: alpine:latest
+    container_name: target-multiport
+    command: sh -c "
+      apk add --no-cache netcat-openbsd &&
+      nc -l -p 8080 &
+      nc -l -p 8443 &
+      nc -l -p 9000 &
+      nc -l -p 22 &
+      wait"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.15
+    expose:
+      - "22"
+      - "8080"
+      - "8443"
+      - "9000"
+
+networks:
+  testnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
