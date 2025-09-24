@@ -60,6 +60,17 @@ class PortScannerClient:
 
     def _get_client_id(self) -> str:
         """Generate unique client ID based on MAC address"""
+        try:
+            # Get the MAC address of the first active network interface
+            interfaces = netifaces.interfaces()
+            for interface in interfaces:
+                if interface != "lo":  # Skip loopback
+                    addrs = netifaces.ifaddresses(interface)
+                    if netifaces.AF_LINK in addrs:
+                        mac = addrs[netifaces.AF_LINK][0]["addr"]
+                        return mac.replace(":", "").upper()
+        except Exception as e:
+            logger.warning(f"Could not get MAC address: {e}")
 
         # Fallback to hostname
         return socket.gethostname()
