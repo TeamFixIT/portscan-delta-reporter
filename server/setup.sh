@@ -32,19 +32,9 @@ source venv/bin/activate
 echo "Upgrading pip..."
 pip install --upgrade pip
 
-# Install dependencies with fallback
+# Install dependencies
 echo "Installing server dependencies..."
 pip install -r requirements.txt
-if [ $? -ne 0 ]; then
-    echo "Warning: Failed to install from requirements.txt"
-    echo "Trying flexible requirements..."
-    pip install -r requirements-flexible.txt
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to install dependencies"
-        echo "Please check the error messages above and install missing system dependencies"
-        exit 1
-    fi
-fi
 
 # Initialize database
 echo "Initializing database..."
@@ -53,5 +43,6 @@ python run.py init-db
 echo "Server setup complete!"
 echo ""
 echo "To start the server:"
-echo "  source venv/bin/activate"
+echo "  source venv/bin/activate - on macOS/Linux"
+echo "  source venv/Scripts/activate - on Windows"
 echo "  python run.py"
