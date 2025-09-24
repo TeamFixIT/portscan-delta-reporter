@@ -1,4 +1,5 @@
 [tool.pylint.messages_control]
 disable = [
-    "import-outside-toplevel"
+    "import-outside-toplevel",
+    "broad-exception-caught"
 ]
