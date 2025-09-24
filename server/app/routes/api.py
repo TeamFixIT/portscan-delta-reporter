@@ -5,15 +5,15 @@ API routes for client communication
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 
-api_bp = Blueprint('api', __name__)
+bp = Blueprint('api', __name__)
 
-@api_bp.route('/scan-tasks/<client_id>', methods=['GET'])
+@bp.route('/scan-tasks/<client_id>', methods=['GET'])
 def get_scan_tasks(client_id):
     """Get pending scan tasks for a client"""
     # TODO: Implement task queue logic
     return jsonify({})
 
-@api_bp.route('/scan-results', methods=['POST'])
+@bp.route('/scan-results', methods=['POST'])
 def receive_scan_results():
     """Receive scan results from clients"""
     try:
@@ -24,13 +24,13 @@ def receive_scan_results():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
-@api_bp.route('/clients', methods=['GET'])
+@bp.route('/clients', methods=['GET'])
 def list_clients():
     """List all registered clients"""
     # TODO: Return client list from database
     return jsonify({'clients': []})
 
-@api_bp.route('/health', methods=['GET'])
+@bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
