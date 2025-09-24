@@ -7,6 +7,11 @@ echo "Setting up Port Scanner Client environment..."
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv venv
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to create virtual environment"
+        echo "Try: python3 -m pip install --upgrade pip"
+        exit 1
+    fi
 fi
 
 # Activate virtual environment
@@ -31,5 +36,6 @@ fi
 echo "✅ Client setup complete!"
 echo ""
 echo "To start the client:"
-echo "  source venv/bin/activate"
+echo "  source venv/bin/activate - on macOS/Linux"
+echo "  source venv/Scripts/activate - on Windows"
 echo "  python client_agent.py"
