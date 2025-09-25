@@ -1,9 +1,11 @@
 """
 Dashboard routes for web interface
 """
+
 from app import db
 from flask import Blueprint, render_template
 from flask_login import login_required
+from app.models.client import Client
 
 bp = Blueprint("dashboard", __name__)
 
@@ -11,9 +13,10 @@ bp = Blueprint("dashboard", __name__)
 @bp.route("/")
 @login_required
 def index():
-    count = 0
     """Dashboard home"""
-    return render_template("dashboard/index.html", count=count)
+    # Query active clients (status == 'online')
+    active_count = Client.query.filter_by(status="online").count()
+    return render_template("dashboard/index.html", count=active_count)
 
 
 @bp.route("/scans")
@@ -26,7 +29,8 @@ def scans():
 @login_required
 def clients():
     """View connected clients"""
-    return render_template("dashboard/clients.html")
+    client_list = Client.query.order_by(Client.last_seen.desc()).all()
+    return render_template("dashboard/clients.html", clients=client_list)
 
 
 @bp.route("/reports")
