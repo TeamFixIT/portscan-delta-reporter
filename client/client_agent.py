@@ -79,6 +79,7 @@ class PortScannerClient:
         start_time = time.time()
 
         try:
+
             logger.info(
                 f"Starting scan {scan_request.scan_id} for target {scan_request.targets[0]}"
             )
@@ -177,6 +178,7 @@ class PortScannerClient:
                     self.send_result(result)
 
                 # Wait before checking again
+
                 time.sleep(self.config["check_interval"])
 
             except KeyboardInterrupt:

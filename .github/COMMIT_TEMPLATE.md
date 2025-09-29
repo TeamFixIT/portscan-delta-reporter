@@ -92,7 +92,7 @@ Include when applicable:
 
 - **Backend**: Flask, SQLAlchemy, Flask-Login, SocketIO
 - **Frontend**: Jinja2 templates, Bootstrap, vanilla JS
-- **Client**: Python, nmap, psutil, netifaces
+- **Client**: Python, nmap, psutil
 - **Database**: SQLite (dev), PostgreSQL (prod)
 - **Infrastructure**: Docker, systemd services
 
