@@ -21,12 +21,7 @@ app = create_app(get_config())
 @app.shell_context_processor
 def make_shell_context():
     """Register shell context objects"""
-    return {
-        'db': db,
-        'User': User,
-        'Scan': Scan,
-        'ScanResult': ScanResult
-    }
+    return {"db": db, "User": User, "Scan": Scan, "ScanResult": ScanResult}
 
 
 @app.cli.command()
@@ -34,61 +29,61 @@ def make_shell_context():
 def init_db():
     """Initialize database with tables"""
     db.create_all()
-    click.echo('Database initialized.')
+    click.echo("Database initialized.")
 
 
 @app.cli.command()
 @with_appcontext
 def create_admin():
     """Create admin user"""
-    username = click.prompt('Admin username')
-    email = click.prompt('Admin email')
-    password = click.prompt('Admin password', hide_input=True)
+    username = click.prompt("Admin username")
+    email = click.prompt("Admin email")
+    password = click.prompt("Admin password", hide_input=True)
 
     try:
         admin_user = User.create_user(
             username=username,
             email=email,
             password=password,
-            first_name='Admin',
-            last_name='User'
+            first_name="Admin",
+            last_name="User",
         )
         admin_user.is_admin = True
         db.session.commit()
 
-        click.echo(f'Admin user {username} created successfully.')
+        click.echo(f"Admin user {username} created successfully.")
 
     except ValueError as e:
-        click.echo(f'Error creating admin user: {e}', err=True)
+        click.echo(f"Error creating admin user: {e}", err=True)
 
 
 @app.cli.command()
 @with_appcontext
 def reset_db():
     """Reset database (WARNING: This will delete all data)"""
-    if click.confirm('This will delete all data. Are you sure?'):
+    if click.confirm("This will delete all data. Are you sure?"):
         db.drop_all()
         db.create_all()
-        click.echo('Database reset successfully.')
+        click.echo("Database reset successfully.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Get configuration
-    config_name = os.environ.get('FLASK_ENV', 'development')
+    config_name = os.environ.get("FLASK_ENV", "development")
 
-    if config_name == 'development':
+    if config_name == "development":
         # Development server with debug mode
         app.run(
-            host='127.0.0.1',
-            port=int(os.environ.get('PORT', 2000)),
+            host="127.0.0.1",
+            port=int(os.environ.get("PORT", 2000)),
             debug=True,
-            threaded=True
+            threaded=True,
         )
     else:
         # Production - should use gunicorn or similar WSGI server
         app.run(
-            host='0.0.0.0',
-            port=int(os.environ.get('PORT', 2000)),
+            host="0.0.0.0",
+            port=int(os.environ.get("PORT", 2000)),
             debug=False,
-            threaded=True
+            threaded=True,
         )

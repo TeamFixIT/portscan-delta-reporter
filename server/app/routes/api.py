@@ -3,6 +3,7 @@ API routes for client communication
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
 from app import db
@@ -23,11 +24,10 @@ def register_client():
     """Register a new client or update existing one"""
     try:
         data = request.get_json()
-
-        # Required fields
         client_id = data.get("client_id")  # MAC address
         hostname = data.get("hostname")
         ip_address = data.get("ip_address")
+        scan_range = data.get("scan_range")
 
         if not client_id:
             return (
@@ -47,6 +47,7 @@ def register_client():
             # Update existing client
             client.hostname = hostname or client.hostname
             client.ip_address = ip_address or client.ip_address
+            client.scan_range = scan_range
             client.last_seen = datetime.utcnow()
             client.mark_online()
             message = "Client updated successfully"
@@ -56,6 +57,7 @@ def register_client():
                 client_id=client_id,
                 hostname=hostname,
                 ip_address=ip_address,
+                scan_range=scan_range,
                 status="online",
                 last_seen=datetime.utcnow(),
             )
@@ -355,10 +357,10 @@ def receive_scan_results():
     """Receive scan results from clients (supports partial updates)"""
     try:
         data = request.get_json()
-
         # Extract data
         scan_id = data.get("scan_id")
         client_id = data.get("client_id")
+        task_id = data.get("task_id")
         status = data.get("status")  # 'in_progress', 'completed', 'failed'
 
         if not scan_id or not client_id:
@@ -379,14 +381,17 @@ def receive_scan_results():
                 client.mark_online()
 
         # Find or create scan result
-        scan_result = ScanResult.query.filter_by(
-            scan_id=scan_id, status="running"
-        ).first()
+        scan_result = (
+            ScanResult.query.filter_by(scan_id=scan_id)
+            .filter(ScanResult.status.in_(["running", "pending"]))
+            .first()
+        )
 
         if not scan_result:
             # Create new scan result
             scan_result = ScanResult(
                 scan_id=scan_id,
+                client_id=client_id,
                 status="running",
                 start_time=datetime.fromisoformat(
                     data.get("timestamp", datetime.utcnow().isoformat())
@@ -422,40 +427,40 @@ def receive_scan_results():
             scan_result.results_data = existing_data
 
         elif status == "completed":
-            # Final update
-            scan_result.mark_completed()
-            scan_result.end_time = datetime.utcnow()
-            scan_result.duration_seconds = data.get("scan_duration", 0)
-
-            # Process final results
+            # Prepare results_data for mark_completed
             results_data = scan_result.results_data or {}
             if "open_ports" in data:
                 target = data.get("target")
                 if target:
                     if "hosts" not in results_data:
                         results_data["hosts"] = {}
+                    # Merge ports if host already exists
+                    existing_ports = []
+                    if target in results_data["hosts"]:
+                        existing_ports = results_data["hosts"][target].get("ports", [])
+                    # Avoid duplicates by port number
+                    new_ports = data["open_ports"]
+                    existing_port_nums = {p["port"] for p in existing_ports}
+                    merged_ports = existing_ports + [
+                        p for p in new_ports if p["port"] not in existing_port_nums
+                    ]
                     results_data["hosts"][target] = {
-                        "ports": data["open_ports"],
+                        "ports": merged_ports,
                         "status": "up",
                     }
-
-            scan_result.results_data = results_data
-
-            # Calculate summary
-            scan_result.calculate_summary()
-
+            scan_result.mark_completed(results_data)
             # Update associated task if exists
-            task = ScanTask.query.filter_by(task_id=scan_id).first()
+            task = ScanTask.query.filter_by(task_id=task_id).first()
+
             if task:
-                task.mark_completed()
-                task.completed_at = datetime.utcnow()
+                task.complete()
 
         elif status == "failed":
             # Mark as failed
             scan_result.mark_failed(data.get("error_message", "Unknown error"))
 
             # Update associated task
-            task = ScanTask.query.filter_by(task_id=scan_id).first()
+            task = ScanTask.query.filter_by(task_id=task_id).first()
             if task:
                 task.mark_failed()
 

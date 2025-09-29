@@ -7,6 +7,7 @@
         <th>MAC Address</th>
         <th>Hostname</th>
         <th>IP Address</th>
+        <th>Scan Range</th>
         <th>Status</th>
         <th>Last Seen</th>
         <th>Created At</th>
@@ -18,6 +19,7 @@
         <td>{{ client.client_id }}</td>
         <td>{{ client.hostname }}</td>
         <td>{{ client.ip_address }}</td>
+        <td>{{ client.scan_range }}</td>
         <td>
           <span
             class="badge {% if client.status == 'online' %}bg-success {% elif client.status == 'scanning' %}bg-warning {% else %}bg-secondary{% endif %}">

@@ -40,20 +40,21 @@ class ScanResult(db.Model):
         self.duration_seconds = (self.end_time - self.start_time).total_seconds()
         self.results_data = results_data
 
-        # Calculate summary statistics
+        # Calculate summary statistics from 'hosts' key
         if results_data and isinstance(results_data, dict):
-            results = results_data.get("results", [])
-            self.hosts_found = len(results)
-            self.ports_found = sum(len(r.get("ports", [])) for r in results)
+            hosts = results_data.get("hosts", {})
+            self.hosts_found = len(hosts)
+            all_ports = []
+            for host_data in hosts.values():
+                all_ports.extend(host_data.get("ports", []))
+            self.ports_found = len([p for p in all_ports if p.get("state") == "open"])
             self.services_found = len(
                 set(
                     p.get("service", "")
-                    for r in results
-                    for p in r.get("ports", [])
+                    for p in all_ports
                     if p.get("state") == "open" and p.get("service")
                 )
             )
-
         db.session.commit()
 
     def mark_failed(self, error_message):
