@@ -16,13 +16,11 @@ from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional
 import requests
 import psutil
-import netifaces
 import nmap
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -30,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ScanRequest:
     """Represents a scan request from the server"""
+
     scan_id: str
     targets: List[str]
     ports: str
@@ -40,6 +39,7 @@ class ScanRequest:
 @dataclass
 class ScanResult:
     """Represents the result of a port scan"""
+
     scan_id: str
     client_id: str
     timestamp: str
@@ -60,17 +60,6 @@ class PortScannerClient:
 
     def _get_client_id(self) -> str:
         """Generate unique client ID based on MAC address"""
-        try:
-            # Get the MAC address of the first active network interface
-            interfaces = netifaces.interfaces()
-            for interface in interfaces:
-                if interface != 'lo':  # Skip loopback
-                    addrs = netifaces.ifaddresses(interface)
-                    if netifaces.AF_LINK in addrs:
-                        mac = addrs[netifaces.AF_LINK][0]['addr']
-                        return mac.replace(':', '').upper()
-        except Exception as e:
-            logger.warning(f"Could not get MAC address: {e}")
 
         # Fallback to hostname
         return socket.gethostname()
@@ -80,9 +69,9 @@ class PortScannerClient:
         # For now, return default config
         # TODO: Implement YAML config loading
         return {
-            'server_url': 'http://localhost:5000',
-            'check_interval': 30,
-            'max_concurrent_scans': 2
+            "server_url": "http://localhost:5000",
+            "check_interval": 30,
+            "max_concurrent_scans": 2,
         }
 
     def perform_scan(self, scan_request: ScanRequest) -> ScanResult:
@@ -90,35 +79,44 @@ class PortScannerClient:
         start_time = time.time()
 
         try:
-            logger.info(f"Starting scan {scan_request.scan_id} for target {scan_request.targets[0]}")
+
+            logger.info(
+                f"Starting scan {scan_request.scan_id} for target {scan_request.targets[0]}"
+            )
 
             # Perform the nmap scan
             target = scan_request.targets[0]  # Single target for now
-            self.nm.scan(target, scan_request.ports, arguments=f'-s{scan_request.scan_type.upper()}')
+            self.nm.scan(
+                target,
+                scan_request.ports,
+                arguments=f"-s{scan_request.scan_type.upper()}",
+            )
 
             open_ports = []
             if target in self.nm.all_hosts():
-                for port in self.nm[target]['tcp']:
-                    port_info = self.nm[target]['tcp'][port]
-                    if port_info['state'] == 'open':
-                        open_ports.append({
-                            'port': port,
-                            'state': port_info['state'],
-                            'service': port_info.get('name', 'unknown'),
-                            'version': port_info.get('version', ''),
-                            'product': port_info.get('product', '')
-                        })
+                for port in self.nm[target]["tcp"]:
+                    port_info = self.nm[target]["tcp"][port]
+                    if port_info["state"] == "open":
+                        open_ports.append(
+                            {
+                                "port": port,
+                                "state": port_info["state"],
+                                "service": port_info.get("name", "unknown"),
+                                "version": port_info.get("version", ""),
+                                "product": port_info.get("product", ""),
+                            }
+                        )
 
             scan_duration = time.time() - start_time
 
             return ScanResult(
                 scan_id=scan_request.scan_id,
                 client_id=self.client_id,
-                timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
+                timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
                 target=target,
-                status='completed',
+                status="completed",
                 open_ports=open_ports,
-                scan_duration=scan_duration
+                scan_duration=scan_duration,
             )
 
         except Exception as e:
@@ -126,23 +124,19 @@ class PortScannerClient:
             return ScanResult(
                 scan_id=scan_request.scan_id,
                 client_id=self.client_id,
-                timestamp=time.strftime('%Y-%m-%d %H:%M:%S'),
-                target=scan_request.targets[0] if scan_request.targets else 'unknown',
-                status='failed',
+                timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
+                target=scan_request.targets[0] if scan_request.targets else "unknown",
+                status="failed",
                 open_ports=[],
                 scan_duration=time.time() - start_time,
-                error_message=str(e)
+                error_message=str(e),
             )
 
     def send_result(self, result: ScanResult) -> bool:
         """Send scan result back to server"""
         try:
             url = f"{self.config['server_url']}/api/scan-results"
-            response = requests.post(
-                url,
-                json=asdict(result),
-                timeout=30
-            )
+            response = requests.post(url, json=asdict(result), timeout=30)
             response.raise_for_status()
             logger.info(f"Successfully sent result for scan {result.scan_id}")
             return True
@@ -184,14 +178,15 @@ class PortScannerClient:
                     self.send_result(result)
 
                 # Wait before checking again
-                time.sleep(self.config['check_interval'])
+
+                time.sleep(self.config["check_interval"])
 
             except KeyboardInterrupt:
                 logger.info("Client shutting down...")
                 break
             except Exception as e:
                 logger.error(f"Unexpected error: {e}")
-                time.sleep(self.config['check_interval'])
+                time.sleep(self.config["check_interval"])
 
 
 if __name__ == "__main__":

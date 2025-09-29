@@ -33,7 +33,7 @@ echo "Upgrading pip..."
 pip install --upgrade pip
 
 # Install dependencies
-echo "Installing client dependencies..."
+echo "Installing server dependencies..."
 pip install -r requirements.txt
 
 # Initialize database

@@ -8,7 +8,6 @@ websockets==11.0.3
 
 # System information
 psutil==5.9.5
-netifaces==0.11.0
 
 # Configuration management
 PyYAML==6.0.1
