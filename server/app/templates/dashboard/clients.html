@@ -1,0 +1,40 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Connected Clients</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>MAC Address</th>
+        <th>Hostname</th>
+        <th>IP Address</th>
+        <th>Scan Range</th>
+        <th>Status</th>
+        <th>Last Seen</th>
+        <th>Created At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for client in clients %}
+      <tr>
+        <td>{{ client.client_id }}</td>
+        <td>{{ client.hostname }}</td>
+        <td>{{ client.ip_address }}</td>
+        <td>{{ client.scan_range }}</td>
+        <td>
+          <span
+            class="badge {% if client.status == 'online' %}bg-success {% elif client.status == 'scanning' %}bg-warning {% else %}bg-secondary{% endif %}">
+            {{ client.status }}
+          </span>
+        </td>
+        <td>{{ client.last_seen }}</td>
+        <td>{{ client.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center">No clients found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

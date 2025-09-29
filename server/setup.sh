@@ -36,13 +36,4 @@ pip install --upgrade pip
 echo "Installing server dependencies..."
 pip install -r requirements.txt
 
-# Initialize database
-echo "Initializing database..."
-python run.py init-db
-
 echo "Server setup complete!"
-echo ""
-echo "To start the server:"
-echo "  source venv/bin/activate - on macOS/Linux"
-echo "  source venv/Scripts/activate - on Windows"
-echo "  python run.py"

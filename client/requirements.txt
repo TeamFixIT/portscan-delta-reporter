@@ -5,6 +5,7 @@
 python-nmap==0.7.1
 requests==2.31.0
 websockets==11.0.3
+Flask==2.3.3
 
 # System information
 psutil==5.9.5
