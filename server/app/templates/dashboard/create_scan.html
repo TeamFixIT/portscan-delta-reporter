@@ -1,0 +1,96 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Create New Scan</h2>
+  <form id="create-scan-form" method="post" action="/dashboard/scans/create">
+    <div class="mb-3">
+      <label for="name" class="form-label">Scan Name</label>
+      <input type="text" class="form-control" id="name" name="name" required />
+    </div>
+    <div class="mb-3">
+      <label for="description" class="form-label">Description</label>
+      <textarea class="form-control" id="description" name="description"></textarea>
+    </div>
+    <div class="mb-3">
+      <label for="target" class="form-label">Target (IP/Subnet)</label>
+      <input type="text" class="form-control" id="target" name="target" required />
+    </div>
+    <div class="mb-3">
+      <label for="ports" class="form-label">Ports</label>
+      <input type="text" class="form-control" id="ports" name="ports" value="1-65535" required />
+    </div>
+    <div class="mb-3">
+      <label for="scan_arguments" class="form-label">Scan Arguments</label>
+      <input
+        type="text"
+        class="form-control"
+        id="scan_arguments"
+        name="scan_arguments"
+        value="-sV -O" />
+    </div>
+    <div class="mb-3">
+      <label for="interval_minutes" class="form-label">Interval (minutes)</label>
+      <input
+        type="number"
+        class="form-control"
+        id="interval_minutes"
+        name="interval_minutes"
+        value="10080"
+        required />
+      <div class="form-text">Weekly = 10080 minutes</div>
+    </div>
+    <div class="form-check mb-2">
+      <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked />
+      <label class="form-check-label" for="is_active">Active</label>
+    </div>
+    <div class="form-check mb-3">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="is_scheduled"
+        name="is_scheduled"
+        checked />
+      <label class="form-check-label" for="is_scheduled">Scheduled</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Create Scan</button>
+  </form>
+  <div id="scan-create-result" class="mt-3"></div>
+</div>
+<script>
+  document.getElementById("create-scan-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      name: form.name.value,
+      description: form.description.value,
+      target: form.target.value,
+      ports: form.ports.value,
+      scan_arguments: form.scan_arguments.value,
+      interval_minutes: parseInt(form.interval_minutes.value, 10),
+      is_active: form.is_active.checked,
+      is_scheduled: form.is_scheduled.checked,
+    };
+    const resultDiv = document.getElementById("scan-create-result");
+    resultDiv.innerHTML = "";
+    try {
+      const resp = await fetch("/api/scans", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const respData = await resp.json();
+      if (resp.ok) {
+        resultDiv.innerHTML = `<div class='alert alert-success'>Scan created successfully!</div>`;
+        form.reset();
+      } else {
+        resultDiv.innerHTML = `<div class='alert alert-danger'>${
+          respData.message || "Failed to create scan."
+        }</div>`;
+      }
+    } catch (err) {
+      resultDiv.innerHTML = `<div class='alert alert-danger'>Error: ${err}</div>`;
+    }
+  });
+</script>
+{% endblock %}

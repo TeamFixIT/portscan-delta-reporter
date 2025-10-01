@@ -6,36 +6,84 @@ Run this file to start the Port Scanner Delta Reporter server.
 """
 
 import os
+import click
+from flask.cli import with_appcontext
 from app import create_app, db, socketio
+from app.models.user import User
+from app.models.scan import Scan
+from app.models.scan_result import ScanResult
+from config import get_config
 
-# Create Flask app
-app = create_app()
+# Create app instance
+app = create_app(get_config())
 
-@app.cli.command('init-db')
+
+@app.shell_context_processor
+def make_shell_context():
+    """Register shell context objects"""
+    return {"db": db, "User": User, "Scan": Scan, "ScanResult": ScanResult}
+
+
+@app.cli.command()
+@with_appcontext
 def init_db():
-    """Initialize the database with tables."""
-    with app.app_context():
-        db.create_all()
-        print("Database initialized!")
+    """Initialize database with tables"""
+    db.create_all()
+    click.echo("Database initialized.")
 
-@app.cli.command('reset-db')
+
+@app.cli.command()
+@with_appcontext
+def create_admin():
+    """Create admin user"""
+    username = click.prompt("Admin username")
+    email = click.prompt("Admin email")
+    password = click.prompt("Admin password", hide_input=True)
+
+    try:
+        admin_user = User.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name="Admin",
+            last_name="User",
+        )
+        admin_user.is_admin = True
+        db.session.commit()
+
+        click.echo(f"Admin user {username} created successfully.")
+
+    except ValueError as e:
+        click.echo(f"Error creating admin user: {e}", err=True)
+
+
+@app.cli.command()
+@with_appcontext
 def reset_db():
-    """Reset the database (drop and recreate all tables)."""
-    with app.app_context():
+    """Reset database (WARNING: This will delete all data)"""
+    if click.confirm("This will delete all data. Are you sure?"):
         db.drop_all()
         db.create_all()
-        print("Database reset!")
+        click.echo("Database reset successfully.")
 
-if __name__ == '__main__':
-    # Create tables if they don't exist
-    with app.app_context():
-        db.create_all()
 
-    # Run the app with SocketIO support
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=int(os.environ.get('PORT', 5000)),
-        debug=True,
-        allow_unsafe_werkzeug=True
-    )
+if __name__ == "__main__":
+    # Get configuration
+    config_name = os.environ.get("FLASK_ENV", "development")
+
+    if config_name == "development":
+        # Development server with debug mode
+        app.run(
+            host="127.0.0.1",
+            port=int(os.environ.get("PORT", 2000)),
+            debug=True,
+            threaded=True,
+        )
+    else:
+        # Production - should use gunicorn or similar WSGI server
+        app.run(
+            host="0.0.0.0",
+            port=int(os.environ.get("PORT", 2000)),
+            debug=False,
+            threaded=True,
+        )

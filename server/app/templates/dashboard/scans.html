@@ -1,0 +1,128 @@
+{% extends "base.html" %} {% block content %}
+<div class="container mt-4">
+  <h2>Scans Overview</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Scan Name</th>
+        <th>Description</th>
+        <th>Target</th>
+        <th>Ports</th>
+        <th>Created At</th>
+        <th>Tasks</th>
+        <th>Results</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for scan in scans %}
+      <tr id="scan-row-{{ scan.id }}">
+        <td>{{ scan.name }}</td>
+        <td>{{ scan.description }}</td>
+        <td>{{ scan.target }}</td>
+        <td>{{ scan.ports }}</td>
+        <td>{{ scan.created_at }}</td>
+        <td>
+          <ul>
+            {% for task in scan.tasks %}
+            <li>
+              Task ID: {{ task.task_id }}<br />
+              Client: {{ task.client_id or 'Unassigned' }}<br />
+              Status:
+              <span
+                class="badge {% if task.status == 'completed' %}bg-success{% elif task.status == 'failed' %}bg-danger{% elif task.status == 'assigned' %}bg-warning{% else %}bg-secondary{% endif %}"
+                >{{ task.status }}</span
+              ><br />
+              Created: {{ task.created_at }}
+            </li>
+            {% else %}
+            <li>No tasks</li>
+            {% endfor %}
+          </ul>
+        </td>
+        <td>
+          {% if scan.results_list and scan.results_list|length > 0 %}
+          <ul class="list-unstyled mb-0">
+            {% for result in scan.results_list %}
+            <li class="mb-2">
+              <strong>Status:</strong> {{ result.status }}<br />
+              <strong>Start:</strong> {{ result.start_time }}<br />
+              <strong>End:</strong> {{ result.end_time or 'N/A' }}<br />
+              <strong>Open Ports:</strong> {{ result.ports_found }}<br />
+              <strong>Error:</strong> {{ result.error_message or 'None' }}
+              <hr class="my-1" />
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %} No results {% endif %}
+        </td>
+        <td>
+          <button class="btn btn-primary btn-sm execute-scan-btn" data-scan-id="{{ scan.id }}">
+            Execute
+          </button>
+          <button class="btn btn-danger btn-sm delete-scan-btn" data-scan-id="{{ scan.id }}">
+            Delete
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="8" class="text-center">No scans found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+  document.querySelectorAll(".delete-scan-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!confirm("Are you sure you want to delete this scan?")) return;
+      const scanId = this.getAttribute("data-scan-id");
+      fetch(`/api/scans/${scanId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((resp) => resp.json())
+        .then((data) => {
+          if (data.status === "success") {
+            document.getElementById(`scan-row-${scanId}`).remove();
+          } else {
+            alert(data.message || "Failed to delete scan.");
+          }
+        })
+        .catch((err) => alert("Error: " + err));
+    });
+  });
+
+  document.querySelectorAll(".execute-scan-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      const scanId = this.getAttribute("data-scan-id");
+      btn.disabled = true;
+      fetch(`/api/scans/${scanId}/execute`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+        .then((resp) => resp.json())
+        .then((data) => {
+          if (
+            data.status === "success" ||
+            data.status === "accepted" ||
+            data.status === "pending"
+          ) {
+            alert("Scan execution started.");
+          } else {
+            alert(data.message || "Failed to execute scan.");
+          }
+        })
+        .catch((err) => alert("Error: " + err))
+        .finally(() => {
+          btn.disabled = false;
+        });
+    });
+  });
+</script>
+{% endblock %}

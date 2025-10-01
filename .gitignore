@@ -46,6 +46,8 @@ output/*.pdf
 output/*.csv
 uploads/*
 !uploads/.gitkeep
+server/migrations
+prompt*
 
 # Logs
 *.log

@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-Welcome to the **Port Scan & Delta Reporter** project!  
+Welcome to the **Port Scan & Delta Reporter** project!
 We’re a team of 6 collaborating on this repo. To keep our workflow clean, please follow these rules:
 
 ---
@@ -83,5 +83,5 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-Thanks for contributing! 🚀  
+Thanks for contributing! 🚀
 — The TeamFixIT Crew

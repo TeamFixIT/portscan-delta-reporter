@@ -1,42 +1,37 @@
-# Configuration example for Port Scanner Client Agent
-# Copy this file to config.yml and modify as needed
+# Port Scanner Client Configuration
 
-server:
-  # URL of the central scanning server
-  url: "http://localhost:5000"
+# Server connection settings
+server_url: "http://localhost:2000" # Change to your server address
 
-  # Authentication token (if required)
-  # auth_token: "your-api-key-here"
+# Scanning behavior
+check_interval: 30 # How often to check for new tasks (seconds)
+heartbeat_interval: 60 # How often to send heartbeat (seconds)
+max_concurrent_scans: 2 # Maximum concurrent scans (not yet implemented)
+progress_update_interval: 10 # How often to send progress updates during scan (seconds)
 
-client:
-  # How often to check for new scan tasks (seconds)
-  check_interval: 30
+# Network resilience
+retry_attempts: 3 # Number of retry attempts for failed requests
+retry_delay: 5 # Delay between retry attempts (seconds)
 
-  # Maximum number of concurrent scans
-  max_concurrent_scans: 2
+# Scan defaults (can be overridden by server)
+default_timeout: 300 # Default scan timeout (seconds)
+default_ports: "1-1000" # Default port range if not specified
 
-  # Client identification (leave empty to auto-generate from MAC)
-  client_id: ""
+# Logging
+log_level: "INFO" # DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_file: "client.log" # Optional: log to file
+log_max_size: 10485760 # Max log file size in bytes (10MB)
+log_backup_count: 5 # Number of backup log files to keep
 
-scanning:
-  # Default scan timeout (seconds)
-  default_timeout: 300
+# Performance tuning
+nmap_max_parallelism: 100 # Maximum parallel probes for nmap
+nmap_min_rate: 50 # Minimum packet rate for nmap
 
-  # Default nmap arguments
-  default_args: "-sS -O -sV"
+# Client identification (optional - will auto-detect if not set)
+client_port: 8080 # Port to listen on
+client_host: "0.0.0.0" # Interface to bind to
+# client_id: "CUSTOM_ID"  # Override auto-detected MAC address
+# hostname: "scanner-01"  # Override auto-detected hostname
 
-  # Network interface to use for scanning (leave empty for auto)
-  interface: ""
-
-logging:
-  # Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-  level: "INFO"
-
-  # Log file path (leave empty for console only)
-  file: "/var/log/portscan-client.log"
-
-  # Maximum log file size in MB
-  max_size: 10
-
-  # Number of backup files to keep
-  backup_count: 5
+# Scan range for this client (optional, e.g. '192.168.1.0/24')
+scan_range: "192.168.0.0/24"
