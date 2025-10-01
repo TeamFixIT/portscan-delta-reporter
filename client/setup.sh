@@ -16,7 +16,11 @@ fi
 
 # Activate virtual environment
 echo "Activating virtual environment..."
-source venv/bin/activate
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; then
+    source venv/Scripts/activate
+else
+    source venv/bin/activate
+fi
 
 # Upgrade pip
 echo "Upgrading pip..."
