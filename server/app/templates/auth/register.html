@@ -1,0 +1,309 @@
+{% extends "base.html" %} {% block title %}Register - Port Detector{% endblock %} {% block content
+%}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2><i class="fas fa-user-plus me-3"></i>Join Port Detector</h2>
+      <p class="mb-0">Create your account</p>
+    </div>
+    <div class="auth-body">
+      <form method="POST" id="registerForm">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="first_name" class="form-label">
+              <i class="fas fa-user me-2"></i>First Name
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="first_name"
+              name="first_name"
+              placeholder="First name (optional)" />
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="last_name" class="form-label">
+              <i class="fas fa-user me-2"></i>Last Name
+            </label>
+            <input
+              type="text"
+              class="form-control"
+              id="last_name"
+              name="last_name"
+              placeholder="Last name (optional)" />
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="username" class="form-label">
+            <i class="fas fa-at me-2"></i>Username <span class="text-danger">*</span>
+          </label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            required
+            placeholder="Choose a username"
+            minlength="3" />
+          <div class="form-text">At least 3 characters, letters, numbers, and underscores only</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">
+            <i class="fas fa-envelope me-2"></i>Email Address <span class="text-danger">*</span>
+          </label>
+          <input
+            type="email"
+            class="form-control"
+            id="email"
+            name="email"
+            required
+            placeholder="Enter your email address" />
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">
+            <i class="fas fa-lock me-2"></i>Password <span class="text-danger">*</span>
+          </label>
+          <div class="input-group">
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              required
+              placeholder="Create a strong password" />
+            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+              <i class="fas fa-eye" id="toggleIcon"></i>
+            </button>
+          </div>
+          <div class="password-requirements mt-2" id="passwordRequirements">
+            <small class="text-muted">Password must contain:</small>
+            <ul class="small text-muted mt-1">
+              <li id="length" class="invalid">At least 8 characters</li>
+              <li id="uppercase" class="invalid">One uppercase letter</li>
+              <li id="lowercase" class="invalid">One lowercase letter</li>
+              <li id="digit" class="invalid">One number</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="confirm_password" class="form-label">
+            <i class="fas fa-lock me-2"></i>Confirm Password <span class="text-danger">*</span>
+          </label>
+          <input
+            type="password"
+            class="form-control"
+            id="confirm_password"
+            name="confirm_password"
+            required
+            placeholder="Confirm your password" />
+          <div class="invalid-feedback" id="passwordMatch"></div>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg" id="registerBtn">
+            <i class="fas fa-user-plus me-2"></i>Create Account
+          </button>
+        </div>
+      </form>
+
+      <div class="text-center mt-4">
+        <p class="text-muted">Already have an account?</p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+          <i class="fas fa-sign-in-alt me-2"></i>Sign In
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_css %}
+<style>
+  .password-requirements .valid {
+    color: #28a745 !important;
+  }
+  .password-requirements .valid:before {
+    content: "✓ ";
+    font-weight: bold;
+  }
+  .password-requirements .invalid {
+    color: #dc3545;
+  }
+  .password-requirements .invalid:before {
+    content: "✗ ";
+    font-weight: bold;
+  }
+  .form-control.is-valid {
+    border-color: #28a745;
+  }
+  .form-control.is-invalid {
+    border-color: #dc3545;
+  }
+</style>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const registerForm = document.getElementById("registerForm");
+    const registerBtn = document.getElementById("registerBtn");
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordField = document.getElementById("password");
+    const confirmPasswordField = document.getElementById("confirm_password");
+    const toggleIcon = document.getElementById("toggleIcon");
+    const usernameField = document.getElementById("username");
+
+    // Toggle password visibility
+    togglePassword.addEventListener("click", function () {
+      const type = passwordField.getAttribute("type") === "password" ? "text" : "password";
+      passwordField.setAttribute("type", type);
+      confirmPasswordField.setAttribute("type", type);
+
+      toggleIcon.classList.toggle("fa-eye");
+      toggleIcon.classList.toggle("fa-eye-slash");
+    });
+
+    // Real-time password validation
+    passwordField.addEventListener("input", function () {
+      const password = passwordField.value;
+
+      // Length check
+      const lengthCheck = document.getElementById("length");
+      if (password.length >= 8) {
+        lengthCheck.classList.remove("invalid");
+        lengthCheck.classList.add("valid");
+      } else {
+        lengthCheck.classList.remove("valid");
+        lengthCheck.classList.add("invalid");
+      }
+
+      // Uppercase check
+      const uppercaseCheck = document.getElementById("uppercase");
+      if (/[A-Z]/.test(password)) {
+        uppercaseCheck.classList.remove("invalid");
+        uppercaseCheck.classList.add("valid");
+      } else {
+        uppercaseCheck.classList.remove("valid");
+        uppercaseCheck.classList.add("invalid");
+      }
+
+      // Lowercase check
+      const lowercaseCheck = document.getElementById("lowercase");
+      if (/[a-z]/.test(password)) {
+        lowercaseCheck.classList.remove("invalid");
+        lowercaseCheck.classList.add("valid");
+      } else {
+        lowercaseCheck.classList.remove("valid");
+        lowercaseCheck.classList.add("invalid");
+      }
+
+      // Digit check
+      const digitCheck = document.getElementById("digit");
+      if (/\d/.test(password)) {
+        digitCheck.classList.remove("invalid");
+        digitCheck.classList.add("valid");
+      } else {
+        digitCheck.classList.remove("valid");
+        digitCheck.classList.add("invalid");
+      }
+
+      checkPasswordMatch();
+    });
+
+    // Real-time password match validation
+    confirmPasswordField.addEventListener("input", checkPasswordMatch);
+
+    function checkPasswordMatch() {
+      const password = passwordField.value;
+      const confirmPassword = confirmPasswordField.value;
+      const matchDiv = document.getElementById("passwordMatch");
+
+      if (confirmPassword === "") {
+        confirmPasswordField.classList.remove("is-valid", "is-invalid");
+        return;
+      }
+
+      if (password === confirmPassword) {
+        confirmPasswordField.classList.remove("is-invalid");
+        confirmPasswordField.classList.add("is-valid");
+        matchDiv.textContent = "";
+      } else {
+        confirmPasswordField.classList.remove("is-valid");
+        confirmPasswordField.classList.add("is-invalid");
+        matchDiv.textContent = "Passwords do not match";
+      }
+    }
+
+    // Username validation
+    usernameField.addEventListener("input", function () {
+      const username = usernameField.value;
+      const isValid = /^[a-zA-Z0-9_]+$/.test(username) && username.length >= 3;
+
+      if (username === "") {
+        usernameField.classList.remove("is-valid", "is-invalid");
+      } else if (isValid) {
+        usernameField.classList.remove("is-invalid");
+        usernameField.classList.add("is-valid");
+      } else {
+        usernameField.classList.remove("is-valid");
+        usernameField.classList.add("is-invalid");
+      }
+    });
+
+    // Handle form submission
+    registerForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(registerForm);
+      const data = Object.fromEntries(formData);
+
+      // Show loading state
+      const originalText = registerBtn.innerHTML;
+      registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Account...';
+      registerBtn.disabled = true;
+
+      fetch('{{ url_for("auth.register") }}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            // Show success message briefly before redirect
+            registerBtn.innerHTML = '<i class="fas fa-check me-2"></i>Account Created!';
+            registerBtn.classList.remove("btn-primary");
+            registerBtn.classList.add("btn-success");
+
+            setTimeout(() => {
+              window.location.href = data.redirect;
+            }, 1000);
+          } else {
+            // Show errors
+            const errors = data.errors || [data.error];
+            errors.forEach((error) => {
+              const alertDiv = document.createElement("div");
+              alertDiv.className = "alert alert-danger alert-dismissible fade show mt-3";
+              alertDiv.innerHTML = `
+                        <i class="fas fa-exclamation-circle me-2"></i>${error}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+              registerForm.insertBefore(alertDiv, registerForm.firstChild);
+            });
+
+            // Reset button
+            registerBtn.innerHTML = originalText;
+            registerBtn.disabled = false;
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          // Fallback to regular form submission
+          registerForm.removeEventListener("submit", arguments.callee);
+          registerForm.submit();
+        });
+    });
+  });
+</script>
+{% endblock %}

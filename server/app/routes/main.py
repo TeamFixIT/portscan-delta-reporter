@@ -6,16 +6,24 @@ from flask import Blueprint, render_template
 from app.forms import LoginForm
 
 
-main_bp = Blueprint('main', __name__)
+bp = Blueprint("main", __name__)
 
 
-@main_bp.route('/')
+@bp.route("/")
 def index():
     """Home page"""
-    form = LoginForm()
-    return render_template('index.html', form=form)
+    return render_template("index.html")
 
-@main_bp.route('/about')
+
+@bp.route("/about")
 def about():
     """About page"""
-    return render_template('about.html')
+    return render_template("about.html")
+
+
+''' Example additional route
+@bp.route("/hello")
+def hello():
+    """About page"""
+    return render_template("index.html")
+'''

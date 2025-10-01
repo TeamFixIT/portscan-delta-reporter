@@ -35,7 +35,7 @@
     "*.yml": "yaml",
     "*.yaml": "yaml",
     ".gitmessage": "git-commit",
-    "*.html": "jinja-html"
+    "*.html": "html"
   },
 
   "emmet.includeLanguages": {

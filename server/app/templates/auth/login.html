@@ -1,4 +1,159 @@
-{% extends "base.html" %} {% block title %}Dashboard - Port Scanner Delta Reporter{% endblock %} {%
-block content %}
-hello joeys learning how to code
+{% extends "base.html" %} {% block title %}Login - Port Detector{% endblock %}
+{% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h2><i class="fas fa-shield-alt me-3"></i>Port Detector</h2>
+      <p class="mb-0">Sign in to your account</p>
+    </div>
+    <div class="auth-body">
+      <form method="POST" id="loginForm">
+        <div class="mb-3">
+          <label for="username" class="form-label">
+            <i class="fas fa-user me-2"></i>Username
+          </label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            required
+            placeholder="Enter your username"
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">
+            <i class="fas fa-lock me-2"></i>Password
+          </label>
+          <div class="input-group">
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              name="password"
+              required
+              placeholder="Enter your password"
+            />
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              id="togglePassword"
+            >
+              <i class="fas fa-eye" id="toggleIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-3 form-check">
+          <input
+            type="checkbox"
+            class="form-check-input"
+            id="remember"
+            name="remember"
+          />
+          <label class="form-check-label" for="remember"> Remember me </label>
+        </div>
+
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg" id="loginBtn">
+            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+          </button>
+        </div>
+      </form>
+
+      <div class="text-center mt-4">
+        <p class="text-muted">Don't have an account?</p>
+        <a
+          href="{{ url_for('auth.register') }}"
+          class="btn btn-outline-primary"
+        >
+          <i class="fas fa-user-plus me-2"></i>Create Account
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const loginForm = document.getElementById("loginForm");
+    const loginBtn = document.getElementById("loginBtn");
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordField = document.getElementById("password");
+    const toggleIcon = document.getElementById("toggleIcon");
+
+    // Toggle password visibility
+    togglePassword.addEventListener("click", function () {
+      const type =
+        passwordField.getAttribute("type") === "password" ? "text" : "password";
+      passwordField.setAttribute("type", type);
+
+      toggleIcon.classList.toggle("fa-eye");
+      toggleIcon.classList.toggle("fa-eye-slash");
+    });
+
+    // Handle form submission
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(loginForm);
+      const data = Object.fromEntries(formData);
+
+      // Show loading state
+      const originalText = loginBtn.innerHTML;
+      loginBtn.innerHTML =
+        '<i class="fas fa-spinner fa-spin me-2"></i>Signing In...';
+      loginBtn.disabled = true;
+
+      fetch('{{ url_for("auth.login") }}', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.success) {
+            // Show success message briefly before redirect
+            loginBtn.innerHTML = '<i class="fas fa-check me-2"></i>Success!';
+            loginBtn.classList.remove("btn-primary");
+            loginBtn.classList.add("btn-success");
+
+            setTimeout(() => {
+              window.location.href = data.redirect;
+            }, 1000);
+          } else {
+            // Show error
+            const alertDiv = document.createElement("div");
+            alertDiv.className =
+              "alert alert-danger alert-dismissible fade show mt-3";
+            alertDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle me-2"></i>${data.error}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+            loginForm.insertBefore(alertDiv, loginForm.firstChild);
+
+            // Reset button
+            loginBtn.innerHTML = originalText;
+            loginBtn.disabled = false;
+          }
+        })
+        .catch((error) => {
+          console.error("Error:", error);
+          // Fallback to regular form submission
+          loginForm.removeEventListener("submit", arguments.callee);
+          loginForm.submit();
+        });
+    });
+
+    // Add enter key support
+    loginForm.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        loginForm.dispatchEvent(new Event("submit"));
+      }
+    });
+  });
+</script>
 {% endblock %}
