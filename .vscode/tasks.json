@@ -4,11 +4,27 @@
     {
       "label": "Setup Server",
       "type": "shell",
-      "command": "bash",
-      "args": [
-        "-c",
-        "./setup.sh && source venv/bin/activate && export FLASK_APP=run.py && flask init-db"
-      ],
+      "windows": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "./setup.sh && source venv/Scripts/activate && set FLASK_APP=run.py && flask init-db"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "./setup.sh && source venv/bin/activate && export FLASK_APP=run.py && flask init-db"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "./setup.sh && source venv/bin/activate && export FLASK_APP=run.py && flask init-db"
+        ]
+      },
       "options": {
         "cwd": "${workspaceFolder}/server"
       },
@@ -106,11 +122,27 @@
     {
       "label": "Initial DB Setup",
       "type": "shell",
-      "command": "bash",
-      "args": [
-        "-c",
-        "source venv/bin/activate && export FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
-      ],
+      "windows": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
+        ]
+      },
       "options": {
         "cwd": "${workspaceFolder}/server"
       },
@@ -126,11 +158,27 @@
     {
       "label": "DB Migration",
       "type": "shell",
-      "command": "bash",
-      "args": [
-        "-c",
-        "source venv/bin/activate && export FLASK_APP=run.py && flask db migrate && flask db upgrade"
-      ],
+      "windows": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask db migrate && flask db upgrade"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask db migrate && flask db upgrade"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask db migrate && flask db upgrade"
+        ]
+      },
       "options": {
         "cwd": "${workspaceFolder}/server"
       },
@@ -146,11 +194,27 @@
     {
       "label": "Reset DB",
       "type": "shell",
-      "command": "bash",
-      "args": [
-        "-c",
-        "source venv/bin/activate && export FLASK_APP=run.py && flask reset-db && flask create-admin"
-      ],
+      "windows": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask reset-db && flask create-admin"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask reset-db && flask create-admin"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask reset-db && flask create-admin"
+        ]
+      },
       "options": {
         "cwd": "${workspaceFolder}/server"
       },
@@ -165,11 +229,27 @@
     {
       "label": "Create Admin User",
       "type": "shell",
-      "command": "bash",
-      "args": [
-        "-c",
-        "source venv/bin/activate && export FLASK_APP=run.py && flask create-admin"
-      ],
+      "windows": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask create-admin"
+        ]
+      },
+      "linux": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask create-admin"
+        ]
+      },
+      "osx": {
+        "command": "bash",
+        "args": [
+          "-c",
+          "source venv/bin/activate && export FLASK_APP=run.py && flask create-admin"
+        ]
+      },
       "options": {
         "cwd": "${workspaceFolder}/server"
       },
