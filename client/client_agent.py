@@ -21,7 +21,6 @@ from queue import Queue
 import yaml
 import requests
 import psutil
-import netifaces
 import nmap
 from flask import Flask, request, jsonify
 from werkzeug.serving import make_server
@@ -101,33 +100,11 @@ class PortScannerClient:
         self._start_heartbeat()
 
     def _get_client_id(self) -> str:
-        """Generate unique client ID based on MAC address"""
-        try:
-            # Get the MAC address of the first active network interface
-            interfaces = netifaces.interfaces()
-            for interface in interfaces:
-                if interface != "lo":  # Skip loopback
-                    addrs = netifaces.ifaddresses(interface)
-                    if netifaces.AF_LINK in addrs:
-                        mac = addrs[netifaces.AF_LINK][0]["addr"]
-                        return mac.replace(":", "").upper()
-        except Exception as e:
-            logger.warning(f"Could not get MAC address: {e}")
-
         # Fallback to hostname
         return socket.gethostname()
 
     def _get_ip_address(self) -> str:
         """Get current IP address"""
-        try:
-            interfaces = netifaces.interfaces()
-            for interface in interfaces:
-                if interface != "lo":
-                    addrs = netifaces.ifaddresses(interface)
-                    if netifaces.AF_INET in addrs:
-                        return addrs[netifaces.AF_INET][0]["addr"]
-        except Exception:
-            pass
         return "0.0.0.0"
 
     def _load_config(self, config_file: str) -> Dict:

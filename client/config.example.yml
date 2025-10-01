@@ -1,7 +1,7 @@
 # Port Scanner Client Configuration
 
 # Server connection settings
-server_url: "http://localhost:5000" # Change to your server address
+server_url: "http://localhost:2000" # Change to your server address
 
 # Scanning behavior
 check_interval: 30 # How often to check for new tasks (seconds)
@@ -34,4 +34,4 @@ client_host: "0.0.0.0" # Interface to bind to
 # hostname: "scanner-01"  # Override auto-detected hostname
 
 # Scan range for this client (optional, e.g. '192.168.1.0/24')
-scan_range: "192.168.1.0/24"
+scan_range: "192.168.0.0/24"
