@@ -11,10 +11,72 @@ from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
+from app.models.delta_report import DeltaReport
 import uuid
 import json
 
 bp = Blueprint("api", __name__)
+
+
+# =============== DELTA REPORTS ==============
+def generate_delta_report(current_scan_id, client_id):
+    """
+    Generates a delta report comparing the current scan result with the previous scan result for a given client.
+    This function retrieves the current and previous scan results for the specified client, extracts the open ports from each,
+    determines which ports are newly opened or closed since the last scan, and creates a DeltaReport entry in the database.
+    Args:
+        current_scan_id (str): The unique identifier of the current scan.
+        client_id (str): The unique identifier of the client (target MAC address).
+    Returns:
+        None: The function does not return a value. It creates and commits a DeltaReport to the database.
+    """
+    # Find the current scan result
+    current_result = (
+        ScanResult.query.filter_by(scan_id=current_scan_id, client_id=client_id)
+        .order_by(ScanResult.end_time.desc())
+        .first()
+    )
+    # Find the previous scan result for the same client/target
+    previous_result = (
+        ScanResult.query.filter(
+            ScanResult.client_id == client_id, ScanResult.scan_id != current_scan_id
+        )
+        .order_by(ScanResult.end_time.desc())
+        .first()
+    )
+
+    if not previous_result or not current_result:
+        return  # Not enough data to generate a delta
+
+    # Extract open ports from results_data
+    def get_open_ports(result):
+        ports = set()
+        hosts = result.results_data.get("hosts", {})
+        for host in hosts.values():
+            for port_info in host.get("ports", []):
+                ports.add(port_info["port"])
+        return ports
+
+    current_ports = get_open_ports(current_result)
+    previous_ports = get_open_ports(previous_result)
+
+    new_ports = current_ports - previous_ports
+    closed_ports = previous_ports - current_ports
+
+    # Create DeltaReport
+    delta_report = DeltaReport(
+        report_id=str(uuid.uuid4()),
+        baseline_scan_id=previous_result.scan_id,
+        current_scan_id=current_scan_id,
+        target_mac=client_id,
+        new_ports_count=len(new_ports),
+        closed_ports_count=len(closed_ports),
+        changed_services_count=0,  # You can add service comparison logic if needed
+        status="generated",
+    )
+    db.session.add(delta_report)
+    db.session.commit()
+
 
 # ============== CLIENT CRUD OPERATIONS ==============
 
@@ -454,6 +516,7 @@ def receive_scan_results():
 
             if task:
                 task.complete()
+                generate_delta_report(scan_id, client_id)
 
         elif status == "failed":
             # Mark as failed
