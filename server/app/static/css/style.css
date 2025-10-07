@@ -78,15 +78,40 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0 12px;
+  animation: fadeIn 1s ease-in; /* Optional: fade in on page load */
+}
+
+/* Gentle Float Animation for Hero Image */
+@keyframes float-gentle {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
 }
 
 .hero-image {
-  max-width: 100%;
+  max-width: 115%;
   height: auto;
   border-radius: 16px;
   box-shadow: none;
-  animation: float 6s ease-in-out infinite;
+  animation: float-gentle 4s ease-in-out infinite;
   margin-top: 0;
+  transition: transform 0.3s ease; /* Smooth transition for hover */
+}
+
+/*Fade-in animation on page load */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Left-align the middle column content */
@@ -109,22 +134,17 @@ body {
   opacity: 0.95;
 }
 
-/* Ensure the sign-in panel aligns to top */
-.login-form-container,
-.authenticated-panel {
-  margin-top: 0;
-}
-
 /* Status badge pulse animation */
 @keyframes statusPulse {
-    0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.6;
-        transform: scale(1.2);
-    }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
 }
 
 .status-indicator.animated {
