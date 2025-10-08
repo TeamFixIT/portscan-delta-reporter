@@ -8,7 +8,7 @@ Run this file to start the Port Scanner Delta Reporter server.
 import os
 import click
 from flask.cli import with_appcontext
-from app import create_app, db, socketio
+from app import create_app, db, socketio, scheduler
 from app.models.user import User
 from app.models.scan import Scan
 from app.models.scan_result import ScanResult
@@ -57,13 +57,30 @@ def create_admin():
         click.echo(f"Error creating admin user: {e}", err=True)
 
 
+from app.scheduler import (
+    scheduler_service,
+)  # or wherever SchedulerService is defined
+
+
 @app.cli.command()
 @with_appcontext
 def reset_db():
-    """Reset database (WARNING: This will delete all data)"""
-    if click.confirm("This will delete all data. Are you sure?"):
+    """Reset database and clear all APScheduler jobs."""
+    if click.confirm("This will delete all data and all scheduled jobs. Continue?"):
+        # Clear all scheduled jobs
+        try:
+            cleared = scheduler_service.clear_all_jobs()
+            if cleared:
+                click.echo("All scheduled jobs cleared successfully.")
+            else:
+                click.echo("No jobs cleared (scheduler not active).")
+        except Exception as e:
+            click.echo(f"Warning: Could not clear scheduled jobs: {e}")
+
+        # Reset the database
         db.drop_all()
         db.create_all()
+
         click.echo("Database reset successfully.")
 
 

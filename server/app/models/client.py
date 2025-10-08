@@ -18,9 +18,6 @@ class Client(db.Model):
     status = db.Column(db.String(20), default="offline")  # online, offline, scanning
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # Relationships
-    scan_results = db.relationship("ScanResult", backref="client", lazy=True)
-
     def __repr__(self):
         return f"<Client {self.client_id} - {self.status}>"
 
@@ -51,5 +48,4 @@ class Client(db.Model):
             "last_seen": self.last_seen.isoformat() if self.last_seen else None,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "scan_results": [sr.id for sr in self.scan_results],
         }

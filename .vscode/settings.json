@@ -1,16 +1,10 @@
 {
   "python.defaultInterpreterPath": "./server/venv/bin/python",
-  "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true,
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": ["--line-length", "88"],
   "python.terminal.activateEnvironment": false,
-
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
   },
-
   "files.exclude": {
     "**/__pycache__": true,
     "**/node_modules": true,
@@ -24,37 +18,37 @@
     "**/instance": true
   },
   "terminal.integrated.cwd": "${workspaceFolder}",
-
   "git.ignoreLimitWarning": true,
   "git.autofetch": true,
   "git.enableSmartCommit": true,
   "git.enableCommitSigning": true,
   "git.alwaysSignOff": true,
-
   "files.associations": {
     "*.yml": "yaml",
     "*.yaml": "yaml",
     ".gitmessage": "git-commit",
-    "*.html": "html"
-  },
-
-  "emmet.includeLanguages": {
-    "jinja-html": "html"
-  },
-
-  "[html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[css]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[jinja-html]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true
+    "*.html": "jinja-html"
+  }
+},
+"emmet.includeLanguages": {
+  "jinja-html": "html"
+},
+"[python]": {
+  "editor.defaultFormatter": "ms-python.black-formatter",
+  "editor.formatOnSave": true
+},
+"[html]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+},
+"[css]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+},
+"[javascript]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+},
+"[jinja-html]": {
+  "editor.defaultFormatter": "esbenp.prettier-vscode"
+},
+"files.trimTrailingWhitespace": true,
+"files.insertFinalNewline": true
 }

@@ -1,11 +1,15 @@
 """
 API routes for client communication
+
+All Routes in this file will be in relation to communication with scanning clients
 """
 
+import logging
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
+from sqlalchemy.exc import SQLAlchemyError
 from app import db
 from app.models.client import Client
 from app.models.scan import Scan
@@ -15,6 +19,8 @@ import uuid
 import json
 
 bp = Blueprint("api", __name__)
+
+logger = logging.getLogger(__name__)
 
 # ============== CLIENT CRUD OPERATIONS ==============
 
@@ -249,277 +255,326 @@ def client_heartbeat(client_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# ============== TASK MANAGEMENT ==============
-
-
-@bp.route("/scan-tasks/<client_id>", methods=["GET"])
-def get_scan_tasks(client_id):
-    """Get pending scan tasks for a client"""
-    try:
-        # Update client last seen
-        client = Client.query.filter_by(client_id=client_id).first()
-        if client:
-            client.last_seen = datetime.utcnow()
-            client.mark_online()
-            db.session.commit()
-
-        # Get next pending task for this client
-        task = (
-            ScanTask.query.filter(
-                and_(
-                    or_(
-                        ScanTask.client_id == client_id,
-                        ScanTask.client_id == None,  # Unassigned tasks
-                    ),
-                    ScanTask.status == "pending",
-                )
-            )
-            .order_by(ScanTask.priority.desc(), ScanTask.created_at.asc())
-            .first()
-        )
-
-        if task:
-            # Assign task to client if not already assigned
-            if not task.client_id:
-                task.assign_to_client(client_id)
-                db.session.commit()
-
-            # Get associated scan for additional context
-            scan = None
-            if hasattr(task, "scan_id"):
-                scan = Scan.query.get(task.scan_id)
-
-            response_data = {
-                "scan_id": task.task_id,
-                "targets": (
-                    task.targets if isinstance(task.targets, list) else [task.targets]
-                ),
-                "ports": task.ports,
-                "scan_type": task.scan_type,
-                "timeout": 300,  # Default timeout
-                "priority": task.priority,
-            }
-
-            # Add scan metadata if available
-            if scan:
-                response_data["scan_name"] = scan.name
-                response_data["scan_arguments"] = scan.scan_arguments
-
-            return jsonify(response_data), 200
-
-        # No tasks available
-        return jsonify({}), 204  # No Content
-
-    except Exception as e:
-        current_app.logger.error(f"Failed to get scan tasks: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@bp.route("/scan-tasks", methods=["POST"])
-def create_scan_task():
-    """Create a new scan task"""
-    try:
-        data = request.get_json()
-
-        # Generate task ID
-        task_id = str(uuid.uuid4())
-
-        # Create scan task
-        task = ScanTask(
-            task_id=task_id,
-            targets=data.get("targets", []),
-            ports=data.get("ports", "1-1000"),
-            scan_type=data.get("scan_type", "tcp"),
-            priority=data.get("priority", 1),
-            status="pending",
-            client_id=data.get("client_id"),  # Optional pre-assignment
-        )
-
-        db.session.add(task)
-        db.session.commit()
-
-        return (
-            jsonify({"status": "success", "task_id": task_id, "task": task.to_dict()}),
-            201,
-        )
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Failed to create scan task: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
 # ============== SCAN RESULTS ==============
 
 
 @bp.route("/scan-results", methods=["POST"])
 def receive_scan_results():
-    """Receive scan results from clients (supports partial updates)"""
+    """
+    Receive structured scan results from client agents
+
+    Expected payload structure:
+    {
+        "scan_id": "scan_123",
+        "task_id": "task_456",
+        "result_id": "result_789",
+        "client_id": "client_001",
+        "status": "completed",
+        "scan_duration": 45.2,
+        "parsed_results": {
+            "192.168.1.1": {
+                "hostname": "router.local",
+                "state": "up",
+                "open_ports": [53, 80, 443],
+                "port_details": {
+                    "53": {"protocol": "tcp", "name": "domain", "product": "", ...},
+                    "80": {"protocol": "tcp", "name": "http", "product": "nginx", ...}
+                }
+            },
+            ...
+        },
+        "summary_stats": {
+            "total_targets": 10,
+            "scanned_targets": 10,
+            "targets_up": 8,
+            "targets_down": 2,
+            "error_targets": 0,
+            "total_open_ports": 45
+        },
+        "error_message": null,
+        "timestamp": "2025-10-07T12:34:56"
+    }
+    """
     try:
         data = request.get_json()
-        # Extract data
-        scan_id = data.get("scan_id")
-        client_id = data.get("client_id")
-        task_id = data.get("task_id")
-        status = data.get("status")  # 'in_progress', 'completed', 'failed'
 
-        if not scan_id or not client_id:
+        if not data:
+            return jsonify({"error": "No JSON data provided"}), 400
+
+        # Validate required fields
+        required_fields = [
+            "task_id",
+            "result_id",
+            "client_id",
+            "status",
+            "parsed_results",
+            "summary_stats",
+        ]
+        missing_fields = [field for field in required_fields if field not in data]
+
+        if missing_fields:
             return (
                 jsonify(
-                    {"status": "error", "message": "scan_id and client_id are required"}
+                    {
+                        "error": "Missing required fields",
+                        "missing_fields": missing_fields,
+                    }
                 ),
                 400,
             )
 
-        # Update client status
-        client = Client.query.filter_by(client_id=client_id).first()
-        if client:
-            client.last_seen = datetime.utcnow()
-            if status == "in_progress":
-                client.mark_scanning()
-            elif status in ["completed", "failed"]:
-                client.mark_online()
+        result_id = data["result_id"]
+        client_id = data["client_id"]
+        task_id = data["task_id"]
 
-        # Find or create scan result
-        scan_result = (
-            ScanResult.query.filter_by(scan_id=scan_id)
-            .filter(ScanResult.status.in_(["running", "pending"]))
-            .first()
-        )
+        # Check if result already exists
+        scan_result = ScanResult.query.filter_by(result_id=result_id).first()
 
         if not scan_result:
-            # Create new scan result
-            scan_result = ScanResult(
-                scan_id=scan_id,
-                client_id=client_id,
-                status="running",
-                start_time=datetime.fromisoformat(
-                    data.get("timestamp", datetime.utcnow().isoformat())
-                ),
-                results_data={},
-            )
-            db.session.add(scan_result)
+            logger.warning(f"Error: Scan result {result_id} not found")
+            return jsonify({"error": "Scan result not found"}), 404
 
-        # Update scan result based on status
-        if status == "in_progress":
-            # Partial update - merge results
-            existing_data = scan_result.results_data or {}
-            new_data = data.get("partial_results", {})
+        # Store the parsed results directly
+        scan_result.parsed_results = data["parsed_results"]
 
-            # Merge open_ports if provided
-            if "open_ports" in data:
-                target = data.get("target")
-                if target:
-                    if "hosts" not in existing_data:
-                        existing_data["hosts"] = {}
-                    if target not in existing_data["hosts"]:
-                        existing_data["hosts"][target] = {"ports": []}
+        # Update summary statistics from client
+        summary_stats = data["summary_stats"]
+        scan_result.total_targets = summary_stats.get("total_targets", 0)
+        scan_result.completed_targets = summary_stats.get(
+            "scanned_targets", 0
+        )  # Successfully scanned (up or down)
+        scan_result.failed_targets = summary_stats.get(
+            "error_targets", 0
+        )  # Only actual errors
+        scan_result.total_open_ports = summary_stats.get("total_open_ports", 0)
 
-                    # Add new ports (avoid duplicates)
-                    existing_ports = {
-                        p["port"]
-                        for p in existing_data["hosts"][target].get("ports", [])
-                    }
-                    for port_info in data["open_ports"]:
-                        if port_info["port"] not in existing_ports:
-                            existing_data["hosts"][target]["ports"].append(port_info)
+        # Track contributing clients
+        if not scan_result.contributing_clients:
+            scan_result.contributing_clients = []
 
-            scan_result.results_data = existing_data
+        if client_id not in scan_result.contributing_clients:
+            scan_result.contributing_clients.append(client_id)
 
-        elif status == "completed":
-            # Prepare results_data for mark_completed
-            results_data = scan_result.results_data or {}
-            if "open_ports" in data:
-                target = data.get("target")
-                if target:
-                    if "hosts" not in results_data:
-                        results_data["hosts"] = {}
-                    # Merge ports if host already exists
-                    existing_ports = []
-                    if target in results_data["hosts"]:
-                        existing_ports = results_data["hosts"][target].get("ports", [])
-                    # Avoid duplicates by port number
-                    new_ports = data["open_ports"]
-                    existing_port_nums = {p["port"] for p in existing_ports}
-                    merged_ports = existing_ports + [
-                        p for p in new_ports if p["port"] not in existing_port_nums
-                    ]
-                    results_data["hosts"][target] = {
-                        "ports": merged_ports,
-                        "status": "up",
-                    }
-            scan_result.mark_completed(results_data)
+        # Update timestamps
+        if not scan_result.started_at:
+            scan_result.started_at = datetime.utcnow()
+
+        if data["status"] == "completed":
+            scan_result.mark_complete()
             # Update associated task if exists
             task = ScanTask.query.filter_by(task_id=task_id).first()
 
             if task:
                 task.complete()
-
-        elif status == "failed":
-            # Mark as failed
-            scan_result.mark_failed(data.get("error_message", "Unknown error"))
-
+        elif data["status"] == "failed":
+            scan_result.mark_failed()
             # Update associated task
             task = ScanTask.query.filter_by(task_id=task_id).first()
             if task:
                 task.mark_failed()
 
+        scan_result.updated_at = datetime.utcnow()
+
         db.session.commit()
 
+        logger.info(
+            f"Received results from {client_id} for result {result_id}: "
+            f"{scan_result.completed_targets}/{scan_result.total_targets} targets, "
+            f"{scan_result.total_open_ports} open ports"
+        )
+
         return (
             jsonify(
                 {
-                    "status": "success",
-                    "message": f"Result received ({status})",
-                    "scan_id": scan_id,
+                    "message": "Scan results received successfully",
+                    "result_id": result_id,
+                    "summary": {
+                        "total_targets": scan_result.total_targets,
+                        "completed_targets": scan_result.completed_targets,
+                        "failed_targets": scan_result.failed_targets,
+                        "total_open_ports": scan_result.total_open_ports,
+                        "contributing_clients": len(scan_result.contributing_clients),
+                    },
                 }
             ),
             200,
         )
 
-    except Exception as e:
+    except SQLAlchemyError as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to process scan result: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.error(f"Database error receiving scan results: {e}")
+        return jsonify({"error": "Database error", "details": str(e)}), 500
+
+    except Exception as e:
+        logger.error(f"Error receiving scan results: {e}")
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 
-@bp.route("/scan-results/<scan_id>/progress", methods=["GET"])
-def get_scan_progress(scan_id):
-    """Get current progress of a scan"""
+@bp.route("/scan-results/<result_id>", methods=["GET"])
+def get_scan_result(result_id):
+    """Get a specific scan result by ID"""
     try:
-        result = ScanResult.query.filter_by(scan_id=scan_id).first()
+        scan_result = ScanResult.query.filter_by(result_id=result_id).first()
 
-        if not result:
-            return jsonify({"status": "error", "message": "Scan not found"}), 404
-
-        # Calculate progress
-        total_hosts = 1  # Could be extracted from task
-        scanned_hosts = (
-            len(result.results_data.get("hosts", {})) if result.results_data else 0
-        )
-        progress = (scanned_hosts / total_hosts) * 100 if total_hosts > 0 else 0
+        if not scan_result:
+            return jsonify({"error": "Scan result not found"}), 404
 
         return (
             jsonify(
                 {
-                    "status": "success",
-                    "scan_id": scan_id,
-                    "scan_status": result.status,
-                    "progress": progress,
-                    "hosts_scanned": scanned_hosts,
-                    "ports_found": result.ports_found or 0,
-                    "start_time": (
-                        result.start_time.isoformat() if result.start_time else None
-                    ),
-                    "duration": result.duration_seconds,
+                    "result_id": scan_result.result_id,
+                    "scan_id": scan_result.scan_id,
+                    "parsed_results": scan_result.parsed_results,
+                    "summary": {
+                        "total_targets": scan_result.total_targets,
+                        "completed_targets": scan_result.completed_targets,
+                        "failed_targets": scan_result.failed_targets,
+                        "total_open_ports": scan_result.total_open_ports,
+                    },
+                    "contributing_clients": scan_result.contributing_clients,
+                    "timestamps": {
+                        "created_at": (
+                            scan_result.created_at.isoformat()
+                            if scan_result.created_at
+                            else None
+                        ),
+                        "started_at": (
+                            scan_result.started_at.isoformat()
+                            if scan_result.started_at
+                            else None
+                        ),
+                        "completed_at": (
+                            scan_result.completed_at.isoformat()
+                            if scan_result.completed_at
+                            else None
+                        ),
+                        "updated_at": (
+                            scan_result.updated_at.isoformat()
+                            if scan_result.updated_at
+                            else None
+                        ),
+                    },
                 }
             ),
             200,
         )
 
     except Exception as e:
-        current_app.logger.error(f"Failed to get scan progress: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.error(f"Error retrieving scan result: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@bp.route("/scan-results/<result_id>/targets", methods=["GET"])
+def get_scan_result_targets(result_id):
+    """Get detailed target information from a scan result"""
+    try:
+        scan_result = ScanResult.query.filter_by(result_id=result_id).first()
+
+        if not scan_result:
+            return jsonify({"error": "Scan result not found"}), 404
+
+        # Optional filters
+        state_filter = request.args.get("state")  # 'up', 'down', 'error'
+        min_ports = request.args.get("min_ports", type=int)  # Minimum open ports
+
+        parsed_results = scan_result.parsed_results or {}
+        filtered_results = {}
+
+        for target, data in parsed_results.items():
+            # Apply filters
+            if state_filter and data.get("state") != state_filter:
+                continue
+
+            if min_ports and len(data.get("open_ports", [])) < min_ports:
+                continue
+
+            filtered_results[target] = data
+
+        return (
+            jsonify(
+                {
+                    "result_id": result_id,
+                    "total_results": len(parsed_results),
+                    "filtered_results": len(filtered_results),
+                    "targets": filtered_results,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving target results: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+@bp.route("/scan-results/<result_id>/summary", methods=["GET"])
+def get_scan_result_summary(result_id):
+    """Get a quick summary of scan results"""
+    try:
+        scan_result = ScanResult.query.filter_by(result_id=result_id).first()
+
+        if not scan_result:
+            return jsonify({"error": "Scan result not found"}), 404
+
+        # Calculate additional statistics
+        parsed_results = scan_result.parsed_results or {}
+
+        # Top services found
+        service_counts = {}
+        port_counts = {}
+
+        for target, data in parsed_results.items():
+            port_details = data.get("port_details", {})
+            for port, details in port_details.items():
+                service_name = details.get("name", "unknown")
+                service_counts[service_name] = service_counts.get(service_name, 0) + 1
+                port_counts[port] = port_counts.get(port, 0) + 1
+
+        # Sort and get top 10
+        top_services = sorted(service_counts.items(), key=lambda x: x[1], reverse=True)[
+            :10
+        ]
+        top_ports = sorted(port_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+
+        return (
+            jsonify(
+                {
+                    "result_id": result_id,
+                    "summary": {
+                        "total_targets": scan_result.total_targets,
+                        "completed_targets": scan_result.completed_targets,
+                        "failed_targets": scan_result.failed_targets,
+                        "total_open_ports": scan_result.total_open_ports,
+                        "unique_services": len(service_counts),
+                        "unique_ports": len(port_counts),
+                    },
+                    "top_services": [
+                        {"name": name, "count": count} for name, count in top_services
+                    ],
+                    "top_ports": [
+                        {"port": port, "count": count} for port, count in top_ports
+                    ],
+                    "contributing_clients": scan_result.contributing_clients,
+                    "duration": {
+                        "started_at": (
+                            scan_result.started_at.isoformat()
+                            if scan_result.started_at
+                            else None
+                        ),
+                        "completed_at": (
+                            scan_result.completed_at.isoformat()
+                            if scan_result.completed_at
+                            else None
+                        ),
+                    },
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating scan summary: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 # ============== HEALTH & MONITORING ==============

@@ -2,7 +2,7 @@
 API routes for scan management
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, redirect, url_for, flash
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
@@ -11,8 +11,10 @@ from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
 from app.models.client import Client
+from app.scheduler import scheduler_service
 import uuid
 import json
+
 
 bp = Blueprint("scan", __name__)
 
@@ -61,9 +63,9 @@ def list_scans():
                 scan_dict["latest_result"] = {
                     "id": latest_result.id,
                     "status": latest_result.status,
-                    "start_time": (
-                        latest_result.start_time.isoformat()
-                        if latest_result.start_time
+                    "started_at": (
+                        latest_result.started_at.isoformat()
+                        if latest_result.started_at
                         else None
                     ),
                     "ports_found": latest_result.ports_found,
@@ -187,7 +189,7 @@ def create_scan():
 
         # Schedule if needed
         if scan.is_scheduled and scan.is_active:
-            _schedule_scan(scan)
+            scheduler_service.schedule_scan(scan)
 
         return (
             jsonify(
@@ -206,7 +208,7 @@ def create_scan():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@bp.route("/scans/<int:scan_id>", methods=["PUT"])
+@bp.route("/scans/<int:scan_id>", methods=["POST", "PUT"])
 @login_required
 def update_scan(scan_id):
     """Update an existing scan configuration"""
@@ -218,32 +220,54 @@ def update_scan(scan_id):
             scan = Scan.query.filter_by(id=scan_id, user_id=current_user.id).first()
 
         if not scan:
+            if request.accept_mimetypes.accept_html:
+                flash("Scan not found", "danger")
+                return redirect(url_for("dashboard.scans"))
             return jsonify({"status": "error", "message": "Scan not found"}), 404
 
-        data = request.get_json()
+        # Handle both JSON and form data
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
 
-        # Track scheduling changes
+        # Track old schedule state
         old_scheduled = scan.is_scheduled
         old_active = scan.is_active
         old_interval = scan.interval_minutes
 
-        # Update fields
-        if "name" in data:
-            scan.name = data["name"]
-        if "description" in data:
-            scan.description = data["description"]
-        if "target" in data:
-            scan.target = data["target"]
-        if "ports" in data:
-            scan.ports = data["ports"]
-        if "scan_arguments" in data:
-            scan.scan_arguments = data["scan_arguments"]
+        # Update fields if provided
+        for field in [
+            "name",
+            "description",
+            "target",
+            "ports",
+            "scan_arguments",
+        ]:
+            if field in data:
+                setattr(scan, field, data[field])
+
+        # Handle interval_minutes with type conversion
         if "interval_minutes" in data:
-            scan.interval_minutes = data["interval_minutes"]
+            scan.interval_minutes = int(data["interval_minutes"])
+
         if "is_active" in data:
-            scan.is_active = data["is_active"]
+            scan.is_active = (
+                data["is_active"]
+                if isinstance(data["is_active"], bool)
+                else data["is_active"] in ("true", "on", "1")
+            )
+        else:
+            scan.is_active = False
+
         if "is_scheduled" in data:
-            scan.is_scheduled = data["is_scheduled"]
+            scan.is_scheduled = (
+                data["is_scheduled"]
+                if isinstance(data["is_scheduled"], bool)
+                else data["is_scheduled"] in ("true", "on", "1")
+            )
+        else:
+            scan.is_scheduled = False
 
         scan.updated_at = datetime.utcnow()
 
@@ -254,20 +278,22 @@ def update_scan(scan_id):
             or old_interval != scan.interval_minutes
         ):
 
-            # Remove old schedule if exists
             if old_scheduled and old_active:
-                _unschedule_scan(scan_id)
+                scheduler_service.unschedule_scan(scan_id)
 
-            # Add new schedule if needed
             if scan.is_scheduled and scan.is_active:
                 scan.next_run = datetime.utcnow() + timedelta(
                     minutes=scan.interval_minutes
                 )
-                _schedule_scan(scan)
+                scheduler_service.schedule_scan(scan)
             else:
                 scan.next_run = None
 
         db.session.commit()
+
+        if not request.is_json:
+            flash("Scan updated successfully!", "success")
+            return redirect(url_for("dashboard.scans"))
 
         return (
             jsonify(
@@ -283,6 +309,11 @@ def update_scan(scan_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Failed to update scan: {str(e)}")
+
+        if not request.is_json:
+            flash(f"Error updating scan: {str(e)}", "danger")
+            return redirect(url_for("dashboard.scans"))
+
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -301,7 +332,7 @@ def delete_scan(scan_id):
             return jsonify({"status": "error", "message": "Scan not found"}), 404
 
         # Unschedule
-        _unschedule_scan(scan_id)
+        scheduler_service.unschedule_scan(scan_id)
 
         # Deactivate scan instead of deleting
         scan.is_active = False
@@ -329,7 +360,7 @@ def delete_scan(scan_id):
 def execute_scan(scan_id):
     """Manually trigger a scan execution"""
     try:
-        # Get scan with access control
+        # Access control
         if current_user.is_admin:
             scan = Scan.query.get(scan_id)
         else:
@@ -338,21 +369,13 @@ def execute_scan(scan_id):
         if not scan:
             return jsonify({"status": "error", "message": "Scan not found"}), 404
 
-        # Call the scheduler's _execute_scan function directly
         from app.scheduler import _execute_scan
 
-        _execute_scan(scan_id)
+        result = _execute_scan(scan_id)
 
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Scan execution started",
-                    "scan_id": scan_id,
-                }
-            ),
-            202,
-        )
+        status_code = 200 if result["status"] == "success" else 500
+        return jsonify(result), status_code
+
     except Exception as e:
         current_app.logger.error(f"Failed to execute scan: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -379,13 +402,14 @@ def toggle_scan(scan_id):
         # Handle scheduling
         if scan.is_scheduled:
             if scan.is_active:
-                scan.next_run = datetime.utcnow() + timedelta(
-                    minutes=scan.interval_minutes
-                )
-                _schedule_scan(scan)
+                if not scan.next_run or scan.next_run <= datetime.utcnow():
+                    scan.next_run = datetime.utcnow() + timedelta(
+                        minutes=scan.interval_minutes
+                    )
+                scheduler_service.schedule_scan(scan)
+
             else:
-                scan.next_run = None
-                _unschedule_scan(scan_id)
+                scheduler_service.unschedule_scan(scan_id)
 
         db.session.commit()
 
@@ -433,7 +457,7 @@ def update_scan_schedule(scan_id):
         # Update scheduler
         if scan.is_scheduled and scan.is_active:
             scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
-            _schedule_scan(scan)
+            scheduler_service.schedule_scan(scan)
         else:
             scan.next_run = None
             _unschedule_scan(scan_id)
@@ -455,114 +479,6 @@ def update_scan_schedule(scan_id):
         db.session.rollback()
         current_app.logger.error(f"Failed to update schedule: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-# ============== SCHEDULER INTEGRATION ==============
-
-
-def _schedule_scan(scan):
-    """Add scan to scheduler"""
-    try:
-        from app.scheduler import scheduler_service
-
-        job_id = f"scan_{scan.id}"
-
-        # Remove existing job if any
-        if scheduler_service.scheduler.get_job(job_id):
-            scheduler_service.scheduler.remove_job(job_id)
-
-        # Add new job
-        scheduler_service.scheduler.add_job(
-            func=_execute_scheduled_scan,
-            trigger="interval",
-            minutes=scan.interval_minutes,
-            id=job_id,
-            args=[scan.id],
-            name=f"Scheduled scan: {scan.name}",
-            replace_existing=True,
-            max_instances=1,
-        )
-
-        current_app.logger.info(
-            f"Scheduled scan {scan.id} with interval {scan.interval_minutes} minutes"
-        )
-
-    except Exception as e:
-        current_app.logger.error(f"Failed to schedule scan {scan.id}: {str(e)}")
-
-
-def _unschedule_scan(scan_id):
-    """Remove scan from scheduler"""
-    try:
-        from app.scheduler import scheduler_service
-
-        job_id = f"scan_{scan_id}"
-
-        if scheduler_service.scheduler.get_job(job_id):
-            scheduler_service.scheduler.remove_job(job_id)
-            current_app.logger.info(f"Unscheduled scan {scan_id}")
-
-    except Exception as e:
-        current_app.logger.error(f"Failed to unschedule scan {scan_id}: {str(e)}")
-
-
-def _execute_scheduled_scan(scan_id):
-    """Execute a scheduled scan (called by scheduler)"""
-    try:
-        with current_app.app_context():
-            scan = Scan.query.get(scan_id)
-
-            if not scan or not scan.is_active:
-                current_app.logger.warning(
-                    f"Scheduled scan {scan_id} not found or inactive"
-                )
-                return
-
-            # Check for available clients
-            available_clients = Client.query.filter(
-                and_(
-                    Client.status.in_(["online", "idle"]),
-                    Client.last_seen >= datetime.utcnow() - timedelta(minutes=5),
-                )
-            ).count()
-
-            if available_clients == 0:
-                current_app.logger.warning(
-                    f"No clients available for scheduled scan {scan_id}"
-                )
-                return
-
-            # Create scan task
-            task_id = str(uuid.uuid4())
-            targets = scan.target.split(",") if "," in scan.target else [scan.target]
-            targets = [t.strip() for t in targets]
-
-            task = ScanTask(
-                task_id=task_id,
-                targets=targets,
-                ports=scan.ports,
-                scan_type="tcp",
-                priority=1,  # Lower priority for scheduled scans
-                status="pending",
-            )
-
-            db.session.add(task)
-
-            # Update scan
-            scan.update_last_run()
-            scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
-
-            db.session.commit()
-
-            current_app.logger.info(
-                f"Executed scheduled scan {scan_id}, task {task_id}"
-            )
-
-    except Exception as e:
-        current_app.logger.error(
-            f"Failed to execute scheduled scan {scan_id}: {str(e)}"
-        )
-        db.session.rollback()
 
 
 # ============== SCAN RESULTS ==============
