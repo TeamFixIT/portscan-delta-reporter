@@ -8,7 +8,7 @@
         "command": "bash",
         "args": [
           "-c",
-          "./setup.sh && source venv/Scripts/activate && export FLASK_APP=run.py && flask init-db"
+          "./setup.sh && source venv/Scripts/activate && set FLASK_APP=run.py && flask init-db"
         ]
       },
       "linux": {
@@ -126,7 +126,7 @@
         "command": "bash",
         "args": [
           "-c",
-          "source venv/Scripts/activate && export FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade && flask create-admin"
         ]
       },
       "linux": {
@@ -162,7 +162,7 @@
         "command": "bash",
         "args": [
           "-c",
-          "source venv/Scripts/activate && export FLASK_APP=run.py && flask db migrate && flask db upgrade"
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask db migrate && flask db upgrade"
         ]
       },
       "linux": {
@@ -198,7 +198,7 @@
         "command": "bash",
         "args": [
           "-c",
-          "source venv/Scripts/activate && export FLASK_APP=run.py && flask reset-db && flask create-admin"
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask reset-db && flask create-admin"
         ]
       },
       "linux": {
@@ -233,7 +233,7 @@
         "command": "bash",
         "args": [
           "-c",
-          "source venv/Scripts/activate && export FLASK_APP=run.py && flask create-admin"
+          "source venv/Scripts/activate && set FLASK_APP=run.py && flask create-admin"
         ]
       },
       "linux": {
