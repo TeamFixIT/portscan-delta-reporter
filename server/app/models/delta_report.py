@@ -11,26 +11,17 @@ class DeltaReport(db.Model):
     __tablename__ = "delta_reports"
 
     id = db.Column(db.Integer, primary_key=True)
-    report_id = db.Column(
-        db.String(64), unique=True, nullable=False, default=lambda: str(uuid.uuid4())
-    )
 
     # Foreign Keys
     scan_id = db.Column(db.Integer, db.ForeignKey("scans.id"), nullable=False)
-    baseline_result_id = db.Column(
-        db.Integer, db.ForeignKey("scan_results.id"), nullable=True
-    )  # Nullable for aggregated
-    current_result_id = db.Column(
-        db.Integer, db.ForeignKey("scan_results.id"), nullable=True
-    )  # Nullable for aggregated
-
-    # Task group tracking for distributed scans
-    baseline_task_group_id = db.Column(db.String(64), nullable=True, index=True)
-    current_task_group_id = db.Column(db.String(64), nullable=True, index=True)
+    baseline_result_id = db.Column(db.Integer, db.ForeignKey("scan_results.id"))
+    current_result_id = db.Column(db.Integer, db.ForeignKey("scan_results.id"))
 
     # Report metadata
     report_type = db.Column(db.String(20), default="delta")  # delta, aggregated_delta
-    status = db.Column(db.String(20), default="generated")
+    status = db.Column(
+        db.String(20), default="generated"
+    )  # TODO Might be redundant depending how quickly reports generate
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Summary statistics
@@ -43,6 +34,43 @@ class DeltaReport(db.Model):
     # Detailed delta data as JSON
     delta_data = db.Column(db.JSON)
 
+    """ TODO Create db.json structure for delta_data
+    Example structure:
+    {
+        {
+        "scanner": {
+            "name": "nmap",
+            "args": "-A -T4"
+        },
+        "delta": {
+            "new_up_hosts": [192.168.1.1],
+            "new_down_hosts": [192.168.1.2],
+            "added_ports": [
+            {
+                "port": 8080,
+                "protocol": "tcp",
+                "service": "http-proxy"
+            }
+            ],
+            "removed_ports": [
+            {
+                "port": 22,
+                "protocol": "tcp",
+                "service": "ssh"
+            }
+            ],
+            "changed_ports": [
+            {
+                "port": 443,
+                "protocol": "tcp",
+                "before": { "state": "open", "service": "https", "banner": "nginx 1.18" },
+                "after":  { "state": "open", "service": "https", "banner": "nginx 1.20" }
+            }
+            ]
+        },
+        }
+        """
+
     # Relationships
     baseline_result = db.relationship(
         "ScanResult", foreign_keys=[baseline_result_id], backref="deltas_as_baseline"
@@ -52,141 +80,8 @@ class DeltaReport(db.Model):
     )
     scan = db.relationship("Scan", backref="delta_reports")
 
-    # Indexes for performance
-    __table_args__ = (
-        db.Index("idx_delta_scan_id", "scan_id"),
-        db.Index("idx_delta_created_at", "created_at"),
-        db.Index("idx_delta_current_result", "current_result_id"),
-        db.Index(
-            "idx_delta_task_groups", "baseline_task_group_id", "current_task_group_id"
-        ),
-        db.Index(
-            "idx_delta_has_changes",
-            "new_ports_count",
-            "closed_ports_count",
-            "changed_services_count",
-            "new_hosts_count",
-            "removed_hosts_count",
-        ),
-    )
-
     def __repr__(self):
         return f"<DeltaReport {self.report_id} - {self.status}>"
-
-    @staticmethod
-    def generate_from_results(scan_id, baseline_result, current_result):
-        """
-        Generate a delta report by comparing two scan results.
-
-        Args:
-            scan_id: ID of the parent scan
-            baseline_result: Previous ScanResult to compare from
-            current_result: Current ScanResult to compare to
-
-        Returns:
-            DeltaReport: The generated report, or None if comparison failed
-        """
-        if not baseline_result or not current_result:
-            return None
-
-        if (
-            baseline_result.status != "completed"
-            or current_result.status != "completed"
-        ):
-            return None
-
-        # Generate delta data
-        delta_data = current_result.compare_with(baseline_result)
-
-        if not delta_data:
-            return None
-
-        # Create the report
-        report = DeltaReport(
-            report_id=str(uuid.uuid4()),
-            scan_id=scan_id,
-            baseline_result_id=baseline_result.id,
-            current_result_id=current_result.id,
-            report_type="delta",
-            delta_data=delta_data,
-            new_ports_count=delta_data["summary"]["total_new_ports"],
-            closed_ports_count=delta_data["summary"]["total_closed_ports"],
-            changed_services_count=delta_data["summary"]["total_changed_services"],
-            new_hosts_count=delta_data["summary"]["total_new_hosts"],
-            removed_hosts_count=delta_data["summary"]["total_removed_hosts"],
-            status="generated",
-        )
-
-        db.session.add(report)
-        db.session.commit()
-
-        return report
-
-    @staticmethod
-    def generate_from_aggregated_results(
-        scan_id,
-        baseline_result,
-        current_result,
-        baseline_task_group_id=None,
-        current_task_group_id=None,
-    ):
-        """
-        Generate a delta report from aggregated scan results (distributed scanning).
-        This is used when multiple clients scan different ranges and results need to be combined.
-
-        Args:
-            scan_id: ID of the parent scan
-            baseline_result: Aggregated baseline ScanResult (can be temporary object)
-            current_result: Aggregated current ScanResult (can be temporary object)
-            baseline_task_group_id: Task group ID for baseline
-            current_task_group_id: Task group ID for current
-
-        Returns:
-            DeltaReport: The generated report, or None if comparison failed
-        """
-        if not baseline_result or not current_result:
-            return None
-
-        # Generate delta data
-        delta_data = current_result.compare_with(baseline_result)
-
-        if not delta_data:
-            return None
-
-        # Check if a report already exists for this task group pair
-        existing = DeltaReport.query.filter_by(
-            baseline_task_group_id=baseline_task_group_id,
-            current_task_group_id=current_task_group_id,
-        ).first()
-
-        if existing:
-            print(
-                f"ℹ️ Delta report already exists for task groups {baseline_task_group_id} → {current_task_group_id}"
-            )
-            return existing
-
-        # Create the report
-        report = DeltaReport(
-            report_id=str(uuid.uuid4()),
-            scan_id=scan_id,
-            baseline_result_id=None,  # Aggregated, no single result
-            current_result_id=None,  # Aggregated, no single result
-            baseline_task_group_id=baseline_task_group_id,
-            current_task_group_id=current_task_group_id,
-            report_type="aggregated_delta",
-            delta_data=delta_data,
-            new_ports_count=delta_data["summary"]["total_new_ports"],
-            closed_ports_count=delta_data["summary"]["total_closed_ports"],
-            changed_services_count=delta_data["summary"]["total_changed_services"],
-            new_hosts_count=delta_data["summary"]["total_new_hosts"],
-            removed_hosts_count=delta_data["summary"]["total_removed_hosts"],
-            status="generated",
-        )
-
-        db.session.add(report)
-        db.session.commit()
-
-        return report
 
     def has_changes(self):
         """Check if this delta report contains any changes"""
@@ -198,49 +93,7 @@ class DeltaReport(db.Model):
             or self.removed_hosts_count > 0
         )
 
-    def get_task_groups_info(self):
-        """
-        Get information about the task groups involved in this report.
-
-        Returns:
-            dict: Information about baseline and current task groups
-        """
-        from app.models.scan_task import ScanTask
-
-        info = {"baseline": None, "current": None}
-
-        if self.baseline_task_group_id:
-            baseline_tasks = ScanTask.query.filter_by(
-                task_group_id=self.baseline_task_group_id
-            ).all()
-            info["baseline"] = {
-                "task_group_id": self.baseline_task_group_id,
-                "task_count": len(baseline_tasks),
-                "clients": list(
-                    set(t.client_id for t in baseline_tasks if t.client_id)
-                ),
-                "completed_at": max(
-                    (t.completed_at for t in baseline_tasks if t.completed_at),
-                    default=None,
-                ),
-            }
-
-        if self.current_task_group_id:
-            current_tasks = ScanTask.query.filter_by(
-                task_group_id=self.current_task_group_id
-            ).all()
-            info["current"] = {
-                "task_group_id": self.current_task_group_id,
-                "task_count": len(current_tasks),
-                "clients": list(set(t.client_id for t in current_tasks if t.client_id)),
-                "completed_at": max(
-                    (t.completed_at for t in current_tasks if t.completed_at),
-                    default=None,
-                ),
-            }
-
-        return info
-
+    # TODO fix up the to_csv to export a csv of the delta report.
     def to_csv(self):
         """
         Export delta report as CSV string.
@@ -381,6 +234,7 @@ class DeltaReport(db.Model):
 
         return output.getvalue()
 
+    # This is for API output.
     def to_dict(self, include_delta_data=False):
         """
         Convert delta report to dictionary.
@@ -390,12 +244,9 @@ class DeltaReport(db.Model):
         """
         result = {
             "id": self.id,
-            "report_id": self.report_id,
             "scan_id": self.scan_id,
             "baseline_result_id": self.baseline_result_id,
             "current_result_id": self.current_result_id,
-            "baseline_task_group_id": self.baseline_task_group_id,
-            "current_task_group_id": self.current_task_group_id,
             "report_type": self.report_type,
             "status": self.status,
             "created_at": self.created_at.isoformat() if self.created_at else None,
@@ -406,34 +257,4 @@ class DeltaReport(db.Model):
             "removed_hosts_count": self.removed_hosts_count,
             "has_changes": self.has_changes(),
         }
-
-        # Add scan times based on report type
-        if self.report_type == "aggregated_delta" and (
-            self.baseline_task_group_id or self.current_task_group_id
-        ):
-            task_info = self.get_task_groups_info()
-            if task_info["baseline"] and task_info["baseline"]["completed_at"]:
-                result["baseline_scan_time"] = task_info["baseline"][
-                    "completed_at"
-                ].isoformat()
-            if task_info["current"] and task_info["current"]["completed_at"]:
-                result["current_scan_time"] = task_info["current"][
-                    "completed_at"
-                ].isoformat()
-        else:
-            result["baseline_scan_time"] = (
-                self.baseline_result.start_time.isoformat()
-                if self.baseline_result
-                else None
-            )
-            result["current_scan_time"] = (
-                self.current_result.start_time.isoformat()
-                if self.current_result
-                else None
-            )
-
-        if include_delta_data:
-            result["delta_data"] = self.delta_data
-            result["task_groups_info"] = self.get_task_groups_info()
-
         return result

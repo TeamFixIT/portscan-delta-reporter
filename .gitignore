@@ -61,3 +61,6 @@ config.yml
 # Temporary files
 *.tmp
 *.temp
+
+# Backup files
+dump
