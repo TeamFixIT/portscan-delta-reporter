@@ -1,5 +1,11 @@
 {% extends "base.html" %} {% block content %}
 <div class="container mt-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.scans') }}">Scans</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Create Scan</li>
+    </ol>
+  </nav>
   <h2>Create New Scan</h2>
   <form id="create-scan-form" method="post" action="/dashboard/scans/create">
     <div class="mb-3">
@@ -20,22 +26,11 @@
     </div>
     <div class="mb-3">
       <label for="scan_arguments" class="form-label">Scan Arguments</label>
-      <input
-        type="text"
-        class="form-control"
-        id="scan_arguments"
-        name="scan_arguments"
-        value="-sV -O" />
+      <input type="text" class="form-control" id="scan_arguments" name="scan_arguments" value="-sV -O" />
     </div>
     <div class="mb-3">
       <label for="interval_minutes" class="form-label">Interval (minutes)</label>
-      <input
-        type="number"
-        class="form-control"
-        id="interval_minutes"
-        name="interval_minutes"
-        value="10080"
-        required />
+      <input type="number" class="form-control" id="interval_minutes" name="interval_minutes" value="10080" required />
       <div class="form-text">Weekly = 10080 minutes</div>
     </div>
     <div class="form-check mb-2">
@@ -43,12 +38,7 @@
       <label class="form-check-label" for="is_active">Active</label>
     </div>
     <div class="form-check mb-3">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        id="is_scheduled"
-        name="is_scheduled"
-        checked />
+      <input class="form-check-input" type="checkbox" id="is_scheduled" name="is_scheduled" checked />
       <label class="form-check-label" for="is_scheduled">Scheduled</label>
     </div>
     <button type="submit" class="btn btn-primary">Create Scan</button>
@@ -84,9 +74,8 @@
         resultDiv.innerHTML = `<div class='alert alert-success'>Scan created successfully!</div>`;
         form.reset();
       } else {
-        resultDiv.innerHTML = `<div class='alert alert-danger'>${
-          respData.message || "Failed to create scan."
-        }</div>`;
+        resultDiv.innerHTML = `<div class='alert alert-danger'>${respData.message || "Failed to create scan."
+          }</div>`;
       }
     } catch (err) {
       resultDiv.innerHTML = `<div class='alert alert-danger'>Error: ${err}</div>`;

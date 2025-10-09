@@ -4,7 +4,7 @@ Push-Based Port Scanner Client Agent
 
 This client runs on Raspberry Pi 4 devices and performs network scanning
 tasks as requested by the central server. It runs a web server to listen
-for push-based scan requests from the server and returns results progressively.
+for push-based scan requests from the server and returns complete results.
 """
 
 import json
@@ -41,9 +41,10 @@ class ScanRequest:
     """Represents a scan request from the server"""
 
     scan_id: str
+    task_id: str
+    result_id: str
     targets: List[str]
     ports: str
-    task_id: Optional[str] = None
     scan_type: str = "tcp"
     timeout: int = 300
     priority: int = 1
@@ -53,18 +54,17 @@ class ScanRequest:
 
 @dataclass
 class ScanResult:
-    """Represents the result of a port scan"""
+    """Represents the complete result of a port scan"""
 
     scan_id: str
+    task_id: str
+    result_id: str
     client_id: str
-    timestamp: str
-    target: str
-    status: str  # 'in_progress', 'completed', 'failed'
-    open_ports: List[Dict]
     scan_duration: float
-    task_id: Optional[str] = None
+    status: str  # 'in_progress', 'completed', 'failed'
+    target_results: list  # List of target result dicts
+    total_targets: int
     error_message: Optional[str] = None
-    partial_results: Optional[Dict] = None
 
 
 class PortScannerClient:
@@ -114,7 +114,6 @@ class PortScannerClient:
             "client_port": 8080,
             "heartbeat_interval": 60,
             "max_concurrent_scans": 2,
-            "progress_update_interval": 10,
             "retry_attempts": 3,
             "retry_delay": 5,
             "client_host": "0.0.0.0",  # Listen on all interfaces
@@ -122,7 +121,7 @@ class PortScannerClient:
         }
 
         try:
-            with open(config_file, "r") as f:
+            with open(config_file, "r", encoding="utf-8") as f:
                 loaded_config = yaml.safe_load(f)
                 default_config.update(loaded_config)
         except FileNotFoundError:
@@ -169,6 +168,7 @@ class PortScannerClient:
                 scan_request = ScanRequest(
                     scan_id=data.get("scan_id"),
                     task_id=data.get("task_id"),
+                    result_id=data.get("result_id"),
                     targets=data.get("targets", []),
                     ports=data.get("ports", "1-1000"),
                     scan_type=data.get("scan_type", "T"),
@@ -178,7 +178,9 @@ class PortScannerClient:
                     scan_arguments=data.get("scan_arguments"),
                 )
                 # Check if scan already exists
+
                 if scan_request.scan_id in self.active_scans:
+                    print("Scan already running")
                     return (
                         jsonify(
                             {
@@ -190,9 +192,7 @@ class PortScannerClient:
                     )
 
                 # Submit scan to thread pool
-                future = self.executor.submit(
-                    self.perform_progressive_scan, scan_request
-                )
+                future = self.executor.submit(self.perform_scan, scan_request)
                 self.active_scans[scan_request.scan_id] = future
 
                 logger.info(f"Accepted scan request: {scan_request.scan_id}")
@@ -341,278 +341,242 @@ class PortScannerClient:
         thread = threading.Thread(target=heartbeat_loop, daemon=True)
         thread.start()
 
-    def perform_progressive_scan(self, scan_request: ScanRequest):
-        """Perform a scan with progressive updates"""
+    def _extract_scan_data(self, target: str) -> Dict:
+        """Extract scan data from nmap results for easier server processing"""
+        try:
+            if target not in self.nm.all_hosts():
+                return {
+                    "hostname": "",
+                    "state": "down",
+                    "open_ports": [],
+                    "port_details": {},
+                }
+
+            # Get basic host information
+            hostname = self.nm[target].hostname()
+            state = self.nm[target].state()
+
+            open_ports = []
+            port_details = {}
+
+            # Extract port information from all protocols
+            for proto in self.nm[target].all_protocols():
+                ports = self.nm[target][proto].keys()
+
+                for port in sorted(ports):
+                    port_info = self.nm[target][proto][port]
+                    port_state = port_info.get("state", "unknown")
+
+                    # Only include open ports in the list
+                    if port_state == "open":
+                        open_ports.append(port)
+
+                        # Store detailed information for this port
+                        port_details[str(port)] = {
+                            "protocol": proto,
+                            "state": port_state,
+                            "name": port_info.get("name", "unknown"),
+                            "product": port_info.get("product", ""),
+                            "version": port_info.get("version", ""),
+                            "extrainfo": port_info.get("extrainfo", ""),
+                            "reason": port_info.get("reason", ""),
+                            "conf": port_info.get("conf", ""),
+                        }
+
+            # Build result structure
+            result = {
+                "hostname": hostname,
+                "state": state,
+                "open_ports": sorted(open_ports),
+                "port_details": port_details,
+            }
+
+            # Optionally add OS detection if available
+            if hasattr(self.nm[target], "get") and "osmatch" in self.nm[target]:
+                os_matches = self.nm[target]["osmatch"]
+                if os_matches:
+                    # Take the best match
+                    result["os_detection"] = {
+                        "name": os_matches[0].get("name", ""),
+                        "accuracy": os_matches[0].get("accuracy", ""),
+                    }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error extracting scan data for {target}: {e}")
+            return {
+                "hostname": "",
+                "state": "error",
+                "open_ports": [],
+                "port_details": {},
+                "error": str(e),
+            }
+
+    def perform_scan(self, scan_request: ScanRequest):
+        """Perform a complete scan and send results to server"""
         start_time = time.time()
-        all_results = {}
 
         try:
             logger.info(
                 f"Starting scan {scan_request.scan_id} with {len(scan_request.targets)} targets"
             )
 
-            for i, target in enumerate(scan_request.targets):
-                logger.info(
-                    f"Scanning target {target} ({i+1}/{len(scan_request.targets)}) for scan {scan_request.scan_id}"
-                )
+            # Build scan arguments
+            scan_args = f"-s{scan_request.scan_type.upper()}"
+            if scan_request.scan_arguments:
+                scan_args += f" {scan_request.scan_arguments}"
+            # Perform scan for all targets
+            targets_str = " ".join(scan_request.targets)
+            logger.info(f"Scanning targets: {targets_str}")
+            logger.info(f"Ports: {scan_request.ports}")
+            logger.info(f"Arguments: {scan_args}")
 
-                # Send initial in-progress update
-                self._send_progress_update(
-                    scan_request.scan_id,
-                    target,
-                    "in_progress",
-                    [],
-                    0,
-                    progress_info={
-                        "current_target": i + 1,
-                        "total_targets": len(scan_request.targets),
-                    },
-                    task_id=scan_request.task_id,
-                )
+            self.nm.scan(
+                hosts=targets_str,
+                ports=scan_request.ports,
+                arguments=scan_args,
+            )
 
-                # Perform the nmap scan
-                scan_args = f"-s{scan_request.scan_type.upper()}"
-                if scan_request.scan_arguments:
-                    scan_args += f" {scan_request.scan_arguments}"
-
-                '''
-                TODO callback isnt supported in python-nmap must be accomplished with split up scans
-                # Use callback for progressive updates
-                def callback(host, scan_result):
-                    """Callback for nmap progress"""
-                    try:
-                        if host in scan_result["scan"]:
-                            open_ports = []
-                            for proto in ["tcp", "udp"]:
-                                if proto in scan_result["scan"][host]:
-                                    for port in scan_result["scan"][host][proto]:
-                                        port_info = scan_result["scan"][host][proto][
-                                            port
-                                        ]
-                                        if port_info["state"] == "open":
-                                            open_ports.append(
-                                                {
-                                                    "port": port,
-                                                    "state": port_info["state"],
-                                                    "service": port_info.get(
-                                                        "name", "unknown"
-                                                    ),
-                                                    "version": port_info.get(
-                                                        "version", ""
-                                                    ),
-                                                    "product": port_info.get(
-                                                        "product", ""
-                                                    ),
-                                                    "protocol": proto,
-                                                }
-                                            )
-
-                            # Send progressive update
-                            self._send_progress_update(
-                                scan_request.scan_id,
-                                host,
-                                "in_progress",
-                                open_ports,
-                                time.time() - start_time,
-                            )
-                    except Exception as e:
-                        logger.warning(f"Error in scan callback: {e}")
-                '''
-
-                # Start scan
-                self.nm.scan(
-                    hosts=target,
-                    ports=scan_request.ports,
-                    arguments=scan_args,
-                )
-
-                # Collect final results for this target
-                open_ports = []
-                if target in self.nm.all_hosts():
-                    for proto in ["tcp", "udp"]:
-                        if proto in self.nm[target]:
-                            for port in self.nm[target][proto]:
-                                port_info = self.nm[target][proto][port]
-                                if port_info["state"] == "open":
-                                    open_ports.append(
-                                        {
-                                            "port": port,
-                                            "state": port_info["state"],
-                                            "service": port_info.get("name", "unknown"),
-                                            "version": port_info.get("version", ""),
-                                            "product": port_info.get("product", ""),
-                                            "protocol": proto,
-                                        }
-                                    )
-
-                all_results[target] = open_ports
-                logger.info(
-                    f"Completed scan for target {target}: {len(open_ports)} open ports found"
-                )
-
-            # Send final completed status for entire scan
             scan_duration = time.time() - start_time
 
-            # Send final result for each target
-            for target, ports in all_results.items():
-                result = ScanResult(
-                    scan_id=scan_request.scan_id,
-                    client_id=self.client_id,
-                    timestamp=datetime.utcnow().isoformat(),
-                    target=target,
-                    status="completed",
-                    open_ports=ports,
-                    scan_duration=scan_duration,
-                    task_id=scan_request.task_id,
-                )
-                self.send_result(result)
+            # Build results structure
+            parsed_results = {}
+            summary_stats = {
+                "total_targets": len(scan_request.targets),
+                "scanned_targets": 0,
+                "targets_up": 0,
+                "targets_down": 0,
+                "error_targets": 0,
+                "total_open_ports": 0,
+            }
 
-            logger.info(
-                f"Scan {scan_request.scan_id} completed in {scan_duration:.2f} seconds"
-            )
+            for target in scan_request.targets:
+                try:
+                    # Extract scan data
+                    target_data = self._extract_scan_data(target)
+                    parsed_results[target] = target_data
+
+                    # Update summary statistics
+                    if target_data["state"] == "up":
+                        summary_stats["scanned_targets"] += 1
+                        summary_stats["targets_up"] += 1
+                        summary_stats["total_open_ports"] += len(
+                            target_data["open_ports"]
+                        )
+                    elif target_data["state"] == "down":
+                        summary_stats["scanned_targets"] += 1
+                        summary_stats["targets_down"] += 1
+                    elif target_data["state"] == "error":
+                        summary_stats["error_targets"] += 1
+
+                    # Log summary
+                    open_ports_count = len(target_data["open_ports"])
+                    logger.info(
+                        f"Processed target {target}: {target_data['state']} - "
+                        f"{open_ports_count} open ports"
+                    )
+
+                except Exception as e:
+                    logger.error(f"Error processing results for target {target}: {e}")
+                    parsed_results[target] = {
+                        "hostname": "",
+                        "state": "error",
+                        "open_ports": [],
+                        "port_details": {},
+                        "error": str(e),
+                    }
+                    summary_stats["failed_targets"] += 1
+
+            # Prepare result payload
+            result_payload = {
+                "scan_id": scan_request.scan_id,
+                "task_id": scan_request.task_id,
+                "result_id": scan_request.result_id,
+                "client_id": self.client_id,
+                "status": "completed",
+                "scan_duration": scan_duration,
+                "parsed_results": parsed_results,
+                "summary_stats": summary_stats,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+            # Send results to server
+            success = self.send_scan_results(result_payload)
+
+            if success:
+                logger.info(
+                    f"Scan {scan_request.scan_id} completed and sent in {scan_duration:.2f}s - "
+                    f"{summary_stats['total_open_ports']} total open ports found"
+                )
+            else:
+                logger.error(f"Failed to send results for scan {scan_request.scan_id}")
 
         except Exception as e:
             logger.error(f"Scan {scan_request.scan_id} failed: {e}")
-            # Send failure status for all targets
-            for target in scan_request.targets:
-                result = ScanResult(
-                    scan_id=scan_request.scan_id,
-                    client_id=self.client_id,
-                    timestamp=datetime.utcnow().isoformat(),
-                    target=target,
-                    status="failed",
-                    open_ports=[],
-                    scan_duration=time.time() - start_time,
-                    error_message=str(e),
-                    task_id=scan_request.task_id,
-                )
-                self.send_result(result)
+
+            # Send failure status
+            result_payload = {
+                "scan_id": scan_request.scan_id,
+                "task_id": scan_request.task_id,
+                "result_id": scan_request.result_id,
+                "status": "failed",
+                "scan_duration": time.time() - start_time,
+                "parsed_results": {},
+                "summary_stats": {
+                    "total_targets": len(scan_request.targets),
+                    "up_targets": 0,
+                    "down_targets": 0,
+                    "failed_targets": len(scan_request.targets),
+                    "total_open_ports": 0,
+                },
+                "error_message": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+            self.send_scan_results(result_payload)
+
         finally:
             # Clean up completed scan
             if scan_request.scan_id in self.active_scans:
                 del self.active_scans[scan_request.scan_id]
 
-    def _send_progress_update(
-        self,
-        scan_id: str,
-        target: str,
-        status: str,
-        open_ports: List[Dict],
-        duration: float,
-        progress_info: Optional[Dict] = None,
-        task_id: Optional[str] = None,
-    ):
-        """Send progressive scan update to server"""
-        try:
-            url = f"{self.config['server_url']}/api/scan-results"
-            data = {
-                "scan_id": scan_id,
-                "client_id": self.client_id,
-                "timestamp": datetime.utcnow().isoformat(),
-                "target": target,
-                "status": status,
-                "open_ports": open_ports,
-                "scan_duration": duration,
-                "progress_info": progress_info or {},
-            }
-            if task_id:
-                data["task_id"] = task_id
-            response = requests.post(url, json=data, timeout=10)
-            if response.status_code == 200:
-                logger.debug(f"Progress update sent for {target}")
-            else:
-                logger.warning(
-                    f"Failed to send progress update: {response.status_code}"
-                )
-
-        except Exception as e:
-            logger.error(f"Error sending progress update: {e}")
-
-    def perform_scan(self, scan_request: ScanRequest) -> ScanResult:
-        """Perform a basic port scan (backwards compatibility)"""
-        start_time = time.time()
-
-        try:
-
-            logger.info(
-                f"Starting scan {scan_request.scan_id} for target {scan_request.targets[0]}"
-            )
-
-            # Perform the nmap scan
-            target = scan_request.targets[0]
-            scan_args = f"-s{scan_request.scan_type.upper()}"
-            if scan_request.scan_arguments:
-                scan_args += f" {scan_request.scan_arguments}"
-
-            self.nm.scan(target, scan_request.ports, arguments=scan_args)
-
-            open_ports = []
-            if target in self.nm.all_hosts():
-                for proto in ["tcp", "udp"]:
-                    if proto in self.nm[target]:
-                        for port in self.nm[target][proto]:
-                            port_info = self.nm[target][proto][port]
-                            if port_info["state"] == "open":
-                                open_ports.append(
-                                    {
-                                        "port": port,
-                                        "state": port_info["state"],
-                                        "service": port_info.get("name", "unknown"),
-                                        "version": port_info.get("version", ""),
-                                        "product": port_info.get("product", ""),
-                                        "protocol": proto,
-                                    }
-                                )
-
-            scan_duration = time.time() - start_time
-
-            return ScanResult(
-                scan_id=scan_request.scan_id,
-                client_id=self.client_id,
-                timestamp=datetime.utcnow().isoformat(),
-                target=target,
-                status="completed",
-                open_ports=open_ports,
-                scan_duration=scan_duration,
-            )
-
-        except Exception as e:
-            logger.error(f"Scan failed: {e}")
-            return ScanResult(
-                scan_id=scan_request.scan_id,
-                client_id=self.client_id,
-                timestamp=datetime.utcnow().isoformat(),
-                target=scan_request.targets[0] if scan_request.targets else "unknown",
-                status="failed",
-                open_ports=[],
-                scan_duration=time.time() - start_time,
-                error_message=str(e),
-            )
-
-    def send_result(self, result: ScanResult) -> bool:
-        """Send scan result back to server"""
+    def send_scan_results(self, result_payload: Dict) -> bool:
+        """Send structured scan results back to server"""
         max_attempts = self.config.get("retry_attempts", 3)
         retry_delay = self.config.get("retry_delay", 5)
 
         for attempt in range(max_attempts):
             try:
-                url = f"{self.config['server_url']}/api/scan-results"
+                url = f"{self.config['server_url']}/api/clients/{self.client_id}/results"  # TODO parse client_id here instead through payload
 
-                response = requests.post(url, json=asdict(result), timeout=30)
+                # Use longer timeout for large payloads
+                num_targets = len(result_payload.get("parsed_results", {}))
+                timeout = max(30, num_targets * 0.5)
+
+                response = requests.post(url, json=result_payload, timeout=timeout)
 
                 if response.status_code == 200:
-                    logger.info(f"Successfully sent result for scan {result.scan_id}")
+                    logger.info(
+                        f"Successfully sent results for scan {result_payload['scan_id']} "
+                        f"({num_targets} targets)"
+                    )
                     return True
                 else:
-                    logger.warning(f"Server returned status {response.status_code}")
+                    logger.warning(
+                        f"Server returned status {response.status_code}: "
+                        f"{response.text[:200]}"
+                    )
 
             except requests.exceptions.RequestException as e:
-                logger.warning(f"Attempt {attempt + 1} failed to send result: {e}")
+                logger.warning(f"Attempt {attempt + 1} failed to send results: {e}")
 
             if attempt < max_attempts - 1:
                 time.sleep(retry_delay)
 
-        logger.error(f"Failed to send result after {max_attempts} attempts")
+        logger.error(
+            f"Failed to send results after {max_attempts} attempts "
+            f"for scan {result_payload['scan_id']}"
+        )
         return False
 
     def get_system_info(self) -> Dict:
@@ -678,16 +642,20 @@ class PortScannerClient:
             for scan_id, future in list(self.active_scans.items()):
                 future.cancel()
 
-            # Shutdown executor
-            self.executor.shutdown(wait=True, timeout=30)
+            # Shutdown executor with proper timeout handling
+            self.executor.shutdown(wait=True)
+            logger.info("Thread pool executor shutdown completed")
 
             # Stop HTTP server
             self.stop_server()
 
-            # Mark client as offline
-            url = f"{self.config['server_url']}/api/clients/{self.client_id}"
-            requests.put(url, json={"status": "offline"}, timeout=5)
-            logger.info("Client marked as offline")
+            # Mark client as offline (non-blocking)
+            try:
+                url = f"{self.config['server_url']}/api/clients/{self.client_id}"
+                requests.put(url, json={"status": "offline"}, timeout=5)
+                logger.info("Client marked as offline")
+            except Exception as e:
+                logger.warning(f"Failed to mark client as offline: {e}")
 
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
@@ -725,8 +693,9 @@ class PortScannerClient:
                 if completed_scans:
                     logger.debug(f"Cleaned up {len(completed_scans)} completed scans")
 
-                # Wait before checking again
-                time.sleep(self.config["check_interval"])
+                # Wait before checking again - use a default value if not in config
+                check_interval = self.config.get("check_interval", 10)
+                time.sleep(check_interval)
 
         except KeyboardInterrupt:
             logger.info("Received interrupt signal, shutting down...")

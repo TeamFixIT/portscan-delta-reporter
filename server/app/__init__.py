@@ -67,6 +67,7 @@ def create_app(config_class=Config):
 
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
+    from app.routes.delta import bp as delta_bp
     from app.routes.api import bp as api_bp
     from app.routes.scan import bp as scan_bp
     from app.routes.dashboard import bp as dashboard_bp
@@ -76,6 +77,7 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(scan_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
+    app.register_blueprint(delta_bp, url_prefix="/delta")
 
     # Register error handlers
     @app.errorhandler(404)
