@@ -18,15 +18,36 @@ from app.models.user import User
 class DeltaReportService:
     """Service for managing delta reports"""
 
-    @staticmethod
-    def generate_delta_report():
+    def auto_generate_delta_report(self):
         """
-        Generate a delta report for this task group by:
-        1. Aggregating all scan results from this group
-        2. Finding the previous task group for this scan
-        3. Aggregating results from the previous group
-        4. Comparing the two aggregated results
+        Automatically generate a delta report for the latest completed scan.
+        This should be called after a scan completes.
 
+        Returns:
+            DeltaReport: The generated report, or None if conditions not met
+        """
+        latest_result = self.get_latest_result()
+
+        if not latest_result or latest_result.status != "completed":
+            return None
+
+        # Check if we already have a delta report for this result
+        from app.models.delta_report import DeltaReport
+
+        existing = DeltaReport.query.filter_by(
+            current_result_id=latest_result.id
+        ).first()
+
+        if existing:
+            # Already generated
+            return existing
+
+        return self.generate_delta_report_for_result(latest_result)
+
+    @staticmethod
+    def generate_delta_report(current_result_id: int) -> Optional[DeltaReport]:
+        """
+        Generate a delta report for this result:
         Returns:
             DeltaReport: Generated report or None
         """
@@ -34,72 +55,24 @@ class DeltaReportService:
         from app.models.delta_report import DeltaReport
         from app.models.scan_result import ScanResult
 
-        # Get current group's results
-        current_results = self.get_task_group_results()
+        # TODO implement generate_delta_report, need to get current_result first find previous results to compare against
 
-        if not current_results:
-            print("❌ No completed results in current group")
+        scan_result = ScanResult.query.get(current_result_id)
+
+        if not scan_result or scan_result.status != "completed":
             return None
 
-        print(f"✓ Found {len(current_results)} results in current group")
+        existing = DeltaReport.query.filter_by(
+            current_result_id=current_result_id
+        ).first()
 
-        # Find previous task group for this scan
-        previous_group_id = self.get_previous_task_group_id()
-
-        if not previous_group_id:
-            print("ℹ️ No previous task group found (this is the first scan)")
-            return None
-
-        print(f"✓ Found previous task group: {previous_group_id}")
-
-        # Get previous group's results
-        previous_tasks = ScanTask.query.filter_by(task_group_id=previous_group_id).all()
-
-        previous_results = []
-        for task in previous_tasks:
-            if task.scan_result_id:
-                result = ScanResult.query.get(task.scan_result_id)
-                if result and result.status == "completed":
-                    previous_results.append(result)
-
-        if not previous_results:
-            print("❌ No completed results in previous group")
-            return None
-
-        print(f"✓ Found {len(previous_results)} results in previous group")
-
-        # Create aggregated scan results
-        aggregated_current = self.aggregate_scan_results(current_results)
-        aggregated_baseline = self.aggregate_scan_results(previous_results)
-
-        # Create temporary ScanResult objects for comparison
-        temp_current = ScanResult(
-            scan_id=self.scan_id,
-            client_id="aggregated",
-            status="completed",
-            started_at=min(r.started_at for r in current_results),
-            end_time=max(r.end_time for r in current_results if r.end_time),
-            results_data=aggregated_current,
-        )
-
-        temp_baseline = ScanResult(
-            scan_id=self.scan_id,
-            client_id="aggregated",
-            status="completed",
-            started_at=min(r.started_at for r in previous_results),
-            end_time=max(r.end_time for r in previous_results if r.end_time),
-            results_data=aggregated_baseline,
-        )
+        if existing:
+            # Already generated
+            return existing
 
         # Generate delta report using the aggregated data
         print("🔄 Comparing aggregated results...")
-        delta_report = DeltaReport.generate_from_aggregated_results(
-            scan_id=self.scan_id,
-            baseline_result=temp_baseline,
-            current_result=temp_current,
-            baseline_task_group_id=previous_group_id,
-            current_task_group_id=self.task_group_id,
-        )
+        delta_report = DeltaReport.generate_from_results()
 
         if delta_report:
             print(f"✅ Delta report generated: {delta_report.report_id}")
@@ -112,28 +85,6 @@ class DeltaReportService:
             print("⚠️ Delta report generation failed")
 
         return delta_report
-
-    @staticmethod
-    def generate_report_for_scan_result(scan_result_id: int) -> Optional[DeltaReport]:
-        """
-        Generate a delta report for a completed scan result.
-
-        Args:
-            scan_result_id: ID of the completed scan result
-
-        Returns:
-            DeltaReport: Generated report or None if conditions not met
-        """
-        scan_result = ScanResult.query.get(scan_result_id)
-
-        if not scan_result or scan_result.status != "completed":
-            return None
-
-        scan = scan_result.scan
-        if not scan:
-            return None
-
-        return scan.generate_delta_report_for_result(scan_result)
 
     @staticmethod
     def get_reports_by_user(

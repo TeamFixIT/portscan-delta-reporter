@@ -520,7 +520,6 @@ class PortScannerClient:
                 "scan_id": scan_request.scan_id,
                 "task_id": scan_request.task_id,
                 "result_id": scan_request.result_id,
-                "client_id": self.client_id,
                 "status": "failed",
                 "scan_duration": time.time() - start_time,
                 "parsed_results": {},
@@ -548,7 +547,7 @@ class PortScannerClient:
 
         for attempt in range(max_attempts):
             try:
-                url = f"{self.config['server_url']}/api/scan-results"
+                url = f"{self.config['server_url']}/api/clients/{self.client_id}/results"  # TODO parse client_id here instead through payload
 
                 # Use longer timeout for large payloads
                 num_targets = len(result_payload.get("parsed_results", {}))

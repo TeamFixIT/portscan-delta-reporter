@@ -114,34 +114,9 @@ class Scan(db.Model):
             current_result=current_result,
         )
 
-    def auto_generate_delta_report(self):
-        """
-        Automatically generate a delta report for the latest completed scan.
-        This should be called after a scan completes.
-
-        Returns:
-            DeltaReport: The generated report, or None if conditions not met
-        """
-        latest_result = self.get_latest_result()
-
-        if not latest_result or latest_result.status != "completed":
-            return None
-
-        # Check if we already have a delta report for this result
-        from app.models.delta_report import DeltaReport
-
-        existing = DeltaReport.query.filter_by(
-            current_result_id=latest_result.id
-        ).first()
-
-        if existing:
-            # Already generated
-            return existing
-
-        return self.generate_delta_report_for_result(latest_result)
-
     def get_delta_reports(self, page=1, per_page=10, only_with_changes=False):
         """
+        TODO move to DeltaReport model?
         Get paginated delta reports for this scan.
 
         Args:

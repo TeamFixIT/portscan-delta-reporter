@@ -4,7 +4,7 @@ Dashboard routes for web interface
 
 from app import db
 from flask import Blueprint, render_template, jsonify, abort, request, redirect, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
@@ -54,6 +54,13 @@ def scans():
     return render_template("dashboard/scans.html", scans=scan_list)
 
 
+@bp.route("/scans/create", methods=["GET"])
+@login_required
+def create_scan():
+    """Render the create scan page"""
+    return render_template("dashboard/create_scan.html")
+
+
 @bp.route("/scans/<int:scan_id>")
 @login_required
 def view_scan(scan_id):
@@ -97,15 +104,10 @@ def clients():
     return render_template("dashboard/clients.html", clients=client_list)
 
 
-@bp.route("/scans/create", methods=["GET"])
-@login_required
-def create_scan():
-    """Render the create scan page"""
-    return render_template("dashboard/create_scan.html")
-
-
 @bp.route("/reports")
 @login_required
-def reports():
-    """View generated reports"""
-    return True
+def scan_delta_reports():
+    """
+    Render the delta reports page.
+    """
+    return render_template("dashboard/reports.html")
