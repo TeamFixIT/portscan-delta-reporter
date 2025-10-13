@@ -26,19 +26,48 @@
     </div>
     <div class="mb-3">
       <label for="scan_arguments" class="form-label">Scan Arguments</label>
-      <input type="text" class="form-control" id="scan_arguments" name="scan_arguments" value="-sV -O" />
+      <input
+        type="text"
+        class="form-control"
+        id="scan_arguments"
+        name="scan_arguments"
+        value="-sV -O" />
     </div>
     <div class="mb-3">
       <label for="interval_minutes" class="form-label">Interval (minutes)</label>
-      <input type="number" class="form-control" id="interval_minutes" name="interval_minutes" value="10080" required />
+      <input
+        type="number"
+        class="form-control"
+        id="interval_minutes"
+        name="interval_minutes"
+        value="10080"
+        required />
       <div class="form-text">Weekly = 10080 minutes</div>
+    </div>
+    <div class="mb-3">
+      <label for="initial_interval" class="form-label">Initial Interval (minutes)</label>
+      <input
+        type="number"
+        class="form-control"
+        id="initial_interval"
+        name="initial_interval"
+        value="1"
+        required />
+      <div class="form-text">
+        Used for the first scan scheduling. Defaults to 1 minute if not provided.
+      </div>
     </div>
     <div class="form-check mb-2">
       <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked />
       <label class="form-check-label" for="is_active">Active</label>
     </div>
     <div class="form-check mb-3">
-      <input class="form-check-input" type="checkbox" id="is_scheduled" name="is_scheduled" checked />
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="is_scheduled"
+        name="is_scheduled"
+        checked />
       <label class="form-check-label" for="is_scheduled">Scheduled</label>
     </div>
     <button type="submit" class="btn btn-primary">Create Scan</button>
@@ -56,6 +85,7 @@
       ports: form.ports.value,
       scan_arguments: form.scan_arguments.value,
       interval_minutes: parseInt(form.interval_minutes.value, 10),
+      initial_interval: parseInt(form.initial_interval.value, 10) || 1,
       is_active: form.is_active.checked,
       is_scheduled: form.is_scheduled.checked,
     };
@@ -74,8 +104,9 @@
         resultDiv.innerHTML = `<div class='alert alert-success'>Scan created successfully!</div>`;
         form.reset();
       } else {
-        resultDiv.innerHTML = `<div class='alert alert-danger'>${respData.message || "Failed to create scan."
-          }</div>`;
+        resultDiv.innerHTML = `<div class='alert alert-danger'>${
+          respData.message || "Failed to create scan."
+        }</div>`;
       }
     } catch (err) {
       resultDiv.innerHTML = `<div class='alert alert-danger'>Error: ${err}</div>`;
