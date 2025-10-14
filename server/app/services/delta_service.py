@@ -31,11 +31,22 @@ class DeltaReportService:
         from app.models.scan_result import ScanResult
 
         # TODO implement generate_delta_report, need to get current_result first find previous results to compare against
-
-        scan_result = ScanResult.query.get(current_result_id)
-
         if not scan_result or scan_result.status != "completed":
             return None
+
+        previous_result = (
+            ScanResult.query.filter(
+                ScanResult.scan_id == scan_result.scan_id,
+                ScanResult.id < current_result_id,
+                ScanResult.status == "completed",
+            )
+            .order_by(ScanResult.id.desc())
+            .first()
+        )
+
+        if not previous_result:
+            print("ℹ️ No previous completed scan result found")
+            return None  # No previous result to compare
 
         existing = DeltaReport.query.filter_by(
             current_result_id=current_result_id
@@ -49,15 +60,10 @@ class DeltaReportService:
         print("🔄 Comparing aggregated results...")
         delta_report = DeltaReport.generate_from_results()
 
-        if delta_report:
-            print(f"✅ Delta report generated: {delta_report.report_id}")
-            print(
-                f"   Changes: {delta_report.new_ports_count} new ports, "
-                f"{delta_report.closed_ports_count} closed ports, "
-                f"{delta_report.new_hosts_count} new hosts"
-            )
-        else:
-            print("⚠️ Delta report generation failed")
+        # Generate delta with BOTH results
+        delta_report = DeltaReport.generate_from_results(
+            current_result, previous_result
+        )
 
         return delta_report
 
