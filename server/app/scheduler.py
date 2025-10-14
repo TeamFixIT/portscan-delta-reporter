@@ -139,16 +139,19 @@ def _execute_scan(scan_id):
                 return {"status": "error", "message": msg}
 
             # Create result record
-            task_group_id = str(uuid.uuid4())
-            result_id = str(uuid.uuid4())
             scan_result = ScanResult(
-                result_id=result_id,
                 scan_id=scan_id,
                 status="pending",
                 started_at=datetime.utcnow(),
             )
             db.session.add(scan_result)
 
+            # Flush to push to DB and populate auto-generated fields
+            db.session.flush()
+
+            result_id = scan_result.id
+
+            task_group_id = str(uuid.uuid4())
             assigned_targets = set()
             triggered_clients = 0
 

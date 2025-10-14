@@ -361,9 +361,9 @@ def receive_scan_results(client_id):
 
     Expected payload structure:
     {
+        "id": "result_789",
         "scan_id": "scan_123",
         "task_id": "task_456",
-        "result_id": "result_789",
         "status": "completed",
         "scan_duration": 45.2,
         "parsed_results": {
@@ -421,7 +421,7 @@ def receive_scan_results(client_id):
         task_id = data["task_id"]
 
         # Check if result already exists
-        scan_result = ScanResult.query.filter_by(result_id=result_id).first()
+        scan_result = ScanResult.query.filter_by(id=result_id).first()
 
         if not scan_result:
             logger.warning(f"Error: Scan result {result_id} not found")

@@ -13,7 +13,6 @@ class ScanResult(db.Model):
     __tablename__ = "scan_results"
 
     id = db.Column(db.Integer, primary_key=True)
-    result_id = db.Column(db.String(64), unique=True, nullable=False, index=True)
     scan_id = db.Column(
         db.Integer, db.ForeignKey("scans.id"), nullable=False, index=True
     )
@@ -55,7 +54,7 @@ class ScanResult(db.Model):
     )
 
     def __repr__(self):
-        return f"<ScanResult {self.result_id} - {self.status} ({self.completed_targets}/{self.total_targets})>"
+        return f"<ScanResult {self.status} ({self.completed_targets}/{self.total_targets})>"
 
     def update(self, result_data: Dict) -> bool:
         """
@@ -292,7 +291,6 @@ class ScanResult(db.Model):
         """Convert scan result to dictionary"""
         return {
             "id": self.id,
-            "result_id": self.result_id,
             "scan_id": self.scan_id,
             "status": self.status,
             "total_targets": self.total_targets,
@@ -313,7 +311,6 @@ class ScanResult(db.Model):
         """Convert scan result to summary dictionary (without full nmap data)"""
         return {
             "id": self.id,
-            "result_id": self.result_id,
             "scan_id": self.scan_id,
             "status": self.status,
             "total_targets": self.total_targets,

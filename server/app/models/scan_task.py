@@ -66,13 +66,14 @@ class ScanTask(db.Model):
         if scan_result_id:
             self.scan_result_id = scan_result_id
         db.session.commit()
-        return
+
+        from app.services.delta_service import DeltaReportService
 
         # TODO implement generate_delta_report
         # Check if all tasks in the group are completed
         if self.is_task_group_completed():
             print(f"✓ All tasks in group {self.task_group_id} completed!")
-            self.generate_delta_report()
+            DeltaReportService.generate_delta_report(self.scan_result_id)
         else:
             print(
                 f"⏳ Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}"
