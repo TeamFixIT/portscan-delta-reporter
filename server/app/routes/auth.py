@@ -3,8 +3,18 @@ Authentication routes
 """
 
 import re
+import msal
 from app.models.user import User
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import (
+    Blueprint,
+    render_template,
+    redirect,
+    url_for,
+    flash,
+    request,
+    jsonify,
+    session,
+)
 from app import db
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.urls import url_parse
@@ -13,9 +23,52 @@ from werkzeug.urls import url_parse
 bp = Blueprint("auth", __name__)
 
 
+def _build_msal_app(cache=None, authority=None):
+    """Build MSAL confidential client application"""
+    from flask import current_app
+
+    return msal.ConfidentialClientApplication(
+        current_app.config["ENTRA_CLIENT_ID"],
+        authority=authority or current_app.config["ENTRA_AUTHORITY"],
+        client_credential=current_app.config["ENTRA_CLIENT_SECRET"],
+        token_cache=cache,
+    )
+
+
+def _build_auth_url(authority=None, scopes=None, state=None):
+    """Build authentication URL for Entra ID"""
+    from flask import current_app
+
+    msal_app = _build_msal_app(authority=authority)
+    return msal_app.get_authorization_request_url(
+        scopes or current_app.config["ENTRA_SCOPE"],
+        state=state or str(session.get("state")),
+        redirect_uri=url_for("auth.entra_callback", _external=True),
+    )
+
+
+def validate_email(email):
+    """Validate email format"""
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return re.match(pattern, email) is not None
+
+
+def validate_password(password):
+    """Validate password strength"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters long"
+    if not re.search(r"[A-Z]", password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r"[0-9]", password):
+        return False, "Password must contain at least one number"
+    return True, "Password is valid"
+
+
 @bp.route("/login", methods=["GET", "POST"])
 def login():
-    """User login route"""
+    """User login route - supports both local and Entra ID"""
     if current_user.is_authenticated:
         return redirect(url_for("dashboard.index"))
 
@@ -70,6 +123,87 @@ def login():
             flash(error, "error")
 
     return render_template("auth/login.html")
+
+
+@bp.route("/entra/login")
+def entra_login():
+    """Initiate Entra ID login"""
+    from flask import current_app
+    import uuid
+
+    # Generate and store state for CSRF protection
+    state = str(uuid.uuid4())
+    session["state"] = state
+    session["next"] = request.args.get("next", url_for("dashboard.index"))
+
+    # Build authorization URL
+    auth_url = _build_auth_url(state=state)
+    return redirect(auth_url)
+
+
+@bp.route("/entra/callback")
+def entra_callback():
+    """Handle Entra ID callback"""
+    from flask import current_app
+
+    # Verify state for CSRF protection
+    if request.args.get("state") != session.get("state"):
+        flash("Invalid state parameter. Please try again.", "error")
+        return redirect(url_for("auth.login"))
+
+    # Check for errors from Entra ID
+    if "error" in request.args:
+        error = request.args.get("error")
+        error_description = request.args.get("error_description", "Unknown error")
+        flash(f"Authentication failed: {error_description}", "error")
+        return redirect(url_for("auth.login"))
+
+    # Exchange authorization code for token
+    if "code" not in request.args:
+        flash("No authorization code received.", "error")
+        return redirect(url_for("auth.login"))
+
+    try:
+        msal_app = _build_msal_app()
+        result = msal_app.acquire_token_by_authorization_code(
+            request.args["code"],
+            scopes=current_app.config["ENTRA_SCOPE"],
+            redirect_uri=url_for("auth.entra_callback", _external=True),
+        )
+
+        if "error" in result:
+            flash(
+                f"Authentication failed: {result.get('error_description', 'Unknown error')}",
+                "error",
+            )
+            return redirect(url_for("auth.login"))
+
+        # Get user info from token
+        user_info = result.get("id_token_claims")
+
+        # Get or create user
+        user = User.get_or_create_from_entra(user_info)
+
+        if not user.is_active:
+            flash("Account is deactivated. Please contact administrator.", "error")
+            return redirect(url_for("auth.login"))
+
+        # Log user in
+        login_user(user)
+        user.update_last_login()
+
+        # Get next page from session
+        next_page = session.pop("next", url_for("dashboard.index"))
+        if url_parse(next_page).netloc != "":
+            next_page = url_for("dashboard.index")
+
+        flash(f"Welcome back, {user.get_full_name()}!", "success")
+        return redirect(next_page)
+
+    except Exception as e:
+        current_app.logger.error(f"Entra ID authentication error: {str(e)}")
+        flash("Authentication failed. Please try again.", "error")
+        return redirect(url_for("auth.login"))
 
 
 @bp.route("/register", methods=["GET", "POST"])
@@ -175,8 +309,19 @@ def register():
 def logout():
     """User logout route"""
     username = current_user.username
+    is_sso = current_user.is_sso_user()
     logout_user()
+    session.clear()
+
     flash(f"You have been logged out, {username}.", "info")
+
+    # For SSO users, optionally redirect to Entra ID logout
+    if is_sso and request.args.get("full_logout"):
+        from flask import current_app
+
+        entra_logout_url = f"{current_app.config['ENTRA_AUTHORITY']}/oauth2/v2.0/logout?post_logout_redirect_uri={url_for('auth.login', _external=True)}"
+        return redirect(entra_logout_url)
+
     return redirect(url_for("auth.login"))
 
 
@@ -199,8 +344,12 @@ def update_profile():
 
     errors = []
 
-    # Validate email
-    if email and email != current_user.email:
+    # SSO users cannot change email
+    if current_user.is_sso_user() and email != current_user.email:
+        errors.append("Email cannot be changed for SSO accounts")
+
+    # Validate email for local users
+    if not current_user.is_sso_user() and email and email != current_user.email:
         if not validate_email(email):
             errors.append("Please enter a valid email address")
         elif User.query.filter_by(email=email).first():
@@ -217,7 +366,7 @@ def update_profile():
     try:
         current_user.first_name = first_name if first_name else None
         current_user.last_name = last_name if last_name else None
-        if email and email != current_user.email:
+        if not current_user.is_sso_user() and email and email != current_user.email:
             current_user.email = email
 
         db.session.commit()
@@ -242,7 +391,14 @@ def update_profile():
 @bp.route("/change-password", methods=["POST"])
 @login_required
 def change_password():
-    """Change user password"""
+    """Change user password - only for local users"""
+    if current_user.is_sso_user():
+        error = "Password cannot be changed for SSO accounts"
+        if request.is_json:
+            return jsonify({"success": False, "error": error}), 403
+        flash(error, "error")
+        return redirect(url_for("auth.profile"))
+
     data = request.get_json() if request.is_json else request.form
 
     current_password = data.get("current_password", "")

@@ -182,7 +182,9 @@ def create_scan():
 
         # Calculate next run if scheduled
         if scan.is_scheduled and scan.is_active:
-            scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
+            # Use initial_interval if provided for immediate first execution
+            initial_interval = data.get("initial_interval", 1)
+            scan.next_run = datetime.utcnow() + timedelta(minutes=initial_interval)
 
         db.session.add(scan)
         db.session.commit()
