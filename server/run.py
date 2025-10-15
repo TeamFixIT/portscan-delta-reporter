@@ -91,8 +91,8 @@ if __name__ == "__main__":
     if config_name == "development":
         # Development server with debug mode
         app.run(
-            host="127.0.0.1",
-            port=int(os.environ.get("PORT", 2000)),
+            host="localhost",
+            port=int(os.environ.get("PORT", 5000)),
             debug=True,
             threaded=True,
         )
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         # Production - should use gunicorn or similar WSGI server
         app.run(
             host="0.0.0.0",
-            port=int(os.environ.get("PORT", 2000)),
+            port=int(os.environ.get("PORT", 5000)),
             debug=False,
             threaded=True,
         )

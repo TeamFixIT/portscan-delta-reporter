@@ -174,6 +174,9 @@ def _execute_scan(scan_id):
                 db.session.add(task)
 
                 try:
+                    logger.info(
+                        f"Triggered scan on client {client.ip_address} for {len(targets_for_client)} targets."
+                    )
                     url = f"http://{client.ip_address}:8080/scan"
                     payload = {
                         "scan_id": scan_id,
@@ -192,7 +195,10 @@ def _execute_scan(scan_id):
                     logger.info(
                         f"Triggered scan on client {client.client_id} for {len(targets_for_client)} targets."
                     )
-
+                except requests.exceptions.RequestException:
+                    msg = f"Failed to contact client at {client.ip_address}"
+                    logger.warning(msg)
+                    return {"status": "error", "message": msg}
                 except Exception:
                     msg = f"{req.json().get('error', 'Unknown error')}"
                     logger.warning(msg)

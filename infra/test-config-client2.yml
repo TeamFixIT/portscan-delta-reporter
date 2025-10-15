@@ -1,5 +1,5 @@
-# Test Configuration for Port Scanner Client Agent
-# This configuration is used in the Docker test environment
+# Test Configuration for Port Scanner Client Agent #2
+# Second client with different scan range
 
 # Server connection settings - points to Docker service
 server_url: "http://server:5000"
@@ -28,32 +28,17 @@ log_backup_count: 3
 nmap_max_parallelism: 100
 nmap_min_rate: 50
 
-# Client identification
+# Client identification - DIFFERENT from client 1
 client_port: 8080
 client_host: "0.0.0.0"
-client_id: "rpi-test-client-001"
-hostname: "rpi-docker-client"
+client_id: "rpi-test-client-002"
+hostname: "rpi-docker-client-2"
 
-# Scan range for client 1 - focuses on first half of targets
-scan_range: "172.20.0.0/28"
+# Scan range for second client - focuses on different targets
+scan_range: "172.20.0.16/28"
 
-# Test targets for quick validation
+# Test targets for client 2 (different subset)
 test_targets:
-  - name: "SSH Server"
-    ip: "172.20.0.10"
-    ports: "22,2222"
-    description: "OpenSSH server for testing SSH scans"
-
-  - name: "Web Server"
-    ip: "172.20.0.11"
-    ports: "80,443"
-    description: "Nginx web server for testing HTTP scans"
-
-  - name: "Database Server"
-    ip: "172.20.0.12"
-    ports: "3306"
-    description: "MySQL database for testing DB scans"
-
   - name: "FTP Server"
     ip: "172.20.0.13"
     ports: "21,30000-30009"

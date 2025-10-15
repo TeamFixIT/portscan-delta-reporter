@@ -55,26 +55,37 @@ def register_client():
             client.ip_address = ip_address or client.ip_address
             client.scan_range = scan_range
             client.last_seen = datetime.utcnow()
-            client.mark_online()
-            message = "Client updated successfully"
+
+            # Only mark online if approved
+            if client.approved:
+                client.mark_online()
+                message = "Client updated successfully"
+            else:
+                message = "Client updated but awaiting approval"
         else:
-            # Create new client
+            # Create new client (pending approval)
             client = Client(
                 client_id=client_id,
                 hostname=hostname,
                 ip_address=ip_address,
                 scan_range=scan_range,
-                status="online",
+                status="offline",
                 last_seen=datetime.utcnow(),
+                approved=False,  # New clients require approval
             )
             db.session.add(client)
-            message = "Client registered successfully"
+            message = "Client registered successfully - awaiting approval"
 
         db.session.commit()
 
         return (
             jsonify(
-                {"status": "success", "message": message, "client": client.to_dict()}
+                {
+                    "status": "success",
+                    "message": message,
+                    "client": client.to_dict(),
+                    "approved": client.approved,
+                }
             ),
             200,
         )
@@ -135,7 +146,9 @@ def update_client(client_id):
         if "ip_address" in data:
             client.ip_address = data["ip_address"]
         if "status" in data and data["status"] in ["online", "offline", "scanning"]:
-            client.status = data["status"]
+            # Only allow status changes if approved
+            if client.approved or data["status"] == "offline":
+                client.status = data["status"]
 
         client.last_seen = datetime.utcnow()
         db.session.commit()
@@ -188,16 +201,48 @@ def client_heartbeat(client_id):
         client = Client.query.filter_by(client_id=client_id).first()
 
         if not client:
-            # Auto-register if not found
+            # Auto-register if not found (pending approval)
             data = request.get_json() or {}
             client = Client(
                 client_id=client_id,
                 hostname=data.get("hostname", "Unknown"),
                 ip_address=data.get("ip_address", request.remote_addr),
-                status="online",
+                status="offline",
+                approved=False,
             )
             db.session.add(client)
+            db.session.commit()
 
+            return (
+                jsonify(
+                    {
+                        "status": "pending_approval",
+                        "message": "Client registered but requires approval",
+                        "approved": False,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                ),
+                403,
+            )
+
+        # Check if client is approved
+        if not client.approved:
+            client.last_seen = datetime.utcnow()
+            db.session.commit()
+
+            return (
+                jsonify(
+                    {
+                        "status": "pending_approval",
+                        "message": "Client is not approved yet",
+                        "approved": False,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    }
+                ),
+                403,
+            )
+
+        # Client is approved - update heartbeat
         client.last_seen = datetime.utcnow()
         client.mark_online()
 
@@ -209,13 +254,100 @@ def client_heartbeat(client_id):
         db.session.commit()
 
         return (
-            jsonify({"status": "success", "timestamp": datetime.utcnow().isoformat()}),
+            jsonify(
+                {
+                    "status": "success",
+                    "approved": True,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            ),
             200,
         )
 
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Heartbeat failed: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ============== CLIENT APPROVAL ENDPOINTS ==============
+
+
+@bp.route("/clients/<client_id>/approve", methods=["POST"])
+@login_required
+def approve_client(client_id):
+    """Approve a client (requires login)"""
+    try:
+        client = Client.query.filter_by(client_id=client_id).first()
+
+        if not client:
+            return jsonify({"status": "error", "message": "Client not found"}), 404
+
+        if client.approved:
+            return (
+                jsonify({"status": "success", "message": "Client is already approved"}),
+                200,
+            )
+
+        # Approve the client
+        client.approve(approved_by_user_id=current_user.id)
+
+        logger.info(f"Client {client_id} approved by user {current_user.username}")
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Client approved successfully",
+                    "client": client.to_dict(),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to approve client: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@bp.route("/clients/<client_id>/revoke", methods=["POST"])
+@login_required
+def revoke_client_approval(client_id):
+    """Revoke client approval (requires login)"""
+    try:
+        client = Client.query.filter_by(client_id=client_id).first()
+
+        if not client:
+            return jsonify({"status": "error", "message": "Client not found"}), 404
+
+        if not client.approved:
+            return (
+                jsonify({"status": "success", "message": "Client is not approved"}),
+                200,
+            )
+
+        # Revoke approval
+        client.revoke_approval()
+
+        logger.info(
+            f"Client {client_id} approval revoked by user {current_user.username}"
+        )
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Client approval revoked successfully",
+                    "client": client.to_dict(),
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to revoke client approval: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

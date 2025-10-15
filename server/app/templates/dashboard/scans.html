@@ -1,5 +1,4 @@
-{% extends "base.html" %}
-{% block content %}
+{% extends "base.html" %} {% block content %}
 <div class="container mt-4">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -31,7 +30,9 @@
       {% for scan in scans %}
       <tr id="scan-row-{{ scan.id }}">
         <td>
-          <a href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}" class="fw-semibold text-decoration-none">
+          <a
+            href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
+            class="fw-semibold text-decoration-none">
             {{ scan.name }}
           </a>
         </td>
@@ -51,17 +52,28 @@
         <td>{{ scan.last_run or 'Never' }}</td>
         <td>
           <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-primary execute-scan-btn" data-scan-id="{{ scan.id }}" title="Execute Now">
+            <button
+              class="btn btn-primary execute-scan-btn"
+              data-scan-id="{{ scan.id }}"
+              title="Execute Now">
               <i class="bi bi-play-fill"></i>
             </button>
-            <button class="btn btn-outline-info toggle-active-btn" data-scan-id="{{ scan.id }}" title="Toggle Schedule">
+            <button
+              class="btn btn-outline-info toggle-active-btn"
+              data-scan-id="{{ scan.id }}"
+              title="Toggle Schedule">
               <i class="bi bi-power"></i>
             </button>
-            <a href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}" class="btn btn-outline-warning"
+            <a
+              href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}"
+              class="btn btn-outline-warning"
               title="Edit Scan">
               <i class="bi bi-pencil"></i>
             </a>
-            <button class="btn btn-outline-danger delete-scan-btn" data-scan-id="{{ scan.id }}" title="Delete Scan">
+            <button
+              class="btn btn-outline-danger delete-scan-btn"
+              data-scan-id="{{ scan.id }}"
+              title="Delete Scan">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -69,7 +81,9 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" class="text-center text-muted py-4">No scans found. Click "New Scan" to create one.</td>
+        <td colspan="8" class="text-center text-muted py-4">
+          No scans found. Click "New Scan" to create one.
+        </td>
       </tr>
       {% endfor %}
     </tbody>

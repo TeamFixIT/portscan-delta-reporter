@@ -1,7 +1,7 @@
 # Port Scanner Client Configuration
 
 # Server connection settings
-server_url: "http://localhost:2000" # Change to your server address
+server_url: "http://localhost:5000" # Change to your server address
 
 # Scanning behavior
 check_interval: 30 # How often to check for new tasks (seconds)

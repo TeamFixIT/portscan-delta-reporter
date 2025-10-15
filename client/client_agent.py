@@ -52,21 +52,6 @@ class ScanRequest:
     scan_arguments: Optional[str] = None
 
 
-@dataclass
-class ScanResult:
-    """Represents the complete result of a port scan"""
-
-    scan_id: str
-    task_id: str
-    result_id: str
-    client_id: str
-    scan_duration: float
-    status: str  # 'in_progress', 'completed', 'failed'
-    target_results: list  # List of target result dicts
-    total_targets: int
-    error_message: Optional[str] = None
-
-
 class PortScannerClient:
     """Client agent for performing network scans"""
 
@@ -76,6 +61,7 @@ class PortScannerClient:
         self.config = self._load_config(config_file)
         self.nm = nmap.PortScanner()
         self.registered = False
+        self.approved = False  # New approval flag
 
         # Scan range (from config)
         self.scan_range = self.config.get("scan_range")
@@ -116,8 +102,9 @@ class PortScannerClient:
             "max_concurrent_scans": 2,
             "retry_attempts": 3,
             "retry_delay": 5,
-            "client_host": "0.0.0.0",  # Listen on all interfaces
-            "scan_range": None,  # Add scan_range to config
+            "client_host": "0.0.0.0",
+            "scan_range": None,
+            "check_approval_interval": 30,  # Check approval status every 30 seconds
         }
 
         try:
@@ -131,6 +118,25 @@ class PortScannerClient:
 
         return default_config
 
+    def _check_approval_status(self) -> bool:
+        """Check if client is approved by the server"""
+        try:
+            url = f"{self.config['server_url']}/api/clients/{self.client_id}"
+            response = requests.get(url, timeout=5)
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "success":
+                    client_info = data.get("client", {})
+                    self.approved = client_info.get("approved", False)
+                    return self.approved
+
+            return False
+
+        except Exception as e:
+            logger.debug(f"Failed to check approval status: {e}")
+            return False
+
     def _setup_routes(self):
         """Setup Flask routes for handling incoming requests"""
 
@@ -142,6 +148,7 @@ class PortScannerClient:
                     "status": "healthy",
                     "client_id": self.client_id,
                     "hostname": self.hostname,
+                    "approved": self.approved,
                     "active_scans": len(self.active_scans),
                     "system_info": self.get_system_info(),
                 }
@@ -151,6 +158,19 @@ class PortScannerClient:
         def receive_scan_request():
             """Receive scan request from server"""
             try:
+                # Check if client is approved
+                if not self.approved:
+                    logger.warning("Received scan request but client is not approved")
+                    return (
+                        jsonify(
+                            {
+                                "error": "Client is not approved",
+                                "status": "pending_approval",
+                            }
+                        ),
+                        403,
+                    )
+
                 data = request.get_json()
                 if not data:
                     return jsonify({"error": "No JSON data provided"}), 400
@@ -177,10 +197,9 @@ class PortScannerClient:
                     scan_name=data.get("scan_name"),
                     scan_arguments=data.get("scan_arguments"),
                 )
-                # Check if scan already exists
 
+                # Check if scan already exists
                 if scan_request.scan_id in self.active_scans:
-                    print("Scan already running")
                     return (
                         jsonify(
                             {
@@ -216,6 +235,9 @@ class PortScannerClient:
         def cancel_scan(scan_id):
             """Cancel a running scan"""
             try:
+                if not self.approved:
+                    return jsonify({"error": "Client is not approved"}), 403
+
                 if scan_id not in self.active_scans:
                     return jsonify({"error": "Scan not found"}), 404
 
@@ -251,7 +273,13 @@ class PortScannerClient:
                             }
                         )
 
-                return jsonify({"active_scans": scans, "count": len(scans)})
+                return jsonify(
+                    {
+                        "active_scans": scans,
+                        "count": len(scans),
+                        "approved": self.approved,
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"Error listing scans: {e}")
@@ -292,9 +320,18 @@ class PortScannerClient:
                 response = requests.post(url, json=data, timeout=10)
 
                 if response.status_code == 200:
-                    logger.info(
-                        f"Successfully registered with server as {self.client_id}"
-                    )
+                    response_data = response.json()
+                    self.approved = response_data.get("approved", False)
+
+                    if self.approved:
+                        logger.info(
+                            f"Successfully registered and approved with server as {self.client_id}"
+                        )
+                    else:
+                        logger.warning(
+                            f"Registered with server as {self.client_id} but awaiting approval"
+                        )
+
                     self.registered = True
                     return True
                 else:
@@ -315,6 +352,10 @@ class PortScannerClient:
         """Start heartbeat thread to maintain connection with server"""
 
         def heartbeat_loop():
+            check_interval = self.config.get("check_approval_interval", 30)
+            heartbeat_interval = self.config.get("heartbeat_interval", 60)
+            last_approval_check = 0
+
             while True:
                 try:
                     url = f"{self.config['server_url']}/api/clients/{self.client_id}/heartbeat"
@@ -325,9 +366,28 @@ class PortScannerClient:
                         "active_scans": len(self.active_scans),
                         "system_info": self.get_system_info(),
                     }
+
                     response = requests.post(url, json=data, timeout=5)
+
                     if response.status_code == 200:
+                        response_data = response.json()
+                        self.approved = response_data.get("approved", False)
                         logger.debug("Heartbeat sent successfully")
+
+                    elif response.status_code == 403:
+                        # Client not approved
+                        response_data = response.json()
+                        was_approved = self.approved
+                        self.approved = False
+
+                        if was_approved:
+                            logger.warning("Client approval has been revoked")
+                        else:
+                            now = time.time()
+                            if now - last_approval_check >= check_interval:
+                                logger.info("Still awaiting approval from server...")
+                                last_approval_check = now
+
                     else:
                         logger.debug(
                             f"Heartbeat failed with status: {response.status_code}"
@@ -336,7 +396,13 @@ class PortScannerClient:
                 except Exception as e:
                     logger.debug(f"Heartbeat failed: {e}")
 
-                time.sleep(self.config.get("heartbeat_interval", 60))
+                # Periodically check approval status if not approved
+                now = time.time()
+                if not self.approved and now - last_approval_check >= check_interval:
+                    self._check_approval_status()
+                    last_approval_check = now
+
+                time.sleep(heartbeat_interval)
 
         thread = threading.Thread(target=heartbeat_loop, daemon=True)
         thread.start()
@@ -418,6 +484,33 @@ class PortScannerClient:
         start_time = time.time()
 
         try:
+            # Double-check approval before starting scan
+            if not self.approved:
+                logger.error(
+                    f"Cannot perform scan {scan_request.scan_id} - client not approved"
+                )
+                result_payload = {
+                    "scan_id": scan_request.scan_id,
+                    "task_id": scan_request.task_id,
+                    "result_id": scan_request.result_id,
+                    "client_id": self.client_id,
+                    "status": "failed",
+                    "scan_duration": time.time() - start_time,
+                    "parsed_results": {},
+                    "summary_stats": {
+                        "total_targets": len(scan_request.targets),
+                        "scanned_targets": 0,
+                        "targets_up": 0,
+                        "targets_down": 0,
+                        "error_targets": 0,
+                        "total_open_ports": 0,
+                    },
+                    "error_message": "Client is not approved",
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+                self.send_scan_results(result_payload)
+                return
+
             logger.info(
                 f"Starting scan {scan_request.scan_id} with {len(scan_request.targets)} targets"
             )
@@ -426,6 +519,7 @@ class PortScannerClient:
             scan_args = f"-s{scan_request.scan_type.upper()}"
             if scan_request.scan_arguments:
                 scan_args += f" {scan_request.scan_arguments}"
+
             # Perform scan for all targets
             targets_str = " ".join(scan_request.targets)
             logger.info(f"Scanning targets: {targets_str}")
@@ -486,7 +580,7 @@ class PortScannerClient:
                         "port_details": {},
                         "error": str(e),
                     }
-                    summary_stats["failed_targets"] += 1
+                    summary_stats["error_targets"] += 1
 
             # Prepare result payload
             result_payload = {
@@ -520,14 +614,16 @@ class PortScannerClient:
                 "scan_id": scan_request.scan_id,
                 "task_id": scan_request.task_id,
                 "result_id": scan_request.result_id,
+                "client_id": self.client_id,
                 "status": "failed",
                 "scan_duration": time.time() - start_time,
                 "parsed_results": {},
                 "summary_stats": {
                     "total_targets": len(scan_request.targets),
-                    "up_targets": 0,
-                    "down_targets": 0,
-                    "failed_targets": len(scan_request.targets),
+                    "scanned_targets": 0,
+                    "targets_up": 0,
+                    "targets_down": 0,
+                    "error_targets": len(scan_request.targets),
                     "total_open_ports": 0,
                 },
                 "error_message": str(e),
@@ -547,7 +643,9 @@ class PortScannerClient:
 
         for attempt in range(max_attempts):
             try:
-                url = f"{self.config['server_url']}/api/clients/{self.client_id}/results"  # TODO parse client_id here instead through payload
+                url = (
+                    f"{self.config['server_url']}/api/clients/{self.client_id}/results"
+                )
 
                 # Use longer timeout for large payloads
                 num_targets = len(result_payload.get("parsed_results", {}))
@@ -561,6 +659,9 @@ class PortScannerClient:
                         f"({num_targets} targets)"
                     )
                     return True
+                elif response.status_code == 403:
+                    logger.error("Cannot send results - client is not approved")
+                    return False
                 else:
                     logger.warning(
                         f"Server returned status {response.status_code}: "
@@ -620,6 +721,12 @@ class PortScannerClient:
             logger.info(
                 f"Client ready to receive scan requests on http://{host}:{port}"
             )
+
+            if not self.approved:
+                logger.warning(
+                    "⚠️  Client is NOT approved yet. Waiting for server approval..."
+                )
+
             return True
 
         except Exception as e:
@@ -693,7 +800,7 @@ class PortScannerClient:
                 if completed_scans:
                     logger.debug(f"Cleaned up {len(completed_scans)} completed scans")
 
-                # Wait before checking again - use a default value if not in config
+                # Wait before checking again
                 check_interval = self.config.get("check_interval", 10)
                 time.sleep(check_interval)
 
@@ -711,7 +818,9 @@ def main():
     """Entry point for the client agent"""
     import argparse
 
-    parser = argparse.ArgumentParser(description="Push-Based Port Scanner Client Agent")
+    parser = argparse.ArgumentParser(
+        description="Push-Based Port Scanner Client Agent with Approval System"
+    )
     parser.add_argument(
         "--config",
         default="config.yml",

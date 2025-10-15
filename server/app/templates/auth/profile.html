@@ -486,7 +486,7 @@
               changePasswordBtn.classList.remove("btn-success");
               changePasswordBtn.classList.add("btn-primary");
               changePasswordBtn.disabled = false;
-            }, 2000);
+            }, 5000);
           } else {
             const errors = data.errors || [data.error];
             errors.forEach((error) => showAlert("danger", error));
