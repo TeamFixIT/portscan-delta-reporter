@@ -19,6 +19,7 @@ bp = Blueprint("dashboard", __name__)
 @bp.route("/")
 @login_required
 def index():
+    count = 0
     """Dashboard home"""
     active_clients = Client.query.filter_by(status="online").count()
     recent_scans = Scan.query.filter(

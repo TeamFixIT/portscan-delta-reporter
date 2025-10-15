@@ -4,7 +4,6 @@ Main routes for the Port Scanner Delta Reporter
 
 from flask import Blueprint, render_template
 
-
 bp = Blueprint("main", __name__)
 
 
