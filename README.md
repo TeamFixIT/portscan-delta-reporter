@@ -44,30 +44,6 @@ This project is being built as part of an academic engagement with Murdoch Unive
 - **Python 3.8+** (Python 3.10+ recommended)
 - **nmap** installed on system
 - **Git**
-- **For Windows**: Visual C++ Build Tools (see [Windows Setup Guide](WINDOWS_SETUP.md))
-
-### Quick Setup
-
-**📱 For macOS/Linux/WSL:**
-
-```bash
-cd server
-./setup.sh
-```
-
-**🪟 For Windows:**
-
-```cmd
-cd server
-setup-windows.bat
-```
-
-**🔧 For Raspberry Pi/Client:**
-
-```bash
-cd client
-./setup.sh
-```
 
 ### Cross-Platform Manual Installation
 
@@ -95,21 +71,27 @@ python run.py
 
 **Windows:**
 
-```cmd
-REM Navigate to server directory
+```bash
+# Navigate to server directory
 cd server
 
-REM Create and activate virtual environment
+# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate.bat
+source venv/Scripts/activate
 
-REM Install dependencies
+# Install dependencies
 pip install -r requirements.txt
 
-REM Initialize database
-python run.py init-db
+# Define flask app entry
+export FLASK_APP=run.py
 
-REM Start server
+# Setup flask app
+flask db init
+flask db migrate -m 'Initial migration'
+flask db upgrade
+flask create-admin
+
+# Start server
 python run.py
 ```
 
@@ -123,7 +105,7 @@ cd client
 python3 -m venv venv
 source venv/bin/activate  # macOS/Linux
 # OR
-venv\Scripts\activate.bat  # Windows
+source venv/Scripts/activate  # Windows
 
 # Install dependencies
 pip install -r requirements.txt
@@ -131,7 +113,7 @@ pip install -r requirements.txt
 # Copy and edit config
 cp config.example.yml config.yml  # macOS/Linux
 # OR
-copy config.example.yml config.yml  # Windows
+cp config.example.yml config.yml  # Windows
 # Edit config.yml with your server details
 
 # Start client
@@ -144,35 +126,16 @@ python client_agent.py
 
 1. **Install recommended extensions** (prompted when opening workspace)
 2. **Use Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`):
-   - `Tasks: Run Task` → Select setup/start tasks
+   - `Tasks: Run Task` → Select Initial DB Setup + Create Admin User + Start All Services (in order)
    - `Python: Select Interpreter` → Choose venv interpreter
 
 **Available Tasks:**
 
-- **Setup Server Environment** - Create venv and install dependencies
-- **Setup Client Environment** - Create venv and install dependencies
+- **Setup Server** - Create venv and install dependencies
+- **Setup Client** - Create venv and install dependencies
 - **Start Server** - Launch Flask development server
 - **Start Client** - Launch scanning client agent
-- **Initialize Database** - Create database tables
-- **Run Tests** - Execute pytest for server/client
-- **Docker: Start/Stop Services** - Manage Docker containers
-
-**Debug Configurations:**
-
-- **Debug Server** - Flask app with breakpoints
-- **Debug Client** - Client agent with breakpoints
-- **Debug Server + Client** - Both components simultaneously
-
-**Usage:**
-
-```bash
-# Quick start via VS Code
-1. Open workspace in VS Code
-2. Press F5 or use Debug panel
-3. Select "Debug Server + Client" for full system debug
-```
-
----
+- **Initial DB Setup** - Create database tables
 
 ## Folder Structure
 
@@ -203,18 +166,6 @@ python client_agent.py
 ├─ .github/                       # CI workflows
 └─ README.md
 ```
-
----
-
-## Roadmap
-
-- [ ] Build core scanning + baseline storage
-- [ ] Implement delta detection logic
-- [ ] Add reporting engine
-- [ ] Create Flask web dashboard
-- [ ] Add scheduling support
-- [ ] Polish UI/UX for client delivery
-
 ---
 
 ## License
