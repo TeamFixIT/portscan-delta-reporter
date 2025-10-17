@@ -105,10 +105,28 @@ def clients():
     return render_template("dashboard/clients.html", clients=client_list)
 
 
+@bp.route("/scans/<int:scan_id>/reports")
+@login_required
+def scan_reports(scan_id):
+    """
+    Render the delta reports page for a specific scan.
+
+    URL: /scans/5/reports
+    """
+    scan = Scan.query.get_or_404(scan_id)
+
+    # Check authorization
+    if scan.user_id != current_user.id and not current_user.is_admin:
+        abort(403)
+
+    return render_template("dashboard/scan_reports.html", scan=scan)
+
+
 @bp.route("/reports")
 @login_required
 def reports():
     """
     Render the delta reports page.
     """
-    return render_template("dashboard/reports.html")
+    reports_list = DeltaReport.query.all()
+    return render_template("dashboard/reports.html", reports=reports_list)

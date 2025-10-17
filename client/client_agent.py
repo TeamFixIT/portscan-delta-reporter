@@ -14,6 +14,7 @@ import subprocess
 import sys
 import time
 import threading
+import ipaddress
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -52,6 +53,149 @@ class ScanRequest:
     scan_arguments: Optional[str] = None
 
 
+class ScanCallback:
+    """Callback class for handling nmap scan results"""
+
+    def __init__(self):
+        self.parsed_results = {}
+        self.summary_stats = {
+            "total_targets": 0,
+            "scanned_targets": 0,
+            "targets_up": 0,
+            "targets_down": 0,
+            "error_targets": 0,
+            "total_open_ports": 0,
+        }
+
+    def callback_result(self, host, scan_result):
+        """Callback function for nmap scan results"""
+
+        try:
+            # Extract scan data
+            target_data = self._extract_scan_data(scan_result, host)
+            self.parsed_results[host] = target_data
+            # Update summary statistics
+            if target_data["state"] == "up":
+                self.summary_stats["scanned_targets"] += 1
+                self.summary_stats["targets_up"] += 1
+                self.summary_stats["total_open_ports"] += len(target_data["open_ports"])
+            elif target_data["state"] == "down":
+                self.summary_stats["scanned_targets"] += 1
+                self.summary_stats["targets_down"] += 1
+            elif target_data["state"] == "error":
+                self.summary_stats["error_targets"] += 1
+
+            # Log summary
+            open_ports_count = len(target_data["open_ports"])
+            logger.info(
+                f"Processed target {host}: {target_data['state']} - "
+                f"{open_ports_count} open ports"
+            )
+
+        except Exception as e:
+            logger.error(f"Error processing results for target {host}: {e}")
+            self.parsed_results[host] = {
+                "hostname": "",
+                "state": "error",
+                "open_ports": [],
+                "port_details": {},
+                "error": str(e),
+            }
+            self.summary_stats["error_targets"] += 1
+
+    def _extract_scan_data(self, scan_results, target: str) -> Dict:
+        """Extract all scan data from nmap results for easier server processing"""
+        try:
+            result = {
+                "target": target,
+                "nmap": {},  # For top-level nmap metadata
+                "hostname": "",
+                "state": "down",
+                "addresses": {},
+                "vendor": {},
+                "open_ports": [],
+                "port_details": {},
+                "os_detection": None,
+            }
+
+            # Extract top-level nmap metadata (command_line, scaninfo, scanstats)
+            if "nmap" in scan_results:
+                result["nmap"] = {
+                    "command_line": scan_results["nmap"].get("command_line", ""),
+                    "scaninfo": scan_results["nmap"].get("scaninfo", {}),
+                    "scanstats": scan_results["nmap"].get("scanstats", {}),
+                }
+
+            # Get basic host information from scan results
+            target_data = scan_results["scan"].get(target, {})
+            result["hostname"] = target_data.get("hostnames", [{}])[0].get("name", "")
+            result["state"] = target_data.get("status", {}).get("state", "down")
+            result["addresses"] = target_data.get("addresses", {})
+            result["vendor"] = target_data.get("vendor", {})
+
+            # Extract port information from all protocols
+            open_ports = []
+            port_details = {}
+
+            # Get protocols from scan results
+            protocols = (
+                target_data.get("tcp", {}).keys() if "tcp" in target_data else []
+            )
+            if "udp" in target_data:
+                protocols = list(protocols) + list(target_data.get("udp", {}).keys())
+
+            for proto in ["tcp", "udp"]:
+                if proto in target_data:
+                    ports = target_data[proto].keys()
+                    for port in sorted(ports):
+                        port_info = target_data[proto][port]
+                        port_state = port_info.get("state", "unknown")
+                        # Only include open ports in the list
+                        if port_state == "open":
+                            open_ports.append(int(port))
+                        # Store detailed information for this port
+                        port_details[str(port)] = {
+                            "protocol": proto,
+                            "state": port_state,
+                            "name": port_info.get("name", "unknown"),
+                            "product": port_info.get("product", ""),
+                            "version": port_info.get("version", ""),
+                            "extrainfo": port_info.get("extrainfo", ""),
+                            "reason": port_info.get("reason", ""),
+                            "conf": port_info.get("conf", ""),
+                            "cpe": port_info.get("cpe", ""),
+                        }
+
+            result["open_ports"] = sorted(open_ports)
+            result["port_details"] = port_details
+
+            # Add OS detection if available
+            if "osmatch" in target_data:
+                os_matches = target_data["osmatch"]
+                if os_matches:
+                    result["os_detection"] = {
+                        "name": os_matches[0].get("name", ""),
+                        "accuracy": os_matches[0].get("accuracy", ""),
+                    }
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error extracting scan data for {target}: {e}")
+            return {
+                "target": target,
+                "nmap": {},
+                "hostname": "",
+                "state": "error",
+                "addresses": {},
+                "vendor": {},
+                "open_ports": [],
+                "port_details": {},
+                "os_detection": None,
+                "error": str(e),
+            }
+
+
 class PortScannerClient:
     """Client agent for performing network scans"""
 
@@ -59,9 +203,9 @@ class PortScannerClient:
         self.client_id = self._get_client_id()
         self.hostname = socket.gethostname()
         self.config = self._load_config(config_file)
-        self.nm = nmap.PortScanner()
+        self.nm = nmap.PortScannerYield()
         self.registered = False
-        self.approved = False  # New approval flag
+        self.approved = False
 
         # Scan range (from config)
         self.scan_range = self.config.get("scan_range")
@@ -118,25 +262,6 @@ class PortScannerClient:
 
         return default_config
 
-    def _check_approval_status(self) -> bool:
-        """Check if client is approved by the server"""
-        try:
-            url = f"{self.config['server_url']}/api/clients/{self.client_id}"
-            response = requests.get(url, timeout=5)
-
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "success":
-                    client_info = data.get("client", {})
-                    self.approved = client_info.get("approved", False)
-                    return self.approved
-
-            return False
-
-        except Exception as e:
-            logger.debug(f"Failed to check approval status: {e}")
-            return False
-
     def _setup_routes(self):
         """Setup Flask routes for handling incoming requests"""
 
@@ -153,6 +278,13 @@ class PortScannerClient:
                     "system_info": self.get_system_info(),
                 }
             )
+
+        @self.app.route("/approve", methods=["POST"])
+        def approve():
+            """Approve the client"""
+            self.approved = True
+            logger.info("Client approved")
+            return jsonify({"message": "Client approved", "approved": True})
 
         @self.app.route("/scan", methods=["POST"])
         def receive_scan_request():
@@ -191,7 +323,6 @@ class PortScannerClient:
                     result_id=data.get("result_id"),
                     targets=data.get("targets", []),
                     ports=data.get("ports", "1-1000"),
-                    scan_type=data.get("scan_type", "T"),
                     timeout=data.get("timeout", 300),
                     priority=data.get("priority", 1),
                     scan_name=data.get("scan_name"),
@@ -303,7 +434,7 @@ class PortScannerClient:
                     "hostname": self.hostname,
                     "ip_address": self._get_ip_address(),
                     "scan_range": self.scan_range,
-                    "client_port": self.config.get("client_port", 8080),
+                    "client_port": self.config.get("client_port"),
                     "capabilities": {
                         "max_concurrent_scans": self.config.get(
                             "max_concurrent_scans", 2
@@ -362,7 +493,7 @@ class PortScannerClient:
                     data = {
                         "hostname": self.hostname,
                         "ip_address": self._get_ip_address(),
-                        "client_port": self.config.get("client_port", 8080),
+                        "client_port": self.config.get("client_port"),
                         "active_scans": len(self.active_scans),
                         "system_info": self.get_system_info(),
                     }
@@ -396,93 +527,15 @@ class PortScannerClient:
                 except Exception as e:
                     logger.debug(f"Heartbeat failed: {e}")
 
-                # Periodically check approval status if not approved
-                now = time.time()
-                if not self.approved and now - last_approval_check >= check_interval:
-                    self._check_approval_status()
-                    last_approval_check = now
-
                 time.sleep(heartbeat_interval)
 
         thread = threading.Thread(target=heartbeat_loop, daemon=True)
         thread.start()
 
-    def _extract_scan_data(self, target: str) -> Dict:
-        """Extract scan data from nmap results for easier server processing"""
-        try:
-            if target not in self.nm.all_hosts():
-                return {
-                    "hostname": "",
-                    "state": "down",
-                    "open_ports": [],
-                    "port_details": {},
-                }
-
-            # Get basic host information
-            hostname = self.nm[target].hostname()
-            state = self.nm[target].state()
-
-            open_ports = []
-            port_details = {}
-
-            # Extract port information from all protocols
-            for proto in self.nm[target].all_protocols():
-                ports = self.nm[target][proto].keys()
-
-                for port in sorted(ports):
-                    port_info = self.nm[target][proto][port]
-                    port_state = port_info.get("state", "unknown")
-
-                    # Only include open ports in the list
-                    if port_state == "open":
-                        open_ports.append(port)
-
-                        # Store detailed information for this port
-                        port_details[str(port)] = {
-                            "protocol": proto,
-                            "state": port_state,
-                            "name": port_info.get("name", "unknown"),
-                            "product": port_info.get("product", ""),
-                            "version": port_info.get("version", ""),
-                            "extrainfo": port_info.get("extrainfo", ""),
-                            "reason": port_info.get("reason", ""),
-                            "conf": port_info.get("conf", ""),
-                        }
-
-            # Build result structure
-            result = {
-                "hostname": hostname,
-                "state": state,
-                "open_ports": sorted(open_ports),
-                "port_details": port_details,
-            }
-
-            # Optionally add OS detection if available
-            if hasattr(self.nm[target], "get") and "osmatch" in self.nm[target]:
-                os_matches = self.nm[target]["osmatch"]
-                if os_matches:
-                    # Take the best match
-                    result["os_detection"] = {
-                        "name": os_matches[0].get("name", ""),
-                        "accuracy": os_matches[0].get("accuracy", ""),
-                    }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error extracting scan data for {target}: {e}")
-            return {
-                "hostname": "",
-                "state": "error",
-                "open_ports": [],
-                "port_details": {},
-                "error": str(e),
-            }
-
     def perform_scan(self, scan_request: ScanRequest):
         """Perform a complete scan and send results to server"""
         start_time = time.time()
-
+        callback = ScanCallback()
         try:
             # Double-check approval before starting scan
             if not self.approved:
@@ -515,10 +568,8 @@ class PortScannerClient:
                 f"Starting scan {scan_request.scan_id} with {len(scan_request.targets)} targets"
             )
 
-            # Build scan arguments
-            scan_args = f"-s{scan_request.scan_type.upper()}"
-            if scan_request.scan_arguments:
-                scan_args += f" {scan_request.scan_arguments}"
+            # TODO Sanitize scan arguments
+            scan_args = scan_request.scan_arguments
 
             # Perform scan for all targets
             targets_str = " ".join(scan_request.targets)
@@ -526,62 +577,20 @@ class PortScannerClient:
             logger.info(f"Ports: {scan_request.ports}")
             logger.info(f"Arguments: {scan_args}")
 
-            self.nm.scan(
+            # Handle empty ports string
+            ports_to_scan = scan_request.ports if scan_request.ports else None
+
+            # Use PortScannerYield to scan hosts sequentially
+            for host, scan_result in self.nm.scan(
                 hosts=targets_str,
-                ports=scan_request.ports,
+                ports=ports_to_scan,
                 arguments=scan_args,
-            )
+                sudo=True,
+                timeout=600,
+            ):
+                callback.callback_result(host, scan_result)
 
             scan_duration = time.time() - start_time
-
-            # Build results structure
-            parsed_results = {}
-            summary_stats = {
-                "total_targets": len(scan_request.targets),
-                "scanned_targets": 0,
-                "targets_up": 0,
-                "targets_down": 0,
-                "error_targets": 0,
-                "total_open_ports": 0,
-            }
-
-            for target in scan_request.targets:
-                try:
-                    # Extract scan data
-                    target_data = self._extract_scan_data(target)
-                    parsed_results[target] = target_data
-
-                    # Update summary statistics
-                    if target_data["state"] == "up":
-                        summary_stats["scanned_targets"] += 1
-                        summary_stats["targets_up"] += 1
-                        summary_stats["total_open_ports"] += len(
-                            target_data["open_ports"]
-                        )
-                    elif target_data["state"] == "down":
-                        summary_stats["scanned_targets"] += 1
-                        summary_stats["targets_down"] += 1
-                    elif target_data["state"] == "error":
-                        summary_stats["error_targets"] += 1
-
-                    # Log summary
-                    open_ports_count = len(target_data["open_ports"])
-                    logger.info(
-                        f"Processed target {target}: {target_data['state']} - "
-                        f"{open_ports_count} open ports"
-                    )
-
-                except Exception as e:
-                    logger.error(f"Error processing results for target {target}: {e}")
-                    parsed_results[target] = {
-                        "hostname": "",
-                        "state": "error",
-                        "open_ports": [],
-                        "port_details": {},
-                        "error": str(e),
-                    }
-                    summary_stats["error_targets"] += 1
-
             # Prepare result payload
             result_payload = {
                 "scan_id": scan_request.scan_id,
@@ -590,8 +599,8 @@ class PortScannerClient:
                 "client_id": self.client_id,
                 "status": "completed",
                 "scan_duration": scan_duration,
-                "parsed_results": parsed_results,
-                "summary_stats": summary_stats,
+                "parsed_results": callback.parsed_results,
+                "summary_stats": callback.summary_stats,
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
@@ -601,7 +610,7 @@ class PortScannerClient:
             if success:
                 logger.info(
                     f"Scan {scan_request.scan_id} completed and sent in {scan_duration:.2f}s - "
-                    f"{summary_stats['total_open_ports']} total open ports found"
+                    f"{callback.summary_stats['total_open_ports']} total open ports found"
                 )
             else:
                 logger.error(f"Failed to send results for scan {scan_request.scan_id}")
@@ -704,8 +713,8 @@ class PortScannerClient:
     def start_server(self):
         """Start the Flask web server"""
         try:
-            host = self.config.get("client_host", "0.0.0.0")
-            port = self.config.get("client_port", 8080)
+            host = self.config.get("client_host")
+            port = self.config.get("client_port")
 
             # Create server
             self.server = make_server(host, port, self.app, threaded=True)

@@ -19,7 +19,9 @@ class ScanResult(db.Model):
 
     # Overall status
     status = db.Column(db.String(32), default="pending", index=True)
-
+    type = db.Column(
+        db.String(32), default="full", nullable=False
+    )  # e.g., full, partial
     # Breakdown of scan data for easy querying
     # Structure: {
     #   "192.168.1.1": {
@@ -229,6 +231,10 @@ class ScanResult(db.Model):
 
         db.session.add(self)
         db.session.commit()
+
+        from app.services.delta_service import DeltaReportService
+
+        DeltaReportService().generate_delta_report(self.id)
 
     def mark_failed(self, error_message: Optional[str] = None):
         """

@@ -22,8 +22,9 @@ migrate = Migrate()
 socketio = SocketIO()
 sess = Session()
 
-# Import scheduler service
+# Import scheduler & websocket service
 from app.scheduler import scheduler_service
+from app.services.websocket_service import websocket_service
 
 # Configure logging
 logging.basicConfig(
@@ -65,9 +66,9 @@ def create_app(config_class=Config):
 
     # Initialize scheduler
     scheduler_service.init_app(app)
+    websocket_service.init_app(socketio)
 
     # Register blueprints
-
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
     from app.routes.delta import bp as delta_bp
@@ -80,7 +81,7 @@ def create_app(config_class=Config):
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(scan_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
-    app.register_blueprint(delta_bp, url_prefix="/delta")
+    app.register_blueprint(delta_bp, url_prefix="/api")
 
     # Register error handlers
     @app.errorhandler(404)
