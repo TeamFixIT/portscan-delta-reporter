@@ -33,6 +33,7 @@ def register_client():
         client_id = data.get("client_id")  # MAC address
         hostname = data.get("hostname")
         ip_address = data.get("ip_address")
+        port = data.get("port")
         scan_range = data.get("scan_range")
 
         if not client_id:
@@ -53,6 +54,7 @@ def register_client():
             # Update existing client
             client.hostname = hostname or client.hostname
             client.ip_address = ip_address or client.ip_address
+            client.port = port or client.port
             client.scan_range = scan_range
             client.last_seen = datetime.utcnow()
 
@@ -68,6 +70,7 @@ def register_client():
                 client_id=client_id,
                 hostname=hostname,
                 ip_address=ip_address,
+                port=port,
                 scan_range=scan_range,
                 status="offline",
                 last_seen=datetime.utcnow(),
@@ -453,14 +456,19 @@ def receive_scan_results(client_id):
             scan_result.started_at = datetime.utcnow()
 
         if data["status"] == "completed":
-            scan_result.mark_complete()
             # Update associated task if exists
             task = ScanTask.query.filter_by(task_id=task_id).first()
 
             if task:
                 task.complete()
+            from app import websocket_service
+
+            websocket_service.broadcast_alert(
+                f"Scan task {task_id} completed by client {client_id}",
+                "info",
+            )
         elif data["status"] == "failed":
-            scan_result.mark_failed()
+            # scan_result.mark_failed() TODO only make scan_result failed if all tasks fail otherwise it should be partial do this inside task.mark_failed()
             # Update associated task
             task = ScanTask.query.filter_by(task_id=task_id).first()
             if task:

@@ -80,18 +80,34 @@
     {
       "label": "Start Client",
       "type": "shell",
-      "command": "./venv/Scripts/python.exe",
+      "command": "sudo",
       "args": [
+        "-E",
+        "./venv/bin/python",
         "client_agent.py"
       ],
       "windows": {
-        "command": "./venv/Scripts/python.exe"
+        "command": "powershell",
+        "args": [
+          "-Command",
+          "Start-Process -FilePath './venv/Scripts/python.exe' -ArgumentList 'client_agent.py' -Verb RunAs"
+        ]
       },
       "linux": {
-        "command": "./venv/bin/python"
+        "command": "sudo",
+        "args": [
+          "-E",
+          "./venv/bin/python",
+          "client_agent.py"
+        ]
       },
       "osx": {
-        "command": "./venv/bin/python"
+        "command": "sudo",
+        "args": [
+          "-E",
+          "./venv/bin/python",
+          "client_agent.py"
+        ]
       },
       "options": {
         "cwd": "${workspaceFolder}/client"

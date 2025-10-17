@@ -13,8 +13,8 @@ class Scan(db.Model):
     name = db.Column(db.String(128), nullable=False)
     description = db.Column(db.Text, nullable=True)
     target = db.Column(db.String(255), nullable=False)  # IP or subnet
-    ports = db.Column(db.String(255), nullable=False)  # Port specification
-    scan_arguments = db.Column(db.String(255), default="-sV")
+    ports = db.Column(db.String(255), nullable=True)  # Port specification
+    scan_arguments = db.Column(db.String(255), default="-sS")
     interval_minutes = db.Column(db.Integer, default=60)  # Scan interval
     is_active = db.Column(db.Boolean, default=True)
     is_scheduled = db.Column(db.Boolean, default=False)

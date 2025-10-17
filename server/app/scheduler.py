@@ -75,13 +75,15 @@ def _check_client_heartbeats_job():
 def _execute_scan(scan_id):
     """Standalone function to execute a scan (called by scheduler or manually)."""
     global _app_instance
-
     if _app_instance is None:
         logger.error("App instance not set for scan execution")
         return {"status": "error", "message": "App instance not set for scan execution"}
 
     import ipaddress
     import requests
+    from datetime import datetime, timedelta
+    import uuid
+    import json
 
     with _app_instance.app_context():
         try:
@@ -96,7 +98,10 @@ def _execute_scan(scan_id):
                 raise ValueError(f"Scan {scan_id} not found")
             if not scan.is_active:
                 logger.info(f"Scan {scan_id} is inactive, skipping execution")
-                return
+                return {
+                    "status": "success",
+                    "message": f"Scan {scan_id} is inactive, skipped",
+                }
 
             # Parse scan targets
             try:
@@ -104,7 +109,6 @@ def _execute_scan(scan_id):
                 scan_targets = [str(ip) for ip in scan_network.hosts()]
             except Exception:
                 scan_targets = [t.strip() for t in scan.target.split(",") if t.strip()]
-
             if not scan_targets:
                 raise ValueError(f"No valid targets parsed for scan {scan_id}")
 
@@ -115,7 +119,6 @@ def _execute_scan(scan_id):
                 Client.last_seen >= now - timedelta(minutes=5),
                 Client.scan_range.isnot(None),
             ).all()
-
             if not clients:
                 raise RuntimeError(f"No active clients available for scan {scan_id}")
 
@@ -145,12 +148,8 @@ def _execute_scan(scan_id):
                 started_at=datetime.utcnow(),
             )
             db.session.add(scan_result)
-
-            # Flush to push to DB and populate auto-generated fields
             db.session.flush()
-
             result_id = scan_result.id
-
             task_group_id = str(uuid.uuid4())
             assigned_targets = set()
             triggered_clients = 0
@@ -159,10 +158,8 @@ def _execute_scan(scan_id):
                 targets_for_client = list(ips - assigned_targets)
                 if not targets_for_client:
                     continue
-
                 assigned_targets.update(targets_for_client)
                 task_id = str(uuid.uuid4())
-
                 task = ScanTask(
                     task_id=task_id,
                     task_group_id=task_group_id,
@@ -170,56 +167,64 @@ def _execute_scan(scan_id):
                     scan_id=scan_id,
                     targets=json.dumps(targets_for_client),
                     ports=scan.ports,
-                    scan_type="T",
                     priority=2,
                     status="pending",
+                    scan_result_id=scan_result.id,
                 )
                 db.session.add(task)
-
                 try:
                     logger.info(
-                        f"Triggered scan on client {client.ip_address} for {len(targets_for_client)} targets."
+                        f"Triggering scan on client {client.ip_address} for {len(targets_for_client)} targets."
                     )
-                    url = f"http://{client.ip_address}:8080/scan"
+                    url = f"http://{client.ip_address}:{client.port}/scan"
                     payload = {
                         "scan_id": scan_id,
                         "task_id": task_id,
                         "result_id": result_id,
                         "targets": targets_for_client,
                         "ports": scan.ports,
-                        "scan_type": "T",
                         "scan_arguments": scan.scan_arguments,
                     }
                     req = requests.post(url, json=payload, timeout=5)
                     req.raise_for_status()
-                    print(req.status_code)
-
-                    triggered_clients += 1
                     logger.info(
-                        f"Triggered scan on client {client.client_id} for {len(targets_for_client)} targets."
+                        f"Successfully triggered scan on client {client.client_id} for {len(targets_for_client)} targets."
                     )
-                except requests.exceptions.RequestException:
-                    msg = f"Failed to contact client at {client.ip_address}"
-                    logger.warning(msg)
-                    return {"status": "error", "message": msg}
-                except Exception:
-                    msg = f"{req.json().get('error', 'Unknown error')}"
-                    logger.warning(msg)
-                    return {"status": "error", "message": msg}
+                    triggered_clients += 1
+                except requests.exceptions.RequestException as e:
+                    logger.warning(
+                        f"Failed to contact client at {client.ip_address}: {e}"
+                    )
+                    continue  # Continue to next client instead of failing the scan
+                except Exception as e:
+                    logger.warning(
+                        f"Error triggering scan on client {client.client_id}: {e}"
+                    )
+                    continue
 
             if triggered_clients == 0:
                 db.session.rollback()
-                msg = f"{req.json().get('error', 'Unknown error')}"
+                msg = "No clients successfully triggered for scan"
                 logger.error(msg)
                 return {"status": "error", "message": msg}
 
-            # Finalise and commit
+            # Check if all targets were assigned
+            unassigned_targets = set(scan_targets) - assigned_targets
+            if unassigned_targets:
+                logger.warning(
+                    f"Scan {scan_id} is partial: {len(unassigned_targets)} targets not assigned: {unassigned_targets}"
+                )
+                scan_result.type = "partial"
+            else:
+                scan_result.type = "full"
+
+            # Finalize and commit
             scan.update_last_run()
             scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
             db.session.commit()
-
             msg = (
-                f"Successfully delegated scan {scan_id} to {triggered_clients} clients."
+                f"Successfully delegated scan {scan_id} to {triggered_clients} clients. "
+                f"{'Partial scan due to unassigned targets' if unassigned_targets else 'All targets assigned'}."
             )
             logger.info(msg)
             return {
@@ -227,12 +232,18 @@ def _execute_scan(scan_id):
                 "message": msg,
                 "result_id": result_id,
                 "clients_triggered": triggered_clients,
+                "unassigned_targets": (
+                    list(unassigned_targets) if unassigned_targets else []
+                ),
             }
 
         except Exception as e:
             db.session.rollback()
             logger.error(f"Error executing scan {scan_id}: {e}")
-            raise
+            return {
+                "status": "error",
+                "message": f"Error executing scan {scan_id}: {str(e)}",
+            }
 
 
 class SchedulerService:
@@ -335,7 +346,7 @@ class SchedulerService:
             self.scheduler.add_job(
                 func=_check_client_heartbeats_job,
                 trigger="interval",
-                minutes=1,
+                minutes=3,
                 id="check_heartbeats",
                 replace_existing=True,
             )

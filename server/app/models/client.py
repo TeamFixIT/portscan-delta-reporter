@@ -11,6 +11,9 @@ class Client(db.Model):
     client_id = db.Column(db.String(64), unique=True, nullable=False)  # MAC address
     hostname = db.Column(db.String(255))
     ip_address = db.Column(db.String(45))  # IPv4 or IPv6
+    port = db.Column(
+        db.Integer, nullable=False, default=8080
+    )  # Port the client listens on
     scan_range = db.Column(db.String(255), nullable=True)  # e.g., '192.168.1.0/24'
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default="offline")  # online, offline, scanning
@@ -30,6 +33,16 @@ class Client(db.Model):
 
     def approve(self, approved_by_user_id=None):
         """Approve the client"""
+        try:
+            import requests
+
+            url = f"http://{self.ip_address}:{self.port}/approve"
+            req = requests.post(url, timeout=5)
+            req.raise_for_status()
+            self.status = "online"
+        except Exception as e:
+            print(f"Failed to notify client of approval: {e}")
+
         self.approved = True
         self.approved_at = datetime.utcnow()
         if approved_by_user_id:

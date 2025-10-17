@@ -1,94 +1,101 @@
 {% extends "base.html" %} {% block content %}
-<div class="container mt-4">
+<div class="container py-4">
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+      </li>
       <li class="breadcrumb-item active" aria-current="page">Scans</li>
     </ol>
   </nav>
+
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>Scan Dashboard</h2>
+    <h2 class="mb-0">Scan Dashboard</h2>
     <a href="{{ url_for('dashboard.create_scan') }}" class="btn btn-success">
       <i class="bi bi-plus-lg"></i> New Scan
     </a>
   </div>
 
-  <table class="table table-hover align-middle">
-    <thead class="table-light">
-      <tr>
-        <th>Name</th>
-        <th>Target</th>
-        <th>Ports</th>
-        <th>Interval</th>
-        <th>Active</th>
-        <th>Scheduled</th>
-        <th>Last Run</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for scan in scans %}
-      <tr id="scan-row-{{ scan.id }}">
-        <td>
-          <a
-            href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
-            class="fw-semibold text-decoration-none">
-            {{ scan.name }}
-          </a>
-        </td>
-        <td>{{ scan.target }}</td>
-        <td>{{ scan.ports }}</td>
-        <td>{{ scan.interval_minutes }} min</td>
-        <td>
-          <span class="badge {{ 'bg-success' if scan.is_active else 'bg-secondary' }}">
-            {{ 'Yes' if scan.is_active else 'No' }}
-          </span>
-        </td>
-        <td>
-          <span class="badge {{ 'bg-info' if scan.is_scheduled else 'bg-light text-dark' }}">
-            {{ 'Yes' if scan.is_scheduled else 'No' }}
-          </span>
-        </td>
-        <td>{{ scan.last_run or 'Never' }}</td>
-        <td>
-          <div class="btn-group btn-group-sm" role="group">
-            <button
-              class="btn btn-primary execute-scan-btn"
-              data-scan-id="{{ scan.id }}"
-              title="Execute Now">
-              <i class="bi bi-play-fill"></i>
-            </button>
-            <button
-              class="btn btn-outline-info toggle-active-btn"
-              data-scan-id="{{ scan.id }}"
-              title="Toggle Schedule">
-              <i class="bi bi-power"></i>
-            </button>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Target</th>
+          <th scope="col">Ports</th>
+          <th scope="col">Interval</th>
+          <th scope="col">Active</th>
+          <th scope="col">Scheduled</th>
+          <th scope="col">Last Run</th>
+          <th scope="col" class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for scan in scans %}
+        <tr id="scan-row-{{ scan.id }}">
+          <td>
             <a
-              href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}"
-              class="btn btn-outline-warning"
-              title="Edit Scan">
-              <i class="bi bi-pencil"></i>
+              href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
+              class="text-decoration-none fw-semibold">
+              {{ scan.name }}
             </a>
-            <button
-              class="btn btn-outline-danger delete-scan-btn"
-              data-scan-id="{{ scan.id }}"
-              title="Delete Scan">
-              <i class="bi bi-trash"></i>
-            </button>
-          </div>
-        </td>
-      </tr>
-      {% else %}
-      <tr>
-        <td colspan="8" class="text-center text-muted py-4">
-          No scans found. Click "New Scan" to create one.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+          </td>
+          <td>{{ scan.target }}</td>
+          <td>{{ scan.ports }}</td>
+          <td>{{ scan.interval_minutes }} min</td>
+          <td>
+            <span class="badge {{ 'bg-success' if scan.is_active else 'bg-secondary' }}">
+              {{ 'Yes' if scan.is_active else 'No' }}
+            </span>
+          </td>
+          <td>
+            <span
+              class="badge {{ 'bg-info text-dark' if scan.is_scheduled else 'bg-light text-dark' }}">
+              {{ 'Yes' if scan.is_scheduled else 'No' }}
+            </span>
+          </td>
+          <td>{{ scan.last_run or 'Never' }}</td>
+          <td class="text-center">
+            <div class="btn-group btn-group-sm" role="group">
+              <button
+                class="btn btn-primary execute-scan-btn"
+                data-scan-id="{{ scan.id }}"
+                title="Execute Now">
+                <i class="bi bi-play-fill"></i>
+              </button>
+              <button
+                class="btn btn-outline-info toggle-active-btn"
+                data-scan-id="{{ scan.id }}"
+                title="Toggle Schedule">
+                <i class="bi bi-power"></i>
+              </button>
+              <a
+                href="{{ url_for('dashboard.edit_scan', scan_id=scan.id) }}"
+                class="btn btn-outline-warning"
+                title="Edit Scan">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <button
+                class="btn btn-outline-danger delete-scan-btn"
+                data-scan-id="{{ scan.id }}"
+                title="Delete Scan">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="text-center text-muted py-4">
+            <i class="bi bi-search me-2"></i> No scans found. Click “New Scan” to create one.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
+
 <script>
   // DELETE
   document.querySelectorAll(".delete-scan-btn").forEach((btn) => {

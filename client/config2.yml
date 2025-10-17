@@ -8,7 +8,7 @@ client_host: "0.0.0.0" # Interface to bind to
 # hostname: "scanner-01"  # Override auto-detected hostname
 
 # Scan settings
-chunk_size: 10  # Number of targets per chunk (adjust based on network speed)
+chunk_size: 1  # Number of targets per chunk (adjust based on network speed)
 per_target_timeout: 120  # Timeout per target in seconds
 progress_report_interval: 10  # Send progress updates every N seconds
 
@@ -19,4 +19,4 @@ retry_attempts: 3
 retry_delay: 5
 
 # Scan range for this client (optional, e.g. '192.168.1.0/24')
-scan_range: "192.168.0.0/24"
+scan_range: "192.168.1.0/28"

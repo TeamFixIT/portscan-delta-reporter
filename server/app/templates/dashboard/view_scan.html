@@ -141,6 +141,10 @@
             class="badge {% if result.status == 'completed' %}bg-success {% elif result.status == 'failed' %}bg-danger {% elif result.status == 'pending' %}bg-warning {% else %}bg-secondary{% endif %}">
             {{ result.status }}
           </span>
+          <span
+            class="badge {% if result.type == 'full' %}bg-success {% elif result.type == 'partial' %}bg-warning {% else %}bg-secondary{% endif %}">
+            {{ result.type }}
+          </span>
         </h6>
 
         {% if result.parsed_results %}

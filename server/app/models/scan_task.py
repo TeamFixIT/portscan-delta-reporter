@@ -2,6 +2,7 @@ from datetime import datetime
 from app import db
 import json
 import uuid
+from app.models.scan_result import ScanResult
 
 
 class ScanTask(db.Model):
@@ -54,7 +55,7 @@ class ScanTask(db.Model):
         self.assigned_at = datetime.utcnow()
         db.session.commit()
 
-    def complete(self, scan_result_id=None):
+    def complete(self):
         """
         Mark task as completed and trigger delta report generation if all group tasks are done.
 
@@ -63,17 +64,17 @@ class ScanTask(db.Model):
         """
         self.status = "completed"
         self.completed_at = datetime.utcnow()
-        if scan_result_id:
-            self.scan_result_id = scan_result_id
         db.session.commit()
 
-        from app.services.delta_service import DeltaReportService
-
-        # TODO implement generate_delta_report
         # Check if all tasks in the group are completed
         if self.is_task_group_completed():
             print(f"✓ All tasks in group {self.task_group_id} completed!")
-            DeltaReportService.generate_delta_report(self.scan_result_id)
+            print(self.scan_result_id)
+            result = ScanResult.query.get(self.scan_result_id)
+            if result:
+                result.mark_complete()
+            else:
+                print(f"⚠️ ScanResult with id {self.scan_result_id} not found")
         else:
             print(
                 f"⏳ Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}"

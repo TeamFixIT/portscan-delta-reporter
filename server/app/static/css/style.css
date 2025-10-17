@@ -158,3 +158,96 @@ body {
   font-size: 0.95rem;
   color: #6c757d;
 }
+
+/* Dark theme */
+body.dark-theme {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+
+body.dark-theme .navbar {
+  background-color: #1f1f1f !important;
+}
+
+body.dark-theme .card {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .report-card:hover {
+  box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .filter-card {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme .page-link {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .page-link:hover {
+  background-color: #2a2a2a;
+  color: #fff;
+}
+
+body.dark-theme .page-item.active .page-link {
+  background-color: #0d6efd;
+  border-color: #0a58ca;
+}
+
+body.dark-theme input.form-control,
+body.dark-theme textarea.form-control,
+body.dark-theme select.form-select {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #444;
+}
+
+body.dark-theme input.form-control:focus,
+body.dark-theme textarea.form-control:focus,
+body.dark-theme select.form-select:focus {
+  background-color: #2a2a2a;
+  color: #fff;
+  border-color: #007bff;
+  box-shadow: none;
+}
+
+body.dark-theme .form-check-label {
+  color: #ccc;
+}
+
+body.dark-theme .breadcrumb-item a {
+  color: #66b2ff;
+  text-decoration: none;
+}
+
+body.dark-theme .breadcrumb-item.active {
+  color: #bbb;
+}
+
+body.dark-theme .modal-content {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+}
+
+body.dark-theme .modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .modal-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .btn-close {
+  filter: invert(1);
+}
+
+body.dark-theme .alert {
+  background-color: #2a2a2a;
+  border-color: #3c3c3c;
+  color: #fff;
+}

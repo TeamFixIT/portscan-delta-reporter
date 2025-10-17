@@ -1,155 +1,512 @@
-{% extends "base.html" %} {% block title %}Delta Reports {% endblock %} {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/delta_reports.css') }}" />
+{% extends "base.html" %} {% block title %}Network Security Overview{% endblock %} {% block
+extra_css %}
+<style>
+  .summary-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  .stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  .stat-badge {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    display: block;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  .scan-card {
+    transition: all 0.3s ease;
+    border: 1px solid #dee2e6;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    height: 100%;
+  }
+  .scan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+  .scan-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.25rem;
+    border-bottom: 2px solid #dee2e6;
+  }
+  .scan-card-body {
+    padding: 1.25rem;
+  }
+  .security-score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    border: 6px solid;
+    position: relative;
+  }
+  .security-score-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .security-score-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 0.25rem;
+  }
+  .score-excellent {
+    border-color: #28a745;
+    color: #28a745;
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  }
+  .score-good {
+    border-color: #17a2b8;
+    color: #17a2b8;
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  }
+  .score-warning {
+    border-color: #ffc107;
+    color: #856404;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  }
+  .score-critical {
+    border-color: #dc3545;
+    color: #dc3545;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+  }
+  .status-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .status-stable {
+    background: #d4edda;
+    color: #155724;
+  }
+  .status-changes {
+    background: #fff3cd;
+    color: #856404;
+  }
+  .status-critical {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  .metric-item {
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    text-align: center;
+    border: 1px solid #e9ecef;
+  }
+  .metric-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .metric-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+  .metric-positive {
+    color: #28a745;
+  }
+  .metric-negative {
+    color: #dc3545;
+  }
+  .metric-warning {
+    color: #ffc107;
+  }
+  .metric-info {
+    color: #17a2b8;
+  }
+  .scan-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+    font-size: 0.875rem;
+    color: #6c757d;
+  }
+  .scan-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .last-scan-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    background: #e7f1ff;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    color: #0d6efd;
+  }
+  .empty-state {
+    padding: 4rem 2rem;
+  }
+  .alert-banner {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-left: 4px solid #ffc107;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .comparison-info {
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+  }
+  .comparison-arrow {
+    color: #6c757d;
+    margin: 0 0.5rem;
+  }
+</style>
 {% endblock %} {% block content %}
-<div class="container-fluid mt-4">
-  <!-- Header Section -->
+<div class="container-fluid py-4">
+  <!-- Header -->
   <div class="row mb-4">
-    <div class="col-md-12">
+    <div class="col">
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-          <li class="breadcrumb-item active" aria-current="page">Delta Reports</li>
+          <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Home</a></li>
+          <li class="breadcrumb-item active">Security Overview</li>
         </ol>
       </nav>
-
-      <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
-          <h2 class="mb-1"><i class="fas fa-chart-line"></i> Change History</h2>
+          <h1 class="display-6 mb-1">
+            <i class="fas fa-shield-alt text-primary"></i> Network Security Overview
+          </h1>
+          <p class="text-muted mb-0">Current security posture across all monitored networks</p>
         </div>
-        <div>
-          <button class="btn btn-outline-primary" id="refreshBtn">
+        <div class="d-flex gap-2">
+          <button class="btn btn-outline-primary" onclick="location.reload()">
             <i class="fas fa-sync-alt"></i> Refresh
           </button>
-          <button class="btn btn-outline-secondary" id="exportAllBtn">
-            <i class="fas fa-download"></i> Export All
-          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Filters Section -->
+  {% set complete_reports = reports|selectattr('baseline_result.is_partial', 'equalto',
+  False)|selectattr('current_result.is_partial', 'equalto', False)|list %} {% set scans_with_alerts
+  = complete_reports|selectattr('new_ports_count', 'gt',
+  0)|map(attribute='scan_id')|unique|list|length %}
+
+  <!-- Alert Banner for Critical Changes -->
+  {% if scans_with_alerts > 0 %}
+  <div class="alert-banner">
+    <div class="d-flex align-items-center">
+      <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+      <div>
+        <strong>Security Alert:</strong> {{ scans_with_alerts }} network(s) have new open ports
+        detected.
+        <a href="#" class="alert-link ms-2">Review changes →</a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Global Summary Cards -->
   <div class="row mb-4">
-    <div class="col-md-12">
-      <div class="card">
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card summary-card border-primary h-100">
         <div class="card-body">
-          <div class="row align-items-center">
-            <div class="col-md-6">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="onlyChangesFilter" />
-                <label class="form-check-label" for="onlyChangesFilter">
-                  Only show reports with changes
-                </label>
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+              <i class="fas fa-network-wired"></i>
+            </div>
+            <div>
+              <span class="stat-badge text-primary"
+                >{{ complete_reports|map(attribute='scan_id')|unique|list|length }}</span
+              >
+              <span class="stat-label text-muted">Monitored Networks</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card summary-card border-danger h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger me-3">
+              <i class="fas fa-door-open"></i>
+            </div>
+            <div>
+              <span class="stat-badge text-danger"
+                >{{ complete_reports|sum(attribute='new_ports_count') }}</span
+              >
+              <span class="stat-label text-muted">New Open Ports</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card summary-card border-success h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+              <i class="fas fa-door-closed"></i>
+            </div>
+            <div>
+              <span class="stat-badge text-success"
+                >{{ complete_reports|sum(attribute='closed_ports_count') }}</span
+              >
+              <span class="stat-label text-muted">Closed Ports</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card summary-card border-warning h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+              <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div>
+              <span class="stat-badge text-warning"
+                >{{ complete_reports|sum(attribute='changed_services_count') }}</span
+              >
+              <span class="stat-label text-muted">Service Changes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan Cards - Current State -->
+  {% if complete_reports|length > 0 %} {% set reports_by_scan = {} %} {% for report in
+  complete_reports %} {% if report.scan_id not in reports_by_scan %} {% set _ =
+  reports_by_scan.update({report.scan_id: []}) %} {% endif %} {% set _ =
+  reports_by_scan[report.scan_id].append(report) %} {% endfor %}
+
+  <div class="row g-4">
+    {% for scan_id, scan_reports in reports_by_scan.items() %} {% set scan = scan_reports[0].scan %}
+    {% set latest_report = scan_reports|sort(attribute='created_at', reverse=true)|first %} {#
+    Calculate security score based on latest report #} {% set new_ports_penalty =
+    latest_report.new_ports_count * 10 %} {% set changed_services_penalty =
+    latest_report.changed_services_count * 5 %} {% set new_hosts_penalty =
+    latest_report.new_hosts_count * 3 %} {% set security_score = 100 - new_ports_penalty -
+    changed_services_penalty - new_hosts_penalty %} {% set security_score = [0, security_score]|max
+    %} {# Determine status #} {% set has_critical = latest_report.new_ports_count > 0 %} {% set
+    has_changes = latest_report.new_ports_count > 0 or latest_report.closed_ports_count > 0 or
+    latest_report.changed_services_count > 0 or latest_report.new_hosts_count > 0 or
+    latest_report.removed_hosts_count > 0 %}
+
+    <div class="col-lg-4 col-md-6">
+      <div class="scan-card">
+        <div class="scan-card-header">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h5 class="mb-1">
+                <i class="fas fa-crosshairs text-primary me-2"></i>
+                {{ scan.name if scan and scan.name else scan.target if scan else 'Network #' ~
+                scan_id }}
+              </h5>
+              <small class="text-muted">
+                <i class="fas fa-bullseye me-1"></i>{{ scan.target if scan else 'N/A' }}
+              </small>
+            </div>
+            {% if has_critical %}
+            <span class="status-badge status-critical">
+              <i class="fas fa-exclamation-circle"></i> Alert
+            </span>
+            {% elif has_changes %}
+            <span class="status-badge status-changes">
+              <i class="fas fa-info-circle"></i> Changes
+            </span>
+            {% else %}
+            <span class="status-badge status-stable">
+              <i class="fas fa-check-circle"></i> Stable
+            </span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="scan-card-body">
+          <!-- Security Score Circle -->
+          <div
+            class="security-score-circle {% if security_score >= 90 %}score-excellent {% elif security_score >= 70 %}score-good {% elif security_score >= 50 %}score-warning {% else %}score-critical{% endif %}">
+            <span class="security-score-value">{{ security_score }}</span>
+            <span class="security-score-label">
+              {% if security_score >= 90 %}Excellent {% elif security_score >= 70 %}Good {% elif
+              security_score >= 50 %}Monitor {% else %}Critical{% endif %}
+            </span>
+          </div>
+
+          <!-- Metrics Grid -->
+          <div class="metric-grid">
+            <div class="metric-item">
+              <span
+                class="metric-value {% if latest_report.new_ports_count > 0 %}metric-negative{% else %}metric-positive{% endif %}">
+                {% if latest_report.new_ports_count > 0 %}+{% endif %}{{
+                latest_report.new_ports_count }}
+              </span>
+              <span class="metric-label">New Ports</span>
+            </div>
+            <div class="metric-item">
+              <span
+                class="metric-value {% if latest_report.closed_ports_count > 0 %}metric-positive{% else %}text-muted{% endif %}">
+                {% if latest_report.closed_ports_count > 0 %}-{% endif %}{{
+                latest_report.closed_ports_count }}
+              </span>
+              <span class="metric-label">Closed Ports</span>
+            </div>
+            <div class="metric-item">
+              <span
+                class="metric-value {% if latest_report.new_hosts_count > 0 %}metric-info{% else %}text-muted{% endif %}">
+                {% if latest_report.new_hosts_count > 0 %}+{% endif %}{{
+                latest_report.new_hosts_count }}
+              </span>
+              <span class="metric-label">New Hosts</span>
+            </div>
+            <div class="metric-item">
+              <span
+                class="metric-value {% if latest_report.changed_services_count > 0 %}metric-warning{% else %}text-muted{% endif %}">
+                {{ latest_report.changed_services_count }}
+              </span>
+              <span class="metric-label">Changed Services</span>
+            </div>
+          </div>
+
+          <!-- Comparison Info -->
+          {% if latest_report.delta_data and latest_report.delta_data.baseline and
+          latest_report.delta_data.current %}
+          <div class="comparison-info">
+            <div class="text-center">
+              <small class="text-muted d-block mb-1">Latest Comparison</small>
+              <div class="d-flex align-items-center justify-content-center">
+                <span class="badge bg-light text-dark">
+                  Result #{{ latest_report.delta_data.baseline.result_id }}
+                </span>
+                <i class="fas fa-arrow-right comparison-arrow"></i>
+                <span class="badge bg-primary">
+                  Result #{{ latest_report.delta_data.current.result_id }}
+                </span>
               </div>
             </div>
-            <div class="col-md-3">
-              <select class="form-select" id="perPageSelect">
-                <option value="10">10 per page</option>
-                <option value="25">25 per page</option>
-                <option value="50">50 per page</option>
-                <option value="100">100 per page</option>
-              </select>
+          </div>
+          {% endif %}
+
+          <!-- Meta Information -->
+          <div class="scan-meta">
+            <div class="scan-meta-item">
+              <i class="fas fa-clock"></i>
+              <span>{{ latest_report.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
             </div>
-            <div class="col-md-3">
-              <div id="reportCount" class="text-muted text-end">Loading...</div>
+            <div class="scan-meta-item">
+              <i class="fas fa-file-alt"></i>
+              <span>{{ scan_reports|length }} report(s)</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="d-grid gap-2 mt-3">
+            <a
+              href="{{ url_for('dashboard.view_delta_report', report_id=latest_report.id) }}"
+              class="btn btn-primary">
+              <i class="fas fa-eye me-2"></i>View Latest Report
+            </a>
+            <div class="btn-group">
+              <a
+                href="{{ url_for('dashboard.scan_history', scan_id=scan_id) }}"
+                class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-history me-1"></i>History
+              </a>
+              <a
+                href="{{ url_for('dashboard.export_delta_report', report_id=latest_report.id) }}"
+                class="btn btn-sm btn-outline-success">
+                <i class="fas fa-download me-1"></i>Export
+              </a>
             </div>
           </div>
         </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-
-  <!-- Loading Spinner -->
-  <div id="loadingSpinner" class="text-center py-5" style="display: none">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
+  {% else %}
+  <div class="text-center empty-state">
+    <div class="mb-4">
+      <i class="fas fa-shield-alt fa-5x text-muted opacity-50"></i>
     </div>
-    <p class="mt-3 text-muted">Loading delta reports...</p>
-  </div>
-
-  <!-- Reports List -->
-  <div id="reportsList" class="row">
-    <!-- Reports will be dynamically inserted here -->
-  </div>
-
-  <!-- Pagination -->
-  <div id="paginationContainer" class="row mt-4" style="display: none">
-    <div class="col-md-12">
-      <nav aria-label="Delta reports pagination">
-        <ul class="pagination justify-content-center" id="pagination">
-          <!-- Pagination will be dynamically inserted here -->
-        </ul>
-      </nav>
-    </div>
-  </div>
-
-  <!-- Empty State -->
-  <div id="emptyState" class="text-center py-5" style="display: none">
-    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
-    <h4 class="text-muted">No Delta Reports Found</h4>
-    <p class="text-muted" id="emptyStateMessage">
-      Delta reports will appear here after your second scan completes.
+    <h3 class="text-muted">No Security Reports Available</h3>
+    <p class="text-muted">
+      Delta reports track changes between scans.<br />
+      {% if reports|length > 0 %} All current reports are from partial scans and have been filtered
+      out.<br />
+      Complete a full scan to see security analysis here. {% else %} Run at least two complete scans
+      of the same target to see change analysis. {% endif %}
     </p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary mt-3">
+      <i class="fas fa-play me-2"></i>Go to Dashboard
+    </a>
   </div>
+  {% endif %}
 </div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("Network Security Overview loaded");
 
-<!-- Report Detail Modal -->
-<div
-  class="modal fade"
-  id="reportDetailModal"
-  tabindex="-1"
-  aria-labelledby="reportDetailModalLabel"
-  aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="reportDetailModalLabel">Delta Report Details</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" id="modalBodyContent">
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="exportModalReportBtn">
-          <i class="fas fa-download"></i> Export CSV
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+    // Add any additional interactivity here
+    // For example, tooltips for scores
+    const scoreCircles = document.querySelectorAll(".security-score-circle");
+    scoreCircles.forEach((circle) => {
+      const score = parseInt(circle.querySelector(".security-score-value").textContent);
+      let tooltip = "";
 
-<!-- Delete Confirmation Modal -->
-<div
-  class="modal fade"
-  id="deleteConfirmModal"
-  tabindex="-1"
-  aria-labelledby="deleteConfirmModalLabel"
-  aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
-        <button
-          type="button"
-          class="btn-close btn-close-white"
-          data-bs-dismiss="modal"
-          aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete this delta report?</p>
-        <p class="text-muted small mb-0">This action cannot be undone.</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-          <i class="fas fa-trash"></i> Delete
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %} {% block extra_js %} {% endblock %}
+      if (score >= 90) {
+        tooltip = "Excellent security posture - minimal changes detected";
+      } else if (score >= 70) {
+        tooltip = "Good security posture - some minor changes";
+      } else if (score >= 50) {
+        tooltip = "Monitor closely - moderate changes detected";
+      } else {
+        tooltip = "Critical - significant security changes require attention";
+      }
+
+      circle.setAttribute("title", tooltip);
+    });
+  });
+</script>
+{% endblock %}
