@@ -1,8 +1,13 @@
-{% extends "base.html" %} {% block title %}Login - Port Detector{% endblock %} {% block content %}
+{% extends "base.html" %} {% block extra_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/auth.css') }}"
+/>
+{% endblock %}{% block title %}Login - Port Detector{% endblock %} {% block content %}
 <div class="auth-container">
   <div class="auth-card">
     <div class="auth-header">
-      <h2><i class="fas fa-shield-alt me-3"></i>Port Detector</h2>
+      <h2><i class="fas fa-shield-alt me-3"></i>Port Scanner</h2>
       <p class="mb-0">Sign in to your account</p>
     </div>
     <div class="auth-body">
