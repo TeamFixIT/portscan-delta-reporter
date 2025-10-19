@@ -127,7 +127,7 @@ def _execute_scan(scan_id):
             for client in clients:
                 try:
                     client_net = ipaddress.ip_network(client.scan_range, strict=False)
-                    client_ips = set(str(ip) for ip in client_net.hosts())
+                    client_ips = set(str(ip) for ip in client_net)
                     overlap = set(scan_targets) & client_ips
                     if overlap:
                         client_ip_map[client] = overlap

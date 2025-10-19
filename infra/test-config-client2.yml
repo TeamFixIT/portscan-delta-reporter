@@ -1,55 +1,23 @@
 # Test Configuration for Port Scanner Client Agent #2
-# Second client with different scan range
 
-# Server connection settings - points to Docker service
-server_url: "http://server:5000"
+# Server connection settings
+server_url: "http://server:5000" # Change to your server address
 
-# Scanning behavior
-check_interval: 10  # How often to check for new tasks (seconds) - faster for testing
-heartbeat_interval: 30  # How often to send heartbeat (seconds)
-max_concurrent_scans: 2
-progress_update_interval: 10
-
-# Network resilience
-retry_attempts: 3
-retry_delay: 5
-
-# Scan defaults
-default_timeout: 120  # Shorter timeout for testing
-default_ports: "1-1000"
-
-# Logging
-log_level: "DEBUG"  # Verbose for testing
-log_file: "/var/log/portscan-client.log"
-log_max_size: 10485760
-log_backup_count: 3
-
-# Performance tuning
-nmap_max_parallelism: 100
-nmap_min_rate: 50
-
-# Client identification - DIFFERENT from client 1
 client_port: 8080
-client_host: "0.0.0.0"
+client_host: "172.20.0.101"
 client_id: "rpi-test-client-002"
 hostname: "rpi-docker-client-2"
 
-# Scan range for second client - focuses on different targets
+# Scan settings
+chunk_size: 1  # Number of targets per chunk (adjust based on network speed)
+per_target_timeout: 120  # Timeout per target in seconds
+progress_report_interval: 10  # Send progress updates every N seconds
+
+# Heartbeat and retry settings
+heartbeat_interval: 60
+check_approval_interval: 30
+retry_attempts: 3
+retry_delay: 5
+
+# Scan range for this client (optional, e.g. '192.168.1.0/24')
 scan_range: "172.20.0.16/28"
-
-# Test targets for client 2 (different subset)
-test_targets:
-  - name: "FTP Server"
-    ip: "172.20.0.13"
-    ports: "21,30000-30009"
-    description: "Pure-FTPd server for testing FTP scans"
-
-  - name: "Redis Cache"
-    ip: "172.20.0.14"
-    ports: "6379"
-    description: "Redis cache server for testing"
-
-  - name: "Multi-port Service"
-    ip: "172.20.0.15"
-    ports: "22,8080,8443,9000"
-    description: "Custom service with multiple open ports"

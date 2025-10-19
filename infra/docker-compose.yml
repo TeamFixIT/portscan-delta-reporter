@@ -10,20 +10,39 @@ services:
     environment:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
+      - PORT=5000
       - FLASK_APP=run.py
-      - FLASK_RUN_HOST=0.0.0.0
-      - FLASK_RUN_PORT=5000
-      - DATABASE_URL=sqlite:///portscan_dev.db
     volumes:
       - ../server:/app
+      - ./server.env:/app/.env:ro
+      - server_sessions:/app/sessions
+      - server_uploads:/app/uploads
+      - server_scan_results:/app/scan_results
+      - server_instance:/app/instance
+    depends_on:
+      redis:
+        condition: service_started
     networks:
-      - testnet
-    command: flask run --host=0.0.0.0 --port=5000
+      testnet:
+        ipv4_address: 172.20.0.2
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000')"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+
+  # Redis service for server
+  redis:
+    image: redis:alpine
+    container_name: server-redis
+    command: redis-server
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.5
+    expose:
+      - "6379"
 
   # Raspberry Pi 4 client simulator
   rpi-client:
@@ -36,14 +55,14 @@ services:
         condition: service_healthy
     volumes:
       - ../client:/app
-      - ./test-config.yml:/app/config.yml
+      - ./test-config.yml:/app/config.yml:ro
     networks:
       testnet:
         ipv4_address: 172.20.0.100
-    privileged: true # Needed for nmap scanning
+    privileged: true
     environment:
-      - PYTHONPATH=/app
-      - SERVER_URL=http://server:5000
+      - PYTHONUNBUFFERED=1
+      - SERVER_URL=http://localhost:5000
 
   # Second Raspberry Pi client simulator
   rpi-client-2:
@@ -56,16 +75,16 @@ services:
         condition: service_healthy
     volumes:
       - ../client:/app
-      - ./test-config-client2.yml:/app/config.yml
+      - ./test-config-client2.yml:/app/config.yml:ro
     networks:
       testnet:
         ipv4_address: 172.20.0.101
-    privileged: true # Needed for nmap scanning
+    privileged: true
     environment:
-      - PYTHONPATH=/app
-      - SERVER_URL=http://server:5000
+      - PYTHONUNBUFFERED=1
+      - SERVER_URL=http://localhost:5000
 
-  # Test target: SSH server (simulates a typical Linux server)
+  # Test target: SSH server
   target-ssh:
     image: linuxserver/openssh-server:latest
     container_name: target-ssh
@@ -76,19 +95,18 @@ services:
       - PASSWORD_ACCESS=true
       - USER_NAME=testuser
       - USER_PASSWORD=testpass123
-      - SUDO_ACCESS=false
     networks:
       testnet:
         ipv4_address: 172.20.0.8
     expose:
       - "2222"
 
-  # Test target: Web server (simulates a web application)
+  # Test target: Web server
   target-web:
     image: nginx:alpine
     container_name: target-web
     ports:
-      - "8080:80"  # Access via http://localhost:8080
+      - "8080:80"
     volumes:
       - ./test-web:/usr/share/nginx/html:ro
     networks:
@@ -98,15 +116,15 @@ services:
       - "80"
       - "443"
 
-  # Test target: Database server (simulates a database)
+  # Test target: Database server
   target-db:
     image: mysql:8.0
     container_name: target-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass123
-      MYSQL_DATABASE: testdb
-      MYSQL_USER: testuser
-      MYSQL_PASSWORD: testpass123
+      - MYSQL_ROOT_PASSWORD=rootpass123
+      - MYSQL_DATABASE=testdb
+      - MYSQL_USER=testuser
+      - MYSQL_PASSWORD=testpass123
     networks:
       testnet:
         ipv4_address: 172.20.0.10
@@ -116,7 +134,7 @@ services:
   # Test target: FTP server
   target-ftp:
     image: stilliard/pure-ftpd:hardened
-    platform: linux/amd64  # Force AMD64 for ARM compatibility
+    platform: linux/amd64
     container_name: target-ftp
     environment:
       - PUBLICHOST=172.20.0.13
@@ -145,13 +163,9 @@ services:
   target-multiport:
     image: alpine:latest
     container_name: target-multiport
-    command: sh -c "
-      apk add --no-cache netcat-openbsd &&
-      nc -l -p 8080 &
-      nc -l -p 8443 &
-      nc -l -p 9000 &
-      nc -l -p 22 &
-      wait"
+    command: >
+      sh -c "apk add --no-cache netcat-openbsd &&
+             nc -l -p 8080 & nc -l -p 8443 & nc -l -p 9000 & nc -l -p 22 & wait"
     networks:
       testnet:
         ipv4_address: 172.20.0.20
@@ -168,3 +182,9 @@ networks:
       config:
         - subnet: 172.20.0.0/16
           gateway: 172.20.0.1
+
+volumes:
+  server_sessions:
+  server_uploads:
+  server_scan_results:
+  server_instance:

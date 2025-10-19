@@ -235,7 +235,7 @@ class PortScannerClient:
 
     def _get_ip_address(self) -> str:
         """Get current IP address"""
-        return "0.0.0.0"
+        return socket.gethostbyname(self.client_id)
 
     def _load_config(self, config_file: str) -> Dict:
         """Load configuration from YAML file"""
