@@ -9,12 +9,12 @@ class Client(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.String(64), unique=True, nullable=False)  # MAC address
-    hostname = db.Column(db.String(255))
-    ip_address = db.Column(db.String(45))  # IPv4 or IPv6
+    hostname = db.Column(db.String(255), nullable=False)
+    ip_address = db.Column(db.String(45), nullable=False)  # IPv4 or IPv6
     port = db.Column(
         db.Integer, nullable=False, default=8080
     )  # Port the client listens on
-    scan_range = db.Column(db.String(255), nullable=True)  # e.g., '192.168.1.0/24'
+    scan_range = db.Column(db.String(255), nullable=False)  # e.g., '192.168.1.0/24'
     last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     status = db.Column(db.String(20), default="offline")  # online, offline, scanning
 

@@ -222,9 +222,7 @@ extra_css %}
     </div>
   </div>
 
-  {% set complete_reports = reports|selectattr('baseline_result.is_partial', 'equalto',
-  False)|selectattr('current_result.is_partial', 'equalto', False)|list %} {% set scans_with_alerts
-  = complete_reports|selectattr('new_ports_count', 'gt',
+  {% set scans_with_alerts = reports|selectattr('new_ports_count', 'gt',
   0)|map(attribute='scan_id')|unique|list|length %}
 
   <!-- Alert Banner for Critical Changes -->
@@ -252,7 +250,7 @@ extra_css %}
             </div>
             <div>
               <span class="stat-badge text-primary"
-                >{{ complete_reports|map(attribute='scan_id')|unique|list|length }}</span
+                >{{ reports|map(attribute='scan_id')|unique|list|length }}</span
               >
               <span class="stat-label text-muted">Monitored Networks</span>
             </div>
@@ -269,7 +267,7 @@ extra_css %}
             </div>
             <div>
               <span class="stat-badge text-danger"
-                >{{ complete_reports|sum(attribute='new_ports_count') }}</span
+                >{{ reports|sum(attribute='new_ports_count') }}</span
               >
               <span class="stat-label text-muted">New Open Ports</span>
             </div>
@@ -286,7 +284,7 @@ extra_css %}
             </div>
             <div>
               <span class="stat-badge text-success"
-                >{{ complete_reports|sum(attribute='closed_ports_count') }}</span
+                >{{ reports|sum(attribute='closed_ports_count') }}</span
               >
               <span class="stat-label text-muted">Closed Ports</span>
             </div>
@@ -303,7 +301,7 @@ extra_css %}
             </div>
             <div>
               <span class="stat-badge text-warning"
-                >{{ complete_reports|sum(attribute='changed_services_count') }}</span
+                >{{ reports|sum(attribute='changed_services_count') }}</span
               >
               <span class="stat-label text-muted">Service Changes</span>
             </div>
@@ -314,10 +312,9 @@ extra_css %}
   </div>
 
   <!-- Scan Cards - Current State -->
-  {% if complete_reports|length > 0 %} {% set reports_by_scan = {} %} {% for report in
-  complete_reports %} {% if report.scan_id not in reports_by_scan %} {% set _ =
-  reports_by_scan.update({report.scan_id: []}) %} {% endif %} {% set _ =
-  reports_by_scan[report.scan_id].append(report) %} {% endfor %}
+  {% if reports|length > 0 %} {% set reports_by_scan = {} %} {% for report in reports %} {% if
+  report.scan_id not in reports_by_scan %} {% set _ = reports_by_scan.update({report.scan_id: []})
+  %} {% endif %} {% set _ = reports_by_scan[report.scan_id].append(report) %} {% endfor %}
 
   <div class="row g-4">
     {% for scan_id, scan_reports in reports_by_scan.items() %} {% set scan = scan_reports[0].scan %}
@@ -416,13 +413,25 @@ extra_css %}
               <small class="text-muted d-block mb-1">Latest Comparison</small>
               <div class="d-flex align-items-center justify-content-center">
                 <span class="badge bg-light text-dark">
-                  Result #{{ latest_report.delta_data.baseline.result_id }}
+                  Result #{{ latest_report.delta_data.baseline.result_id }} {% if
+                  latest_report.baseline_result and latest_report.baseline_result.is_partial() %}
+                  <i class="fas fa-exclamation-triangle text-warning ms-1" title="Partial scan"></i>
+                  {% endif %}
                 </span>
                 <i class="fas fa-arrow-right comparison-arrow"></i>
                 <span class="badge bg-primary">
-                  Result #{{ latest_report.delta_data.current.result_id }}
+                  Result #{{ latest_report.delta_data.current.result_id }} {% if
+                  latest_report.current_result and latest_report.current_result.is_partial() %}
+                  <i class="fas fa-exclamation-triangle text-warning ms-1" title="Partial scan"></i>
+                  {% endif %}
                 </span>
               </div>
+              {% if (latest_report.baseline_result and latest_report.baseline_result.is_partial())
+              or (latest_report.current_result and latest_report.current_result.is_partial()) %}
+              <small class="text-warning d-block mt-1">
+                <i class="fas fa-info-circle me-1"></i>Contains partial scan data
+              </small>
+              {% endif %}
             </div>
           </div>
           {% endif %}
@@ -472,10 +481,7 @@ extra_css %}
     <h3 class="text-muted">No Security Reports Available</h3>
     <p class="text-muted">
       Delta reports track changes between scans.<br />
-      {% if reports|length > 0 %} All current reports are from partial scans and have been filtered
-      out.<br />
-      Complete a full scan to see security analysis here. {% else %} Run at least two complete scans
-      of the same target to see change analysis. {% endif %}
+      Run at least two scans of the same target to see change analysis.
     </p>
     <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary mt-3">
       <i class="fas fa-play me-2"></i>Go to Dashboard

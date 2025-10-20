@@ -1,0 +1,424 @@
+{% extends "base.html" %} {% block title %}Delta Report Details{% endblock %} {% block extra_css %}
+<style>
+  .detail-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    border-left: 4px solid;
+    transition: transform 0.2s;
+  }
+  .stat-card:hover {
+    transform: translateX(5px);
+  }
+  .stat-card-new {
+    border-left-color: #dc3545;
+  }
+  .stat-card-closed {
+    border-left-color: #28a745;
+  }
+  .stat-card-changed {
+    border-left-color: #ffc107;
+  }
+  .stat-card-hosts {
+    border-left-color: #17a2b8;
+  }
+
+  .change-table {
+    font-size: 0.9rem;
+  }
+  .change-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+  .host-badge {
+    font-family: "Courier New", monospace;
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.85rem;
+  }
+  .port-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+  }
+  .service-badge {
+    background: #6c757d;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+  }
+  .comparison-box {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+  }
+  .change-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+  }
+  .change-new {
+    background: #dc3545;
+  }
+  .change-closed {
+    background: #28a745;
+  }
+  .change-modified {
+    background: #ffc107;
+  }
+  .empty-section {
+    text-align: center;
+    padding: 3rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    color: #6c757d;
+  }
+  .diff-before {
+    background: #f8d7da;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    text-decoration: line-through;
+  }
+  .diff-after {
+    background: #d4edda;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+  }
+  .section-header {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 2rem 0 1rem 0;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Home</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.reports') }}">Security Overview</a>
+      </li>
+      <li class="breadcrumb-item active">Report #{{ report.id }}</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="detail-header">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="mb-2"><i class="fas fa-file-alt me-2"></i>Delta Report #{{ report.id }}</h1>
+        <p class="mb-2">
+          <i class="fas fa-crosshairs me-2"></i>
+          <strong>Target:</strong> {{ report.scan.target if report.scan else 'N/A' }}
+        </p>
+        <p class="mb-0">
+          <i class="fas fa-clock me-2"></i>
+          <strong>Generated:</strong> {{ report.created_at.strftime('%B %d, %Y at %H:%M:%S') }}
+        </p>
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <div class="btn-group" role="group">
+          <a
+            href="{{ url_for('dashboard.export_delta_report', report_id=report.id) }}"
+            class="btn btn-light">
+            <i class="fas fa-download me-1"></i>CSV
+          </a>
+          <a
+            href="{{ url_for('dashboard.export_delta_report_json', report_id=report.id) }}"
+            class="btn btn-light">
+            <i class="fas fa-download me-1"></i>JSON
+          </a>
+        </div>
+        <a
+          href="{{ url_for('dashboard.scan_history', scan_id=report.scan_id) }}"
+          class="btn btn-light ms-2">
+          <i class="fas fa-history me-1"></i>History
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Statistics -->
+  <div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card stat-card stat-card-new h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-2">New Open Ports</h6>
+          <h2 class="mb-0 text-danger">{{ report.new_ports_count }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card stat-card stat-card-closed h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-2">Closed Ports</h6>
+          <h2 class="mb-0 text-success">{{ report.closed_ports_count }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card stat-card stat-card-changed h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-2">Changed Services</h6>
+          <h2 class="mb-0 text-warning">{{ report.changed_services_count }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6 mb-3">
+      <div class="card stat-card stat-card-hosts h-100">
+        <div class="card-body">
+          <h6 class="text-muted mb-2">Host Changes</h6>
+          <h2 class="mb-0 text-info">{{ report.new_hosts_count + report.removed_hosts_count }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison Info -->
+  {% if report.delta_data and report.delta_data.baseline and report.delta_data.current %}
+  <div class="row mb-4">
+    <div class="col-md-6 mb-3">
+      <div class="comparison-box">
+        <h6 class="text-muted mb-2"><i class="fas fa-history me-2"></i>Baseline Scan</h6>
+        <p class="mb-1"><strong>Result ID:</strong> #{{ report.delta_data.baseline.result_id }}</p>
+        <p class="mb-1">
+          <strong>Completed:</strong> {{ report.delta_data.baseline.completed_at }}
+        </p>
+        <p class="mb-0">
+          <strong>Discovered:</strong>
+          {{ report.delta_data.baseline.total_hosts }} hosts, {{
+          report.delta_data.baseline.total_open_ports }} open ports
+        </p>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div class="comparison-box">
+        <h6 class="text-muted mb-2"><i class="fas fa-clock me-2"></i>Current Scan</h6>
+        <p class="mb-1"><strong>Result ID:</strong> #{{ report.delta_data.current.result_id }}</p>
+        <p class="mb-1"><strong>Completed:</strong> {{ report.delta_data.current.completed_at }}</p>
+        <p class="mb-0">
+          <strong>Discovered:</strong>
+          {{ report.delta_data.current.total_hosts }} hosts, {{
+          report.delta_data.current.total_open_ports }} open ports
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endif %} {% set delta = report.delta_data.delta if report.delta_data and 'delta' in
+  report.delta_data else {} %}
+
+  <!-- New Hosts -->
+  {% if delta.new_up_hosts and delta.new_up_hosts|length > 0 %}
+  <div class="section-header">
+    <h4><i class="fas fa-plus-circle text-success me-2"></i>New Hosts Detected</h4>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row">
+        {% for host in delta.new_up_hosts %}
+        <div class="col-md-3 col-sm-4 col-6 mb-2">
+          <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Removed Hosts -->
+  {% if delta.new_down_hosts and delta.new_down_hosts|length > 0 %}
+  <div class="section-header">
+    <h4><i class="fas fa-minus-circle text-danger me-2"></i>Hosts No Longer Responding</h4>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row">
+        {% for host in delta.new_down_hosts %}
+        <div class="col-md-3 col-sm-4 col-6 mb-2">
+          <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- New Open Ports -->
+  {% if delta.added_ports and delta.added_ports|length > 0 %}
+  <div class="section-header">
+    <h4><i class="fas fa-door-open text-danger me-2"></i>New Open Ports</h4>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover change-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Port</th>
+              <th>Protocol</th>
+              <th>Service</th>
+              <th>State</th>
+              <th>Product</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for port in delta.added_ports %}
+            <tr>
+              <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
+              <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
+              <td>{{ port.protocol|default('N/A')|upper }}</td>
+              <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
+              <td>
+                <span class="badge bg-success">{{ port.state|default('open') }}</span>
+              </td>
+              <td>{{ port.product|default('-') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Closed Ports -->
+  {% if delta.removed_ports and delta.removed_ports|length > 0 %}
+  <div class="section-header">
+    <h4><i class="fas fa-door-closed text-success me-2"></i>Closed Ports</h4>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover change-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Port</th>
+              <th>Protocol</th>
+              <th>Service</th>
+              <th>Previous State</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for port in delta.removed_ports %}
+            <tr>
+              <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
+              <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
+              <td>{{ port.protocol|default('N/A')|upper }}</td>
+              <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
+              <td>
+                <span class="badge bg-secondary">Previously Open</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Changed Services -->
+  {% if delta.changed_ports and delta.changed_ports|length > 0 %}
+  <div class="section-header">
+    <h4><i class="fas fa-exchange-alt text-warning me-2"></i>Service Changes</h4>
+  </div>
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover change-table">
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Port</th>
+              <th>Protocol</th>
+              <th>Previous Service</th>
+              <th>Current Service</th>
+              <th>Banner Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for change in delta.changed_ports %} {% set before = change.before|default({}) %} {%
+            set after = change.after|default({}) %}
+            <tr>
+              <td><span class="host-badge">{{ change.host|default('N/A') }}</span></td>
+              <td><span class="port-badge">{{ change.port|default('N/A') }}</span></td>
+              <td>{{ change.protocol|default('N/A')|upper }}</td>
+              <td>
+                {% if before.service != after.service %}
+                <span class="diff-before">{{ before.service|default('unknown') }}</span>
+                {% else %}
+                <span class="service-badge">{{ before.service|default('unknown') }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if before.service != after.service %}
+                <span class="diff-after">{{ after.service|default('unknown') }}</span>
+                {% else %}
+                <span class="service-badge">{{ after.service|default('unknown') }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if before.banner != after.banner %}
+                <small>
+                  <span class="diff-before">{{ before.banner|default('-')|truncate(30) }}</span>
+                  <i class="fas fa-arrow-right mx-1"></i>
+                  <span class="diff-after">{{ after.banner|default('-')|truncate(30) }}</span>
+                </small>
+                {% else %}
+                <small class="text-muted">No change</small>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- No Changes Message -->
+  {% if not delta or ( (not delta.new_up_hosts or delta.new_up_hosts|length == 0) and (not
+  delta.new_down_hosts or delta.new_down_hosts|length == 0) and (not delta.added_ports or
+  delta.added_ports|length == 0) and (not delta.removed_ports or delta.removed_ports|length == 0)
+  and (not delta.changed_ports or delta.changed_ports|length == 0) ) %}
+  <div class="empty-section">
+    <i class="fas fa-check-circle fa-4x mb-3"></i>
+    <h3>No Changes Detected</h3>
+    <p>The network remained stable between these two scans.</p>
+  </div>
+  {% endif %}
+
+  <!-- Action Buttons -->
+  <div class="row mt-4">
+    <div class="col text-center">
+      <a href="{{ url_for('dashboard.reports') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Overview
+      </a>
+      <a
+        href="{{ url_for('dashboard.scan_history', scan_id=report.scan_id) }}"
+        class="btn btn-primary">
+        <i class="fas fa-history me-2"></i>View Full History
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

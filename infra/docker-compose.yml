@@ -16,10 +16,7 @@ services:
     volumes:
       - ../server:/app
       - ./server.env:/app/.env:ro
-      - server_sessions:/app/sessions
-      - server_uploads:/app/uploads
-      - server_scan_results:/app/scan_results
-      - server_instance:/app/instance
+
     depends_on:
       redis:
         condition: service_started
@@ -43,6 +40,24 @@ services:
         ipv4_address: 172.20.0.5
     expose:
       - "6379"
+
+  # Web service for testing port scanning
+  port-service:
+    build:
+      context: ./test-web
+      dockerfile: web.dockerfile
+    container_name: port-service
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "5001:5000"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.6
+    command: python3 /app/app.py
+    volumes:
+      # Optional: persist rules
+      - ./iptables-save.sh:/etc/iptables-save.sh
 
   # Raspberry Pi 4 client simulator
   rpi-client:
@@ -100,21 +115,6 @@ services:
         ipv4_address: 172.20.0.8
     expose:
       - "2222"
-
-  # Test target: Web server
-  target-web:
-    image: nginx:alpine
-    container_name: target-web
-    ports:
-      - "8080:80"
-    volumes:
-      - ./test-web:/usr/share/nginx/html:ro
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.9
-    expose:
-      - "80"
-      - "443"
 
   # Test target: Database server
   target-db:

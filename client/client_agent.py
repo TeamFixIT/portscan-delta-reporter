@@ -223,9 +223,6 @@ class PortScannerClient:
         self.server = None
         self.server_thread = None
 
-        # Register with server on startup
-        self._register_with_server()
-
         # Start heartbeat thread
         self._start_heartbeat()
 
@@ -434,7 +431,7 @@ class PortScannerClient:
                     "hostname": self.hostname,
                     "ip_address": self._get_ip_address(),
                     "scan_range": self.scan_range,
-                    "client_port": self.config.get("client_port"),
+                    "port": self.config.get("client_port"),
                     "capabilities": {
                         "max_concurrent_scans": self.config.get(
                             "max_concurrent_scans", 2
@@ -459,7 +456,7 @@ class PortScannerClient:
                             f"Successfully registered and approved with server as {self.client_id}"
                         )
                     else:
-                        logger.warning(
+                        logger.info(
                             f"Registered with server as {self.client_id} but awaiting approval"
                         )
 
@@ -483,49 +480,95 @@ class PortScannerClient:
         """Start heartbeat thread to maintain connection with server"""
 
         def heartbeat_loop():
+            """Single heartbeat loop that handles both registration and status updates"""
             check_interval = self.config.get("check_approval_interval", 30)
             heartbeat_interval = self.config.get("heartbeat_interval", 60)
             last_approval_check = 0
+            startup = True  # Track if this is first heartbeat
 
             while True:
                 try:
                     url = f"{self.config['server_url']}/api/clients/{self.client_id}/heartbeat"
                     data = {
+                        "client_id": self.client_id,
                         "hostname": self.hostname,
                         "ip_address": self._get_ip_address(),
-                        "client_port": self.config.get("client_port"),
+                        "port": self.config.get("client_port"),
+                        "scan_range": self.scan_range,
                         "active_scans": len(self.active_scans),
                         "system_info": self.get_system_info(),
+                        "capabilities": {
+                            "max_concurrent_scans": self.config.get(
+                                "max_concurrent_scans", 2
+                            ),
+                            "supported_scan_types": ["tcp", "udp", "syn"],
+                            "nmap_version": (
+                                nmap.__version__
+                                if hasattr(nmap, "__version__")
+                                else "unknown"
+                            ),
+                        },
                     }
 
                     response = requests.post(url, json=data, timeout=5)
 
                     if response.status_code == 200:
                         response_data = response.json()
+                        was_approved = self.approved
                         self.approved = response_data.get("approved", False)
-                        logger.debug("Heartbeat sent successfully")
+
+                        if startup:
+                            if self.approved:
+                                logger.info(
+                                    f"Connected to server as approved client {self.client_id}"
+                                )
+                            else:
+                                logger.warning(
+                                    f"Connected to server as {self.client_id} - awaiting approval"
+                                )
+                            startup = False
+                            self.registered = True
+                        elif was_approved and not self.approved:
+                            logger.warning("Client approval has been revoked")
+                        elif not was_approved and self.approved:
+                            logger.info("Client has been approved!")
+                        else:
+                            logger.debug("Heartbeat sent successfully")
 
                     elif response.status_code == 403:
-                        # Client not approved
+                        # Client not approved or approval revoked
                         response_data = response.json()
                         was_approved = self.approved
                         self.approved = False
 
-                        if was_approved:
+                        if startup:
+                            logger.warning(
+                                f"Connected to server as {self.client_id} - awaiting approval"
+                            )
+                            startup = False
+                            self.registered = True
+                        elif was_approved:
                             logger.warning("Client approval has been revoked")
                         else:
                             now = time.time()
                             if now - last_approval_check >= check_interval:
                                 logger.info("Still awaiting approval from server...")
                                 last_approval_check = now
-
                     else:
-                        logger.debug(
+                        logger.warning(
                             f"Heartbeat failed with status: {response.status_code}"
                         )
+                        if startup:
+                            logger.error("Failed to connect to server on startup")
+
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"Heartbeat failed: {e}")
+                    if startup:
+                        logger.warning("Server is not reachable on startup")
+                        startup = False  # Don't keep showing startup message
 
                 except Exception as e:
-                    logger.debug(f"Heartbeat failed: {e}")
+                    logger.error(f"Heartbeat error: {e}")
 
                 time.sleep(heartbeat_interval)
 
@@ -731,11 +774,6 @@ class PortScannerClient:
                 f"Client ready to receive scan requests on http://{host}:{port}"
             )
 
-            if not self.approved:
-                logger.warning(
-                    "⚠️  Client is NOT approved yet. Waiting for server approval..."
-                )
-
             return True
 
         except Exception as e:
@@ -781,13 +819,6 @@ class PortScannerClient:
         logger.info(f"Port Scanner Client {self.client_id} starting...")
         logger.info(f"Server URL: {self.config['server_url']}")
         logger.info(f"Max concurrent scans: {self.config['max_concurrent_scans']}")
-
-        # Ensure registration
-        if not self.registered:
-            logger.warning("Not registered with server, attempting registration...")
-            if not self._register_with_server():
-                logger.error("Cannot proceed without server registration")
-                return False
 
         # Start the HTTP server
         if not self.start_server():

@@ -1,0 +1,437 @@
+{% extends "base.html" %} {% block title %}Scan History - {{ scan.target }}{% endblock %} {% block
+extra_css %}
+<style>
+  .scan-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .timeline {
+    position: relative;
+    padding: 2rem 0;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 30px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, #007bff 0%, #e9ecef 100%);
+  }
+  .timeline-item {
+    position: relative;
+    padding-left: 80px;
+    margin-bottom: 2rem;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: 18px;
+    top: 0;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+  }
+  .timeline-dot.has-changes {
+    background: #ffc107;
+  }
+  .timeline-dot.no-changes {
+    background: #28a745;
+  }
+  .timeline-dot.critical {
+    background: #dc3545;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,
+    100% {
+      box-shadow: 0 2px 8px rgba(220, 53, 69, 0.4);
+    }
+    50% {
+      box-shadow: 0 2px 20px rgba(220, 53, 69, 0.8);
+    }
+  }
+  .timeline-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+  }
+  .timeline-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(10px);
+  }
+  .timeline-card-header {
+    background: #f8f9fa;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.5rem 0.5rem 0 0;
+  }
+  .timeline-card-body {
+    padding: 1.25rem;
+  }
+  .change-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .change-badge i {
+    font-size: 0.9rem;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .stat-box {
+    text-align: center;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border: 1px solid #e9ecef;
+  }
+  .stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+  }
+  .trend-chart {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+  }
+  .summary-box {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+  }
+  .empty-timeline {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+  }
+  .filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+  .filter-tab {
+    padding: 0.5rem 1rem;
+    border: 2px solid #dee2e6;
+    background: white;
+    border-radius: 2rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+  }
+  .filter-tab:hover {
+    border-color: #007bff;
+    background: #e7f1ff;
+  }
+  .filter-tab.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+  .comparison-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Home</a></li>
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.reports') }}">Security Overview</a>
+      </li>
+      <li class="breadcrumb-item active">Scan History</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="scan-header">
+    <div class="row align-items-center">
+      <div class="col-md-8">
+        <h1 class="mb-2"><i class="fas fa-history me-2"></i>Scan History</h1>
+        <p class="mb-2">
+          <i class="fas fa-network-wired me-2"></i>
+          <strong>{{ scan.name if scan.name else 'Target' }}:</strong> {{ scan.target }}
+        </p>
+        <p class="mb-0">
+          <i class="fas fa-chart-line me-2"></i>
+          <strong>Total Reports:</strong> {{ reports|length }}
+        </p>
+      </div>
+      <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{{ url_for('dashboard.reports') }}" class="btn btn-light">
+          <i class="fas fa-arrow-left me-2"></i>Back to Overview
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {% if reports|length > 0 %}
+  <!-- Summary Box -->
+  <div class="summary-box">
+    <div class="row">
+      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+        <div class="text-center">
+          <h3 class="mb-1 text-primary">{{ reports|sum(attribute='new_ports_count') }}</h3>
+          <small class="text-muted">Total New Ports</small>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+        <div class="text-center">
+          <h3 class="mb-1 text-success">{{ reports|sum(attribute='closed_ports_count') }}</h3>
+          <small class="text-muted">Total Closed Ports</small>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
+        <div class="text-center">
+          <h3 class="mb-1 text-warning">{{ reports|sum(attribute='changed_services_count') }}</h3>
+          <small class="text-muted">Service Changes</small>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="text-center">
+          <h3 class="mb-1 text-info">
+            {{ reports|sum(attribute='new_hosts_count') +
+            reports|sum(attribute='removed_hosts_count') }}
+          </h3>
+          <small class="text-muted">Host Changes</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">
+      <i class="fas fa-th me-1"></i>All Reports
+    </button>
+    <button class="filter-tab" data-filter="changes">
+      <i class="fas fa-exclamation-triangle me-1"></i>Only Changes
+    </button>
+    <button class="filter-tab" data-filter="critical">
+      <i class="fas fa-shield-alt me-1"></i>Critical Only
+    </button>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    {% for report in reports %} {% set has_changes = report.new_ports_count > 0 or
+    report.closed_ports_count > 0 or report.changed_services_count > 0 or report.new_hosts_count > 0
+    or report.removed_hosts_count > 0 %} {% set is_critical = report.new_ports_count > 0 %}
+
+    <div
+      class="timeline-item"
+      data-has-changes="{{ 'true' if has_changes else 'false' }}"
+      data-is-critical="{{ 'true' if is_critical else 'false' }}">
+      <div
+        class="timeline-dot {% if is_critical %}critical{% elif has_changes %}has-changes{% else %}no-changes{% endif %}"></div>
+
+      <div class="timeline-card">
+        <div class="timeline-card-header">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h5 class="mb-1">
+                <i class="fas fa-calendar-alt text-primary me-2"></i>
+                {{ report.created_at.strftime('%B %d, %Y') }}
+              </h5>
+              <small class="text-muted"> {{ report.created_at.strftime('%H:%M:%S') }} </small>
+            </div>
+            <div>
+              {% if is_critical %}
+              <span class="badge bg-danger">
+                <i class="fas fa-exclamation-circle me-1"></i>Critical
+              </span>
+              {% elif has_changes %}
+              <span class="badge bg-warning text-dark">
+                <i class="fas fa-info-circle me-1"></i>Changes Detected
+              </span>
+              {% else %}
+              <span class="badge bg-success"> <i class="fas fa-check-circle me-1"></i>Stable </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-card-body">
+          {% if has_changes %}
+          <!-- Change Badges -->
+          <div class="mb-3">
+            {% if report.new_hosts_count > 0 %}
+            <span class="change-badge bg-info bg-opacity-10 text-info">
+              <i class="fas fa-plus-circle"></i>
+              {{ report.new_hosts_count }} new host(s)
+            </span>
+            {% endif %} {% if report.removed_hosts_count > 0 %}
+            <span class="change-badge bg-secondary bg-opacity-10 text-secondary">
+              <i class="fas fa-minus-circle"></i>
+              {{ report.removed_hosts_count }} removed host(s)
+            </span>
+            {% endif %} {% if report.new_ports_count > 0 %}
+            <span class="change-badge bg-danger bg-opacity-10 text-danger">
+              <i class="fas fa-door-open"></i>
+              {{ report.new_ports_count }} new port(s)
+            </span>
+            {% endif %} {% if report.closed_ports_count > 0 %}
+            <span class="change-badge bg-success bg-opacity-10 text-success">
+              <i class="fas fa-door-closed"></i>
+              {{ report.closed_ports_count }} closed port(s)
+            </span>
+            {% endif %} {% if report.changed_services_count > 0 %}
+            <span class="change-badge bg-warning bg-opacity-10 text-warning">
+              <i class="fas fa-exchange-alt"></i>
+              {{ report.changed_services_count }} service change(s)
+            </span>
+            {% endif %}
+          </div>
+
+          <!-- Stats Grid -->
+          <div class="stats-grid">
+            <div class="stat-box">
+              <span class="stat-value text-danger">+{{ report.new_ports_count }}</span>
+              <span class="stat-label">New Ports</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value text-success">-{{ report.closed_ports_count }}</span>
+              <span class="stat-label">Closed</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value text-warning">{{ report.changed_services_count }}</span>
+              <span class="stat-label">Changed</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-value text-info">
+                {{ report.new_hosts_count + report.removed_hosts_count }}
+              </span>
+              <span class="stat-label">Host Δ</span>
+            </div>
+          </div>
+          {% else %}
+          <div class="mb-0">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>No changes detected</strong> - Network remained stable
+          </div>
+          {% endif %}
+
+          <!-- Comparison Info -->
+          {% if report.delta_data and report.delta_data.baseline and report.delta_data.current %}
+          <div class="comparison-info">
+            <i class="fas fa-info-circle me-1"></i>
+            Comparing Result #{{ report.delta_data.baseline.result_id }} {% if
+            report.baseline_result and report.baseline_result.is_partial() %}
+            <i class="fas fa-exclamation-triangle text-warning ms-1" title="Partial scan"></i>
+            {% endif %}
+            <i class="fas fa-arrow-right mx-1"></i>
+            Result #{{ report.delta_data.current.result_id }} {% if report.current_result and
+            report.current_result.is_partial() %}
+            <i class="fas fa-exclamation-triangle text-warning ms-1" title="Partial scan"></i>
+            {% endif %} {% if (report.baseline_result and report.baseline_result.is_partial()) or
+            (report.current_result and report.current_result.is_partial()) %}
+            <span class="text-warning ms-2">(Contains partial scan)</span>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Action Buttons -->
+          <div class="d-flex gap-2 mt-3 pt-3 border-top">
+            <a
+              href="{{ url_for('dashboard.view_delta_report', report_id=report.id) }}"
+              class="btn btn-sm btn-primary">
+              <i class="fas fa-eye me-1"></i>View Details
+            </a>
+            <a
+              href="{{ url_for('dashboard.export_delta_report', report_id=report.id) }}"
+              class="btn btn-sm btn-outline-success">
+              <i class="fas fa-download me-1"></i>Export CSV
+            </a>
+            <a
+              href="{{ url_for('dashboard.export_delta_report_json', report_id=report.id) }}"
+              class="btn btn-sm btn-outline-info">
+              <i class="fas fa-file-code me-1"></i>JSON
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="empty-timeline">
+    <i class="fas fa-history fa-5x text-muted opacity-50 mb-4"></i>
+    <h3 class="text-muted">No Reports Yet</h3>
+    <p class="text-muted">
+      This scan doesn't have any delta reports yet.<br />
+      Delta reports are created after running multiple scans.
+    </p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary mt-3">
+      <i class="fas fa-play me-2"></i>Run a Scan
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // Filter functionality
+    const filterTabs = document.querySelectorAll(".filter-tab");
+    const timelineItems = document.querySelectorAll(".timeline-item");
+
+    filterTabs.forEach((tab) => {
+      tab.addEventListener("click", function () {
+        // Update active state
+        filterTabs.forEach((t) => t.classList.remove("active"));
+        this.classList.add("active");
+
+        const filter = this.dataset.filter;
+
+        timelineItems.forEach((item) => {
+          const hasChanges = item.dataset.hasChanges === "true";
+          const isCritical = item.dataset.isCritical === "true";
+
+          if (filter === "all") {
+            item.style.display = "block";
+          } else if (filter === "changes") {
+            item.style.display = hasChanges ? "block" : "none";
+          } else if (filter === "critical") {
+            item.style.display = isCritical ? "block" : "none";
+          }
+        });
+      });
+    });
+  });
+</script>
+{% endblock %}

@@ -37,9 +37,4 @@ if [ ! -f "config.yml" ]; then
     echo "⚠️  Please edit config.yml with your server details"
 fi
 
-echo "✅ Client setup complete!"
-echo ""
-echo "To start the client:"
-echo "  source venv/bin/activate - on macOS/Linux"
-echo "  source venv/Scripts/activate - on Windows"
-echo "  python client_agent.py"
+echo "Client setup complete!"

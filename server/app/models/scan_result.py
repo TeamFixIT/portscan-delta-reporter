@@ -58,6 +58,10 @@ class ScanResult(db.Model):
     def __repr__(self):
         return f"<ScanResult {self.status} ({self.completed_targets}/{self.total_targets})>"
 
+    def is_partial(self) -> bool:
+        """Check if the scan result is partial"""
+        return self.type == "partial"
+
     def update(self, result_data: Dict) -> bool:
         """
         Update scan result with data from a client

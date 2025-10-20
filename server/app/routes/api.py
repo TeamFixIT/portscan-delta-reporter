@@ -31,22 +31,26 @@ def register_client():
     """Register a new client or update existing one"""
     try:
         data = request.get_json()
-        client_id = data.get("client_id")  # MAC address
-        hostname = data.get("hostname")
-        ip_address = data.get("ip_address")
-        port = data.get("port")
-        scan_range = data.get("scan_range")
 
-        if not client_id:
+        # Validate required fields
+        required_fields = ["client_id", "hostname", "ip_address", "port", "scan_range"]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
             return (
                 jsonify(
                     {
-                        "status": "error",
-                        "message": "client_id (MAC address) is required",
+                        "error": "Missing required fields",
+                        "missing_fields": missing_fields,
                     }
                 ),
                 400,
             )
+
+        client_id = data["client_id"]
+        hostname = data["hostname"]
+        ip_address = data["ip_address"]
+        port = data["port"]
+        scan_range = data["scan_range"]
 
         # Check if client exists
         client = Client.query.filter_by(client_id=client_id).first()
@@ -200,60 +204,68 @@ def delete_client(client_id):
 
 @bp.route("/clients/<client_id>/heartbeat", methods=["POST"])
 def client_heartbeat(client_id):
-    """Update client heartbeat to maintain online status"""
+    """Handle client heartbeat - registers new clients and updates existing ones"""
     try:
+        data = request.get_json()
+
+        # Validate required fields
+        required_fields = ["client_id", "hostname", "ip_address", "port", "scan_range"]
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return (
+                jsonify(
+                    {
+                        "error": "Missing required fields",
+                        "missing_fields": missing_fields,
+                    }
+                ),
+                400,
+            )
+
+        client_id = data["client_id"]
+        hostname = data["hostname"]
+        ip_address = data["ip_address"]
+        port = data["port"]
+        scan_range = data["scan_range"]
+
+        # Check if client exists
         client = Client.query.filter_by(client_id=client_id).first()
 
-        if not client:
-            # Auto-register if not found (pending approval)
-            data = request.get_json() or {}
+        if client:
+            # Update existing client
+            client.hostname = hostname or client.hostname
+            client.ip_address = ip_address or client.ip_address
+            client.port = port or client.port
+            client.scan_range = scan_range
+            client.last_seen = datetime.utcnow()
+
+            # Check approval status and respond accordingly
+            if not client.approved:
+                message = "Client updated but awaiting approval"
+                status_code = 403
+            else:
+                client.mark_online()
+                message = "Client updated successfully"
+                status_code = 200
+        else:
+            # Create new client (pending approval)
             client = Client(
                 client_id=client_id,
-                hostname=data.get("hostname", "Unknown"),
-                ip_address=data.get("ip_address", request.remote_addr),
+                hostname=hostname,
+                ip_address=ip_address,
+                port=port,
+                scan_range=scan_range,
                 status="offline",
-                approved=False,
+                last_seen=datetime.utcnow(),
+                approved=False,  # New clients require approval
             )
             db.session.add(client)
-            db.session.commit()
+            message = "Client registered successfully - awaiting approval"
+            status_code = 403  # Return 403 for unapproved clients
 
-            return (
-                jsonify(
-                    {
-                        "status": "pending_approval",
-                        "message": "Client registered but requires approval",
-                        "approved": False,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
-                ),
-                403,
+            current_app.logger.info(
+                f"New client registered: {client_id} ({ip_address})"
             )
-
-        # Check if client is approved
-        if not client.approved:
-            client.last_seen = datetime.utcnow()
-            db.session.commit()
-
-            return (
-                jsonify(
-                    {
-                        "status": "pending_approval",
-                        "message": "Client is not approved yet",
-                        "approved": False,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
-                ),
-                403,
-            )
-
-        # Client is approved - update heartbeat
-        client.last_seen = datetime.utcnow()
-        client.mark_online()
-
-        # Update IP if changed
-        data = request.get_json() or {}
-        if "ip_address" in data:
-            client.ip_address = data["ip_address"]
 
         db.session.commit()
 
@@ -261,11 +273,11 @@ def client_heartbeat(client_id):
             jsonify(
                 {
                     "status": "success",
-                    "approved": True,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "message": message,
+                    "approved": client.approved,
                 }
             ),
-            200,
+            status_code,
         )
 
     except Exception as e:
