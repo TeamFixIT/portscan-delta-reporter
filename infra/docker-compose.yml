@@ -42,22 +42,18 @@ services:
       - "6379"
 
   # Web service for testing port scanning
-  port-service:
+  port_controller:
     build:
       context: ./test-web
       dockerfile: web.dockerfile
-    container_name: port-service
-    cap_add:
-      - NET_ADMIN
-    ports:
-      - "5001:5000"
+    container_name: port_controller
     networks:
       testnet:
         ipv4_address: 172.20.0.6
-    command: python3 /app/app.py
-    volumes:
-      # Optional: persist rules
-      - ./iptables-save.sh:/etc/iptables-save.sh
+    ports:
+      - "5050:5050"
+    stdin_open: true
+    tty: true
 
   # Raspberry Pi 4 client simulator
   rpi-client:

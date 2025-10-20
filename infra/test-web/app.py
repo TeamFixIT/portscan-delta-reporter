@@ -1,149 +1,183 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
 import subprocess
+import signal
 import os
-import re
-from functools import wraps
 
 app = Flask(__name__)
-SUBNET = "172.20.0.0/16"
-CHAIN_NAME = "PORT_MANAGER"
-
-# Port validation
-MIN_PORT = 1024
-MAX_PORT = 65535
-
-
-def validate_port(port):
-    """Validate port number is in acceptable range"""
-    if not isinstance(port, int) or port < MIN_PORT or port > MAX_PORT:
-        return False
-    return True
-
-
-def init_iptables():
-    """Initialize custom iptables chain"""
-    # Create custom chain if it doesn't exist
-    subprocess.run(
-        f"iptables -N {CHAIN_NAME} 2>/dev/null || true", shell=True, capture_output=True
-    )
-
-    # Link custom chain to INPUT if not already linked
-    check_cmd = f"iptables -C INPUT -j {CHAIN_NAME} 2>/dev/null"
-    result = subprocess.run(check_cmd, shell=True, capture_output=True)
-    if result.returncode != 0:
-        subprocess.run(
-            f"iptables -I INPUT -j {CHAIN_NAME}", shell=True, capture_output=True
-        )
-
-
-def run_command(cmd):
-    """Execute shell command safely"""
-    try:
-        result = subprocess.run(
-            cmd, shell=True, check=True, capture_output=True, text=True, timeout=5
-        )
-        return {"success": True, "output": result.stdout}
-    except subprocess.CalledProcessError as e:
-        return {"success": False, "error": e.stderr}
-    except subprocess.TimeoutExpired:
-        return {"success": False, "error": "Command timed out"}
+CORS(app)
 
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    """Serve the main HTML page"""
+    return send_from_directory(".", "index.html")
 
 
-@app.route("/open/<int:port>", methods=["POST"])
-def open_port(port):
-    if not validate_port(port):
-        return (
-            jsonify(
-                {"error": f"Invalid port. Must be between {MIN_PORT} and {MAX_PORT}"}
-            ),
-            400,
+# Dictionary to track PIDs of socat processes by port
+port_processes = {}
+
+
+def start_port_listener(port):
+    """Start a socat listener on the specified port"""
+    try:
+        # Start socat in background and capture PID
+        process = subprocess.Popen(
+            ["socat", f"TCP-LISTEN:{port},fork,reuseaddr", "SYSTEM:echo"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
+        port_processes[port] = process.pid
+        return True, process.pid
+    except Exception as e:
+        return False, str(e)
 
-    # Remove DROP rule if it exists (using -D with -C to check first)
-    check_cmd = f"iptables -C {CHAIN_NAME} -p tcp --dport {port} -s {SUBNET} -j DROP 2>/dev/null"
-    check_result = subprocess.run(check_cmd, shell=True, capture_output=True)
 
-    if check_result.returncode == 0:
-        # Rule exists, remove it
-        cmd = f"iptables -D {CHAIN_NAME} -p tcp --dport {port} -s {SUBNET} -j DROP"
-        result = run_command(cmd)
-        if result["success"]:
-            return jsonify({"message": f"Port {port} opened for {SUBNET}"})
+def stop_port_listener(port):
+    """Stop the socat listener on the specified port"""
+    try:
+        if port in port_processes:
+            pid = port_processes[port]
+            os.kill(pid, signal.SIGTERM)
+            del port_processes[port]
+            return True, f"Closed port {port} (PID: {pid})"
         else:
-            return (
-                jsonify({"error": f"Error opening port {port}: {result['error']}"}),
-                500,
-            )
-    else:
-        return jsonify({"message": f"Port {port} already open for {SUBNET}"})
+            # Try to find and kill the process anyway
+            subprocess.run(["pkill", "-f", f"socat.*LISTEN:{port}"], check=False)
+            return True, f"Attempted to close port {port}"
+    except Exception as e:
+        return False, str(e)
 
 
-@app.route("/close/<int:port>", methods=["POST"])
-def close_port(port):
-    if not validate_port(port):
+@app.route("/api/ports/open", methods=["POST"])
+def open_port():
+    """Open a port"""
+    data = request.get_json()
+    port = data.get("port")
+
+    if not port:
+        return jsonify({"error": "Port number required"}), 400
+
+    try:
+        port = int(port)
+        if port < 1 or port > 65535:
+            return jsonify({"error": "Port must be between 1 and 65535"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid port number"}), 400
+
+    if port in port_processes:
+        return jsonify({"error": f"Port {port} is already open"}), 400
+
+    success, result = start_port_listener(port)
+
+    if success:
         return (
             jsonify(
-                {"error": f"Invalid port. Must be between {MIN_PORT} and {MAX_PORT}"}
+                {
+                    "status": "success",
+                    "message": f"Port {port} opened",
+                    "port": port,
+                    "pid": result,
+                }
             ),
-            400,
+            200,
         )
-
-    # Check if rule already exists to prevent duplicates
-    check_cmd = f"iptables -C {CHAIN_NAME} -p tcp --dport {port} -s {SUBNET} -j DROP 2>/dev/null"
-    check_result = subprocess.run(check_cmd, shell=True, capture_output=True)
-
-    if check_result.returncode == 0:
-        return jsonify({"message": f"Port {port} already closed for {SUBNET}"})
-
-    # Add DROP rule
-    cmd = f"iptables -A {CHAIN_NAME} -p tcp --dport {port} -s {SUBNET} -j DROP"
-    result = run_command(cmd)
-
-    if result["success"]:
-        return jsonify({"message": f"Port {port} closed for {SUBNET}"})
     else:
-        return jsonify({"error": f"Error closing port {port}: {result['error']}"}), 500
+        return jsonify({"error": f"Failed to open port: {result}"}), 500
 
 
-@app.route("/status/<int:port>", methods=["GET"])
-def status_port(port):
-    if not validate_port(port):
-        return (
-            jsonify(
-                {"error": f"Invalid port. Must be between {MIN_PORT} and {MAX_PORT}"}
-            ),
-            400,
-        )
+@app.route("/api/ports/close", methods=["POST"])
+def close_port():
+    """Close a port"""
+    data = request.get_json()
+    port = data.get("port")
 
-    cmd = f"iptables -C {CHAIN_NAME} -p tcp --dport {port} -s {SUBNET} -j DROP 2>/dev/null"
-    result = subprocess.run(cmd, shell=True, capture_output=True)
-    status = "closed" if result.returncode == 0 else "open"
+    if not port:
+        return jsonify({"error": "Port number required"}), 400
 
-    return jsonify({"port": port, "status": status, "subnet": SUBNET})
+    try:
+        port = int(port)
+    except ValueError:
+        return jsonify({"error": "Invalid port number"}), 400
 
+    success, result = stop_port_listener(port)
 
-@app.route("/list", methods=["GET"])
-def list_rules():
-    """List all current port rules"""
-    cmd = f"iptables -L {CHAIN_NAME} -n --line-numbers"
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-
-    if result.returncode == 0:
-        return jsonify({"rules": result.stdout})
+    if success:
+        return jsonify({"status": "success", "message": result, "port": port}), 200
     else:
-        return jsonify({"error": "Failed to list rules"}), 500
+        return jsonify({"error": f"Failed to close port: {result}"}), 500
+
+
+@app.route("/api/ports/open-multiple", methods=["POST"])
+def open_multiple_ports():
+    """Open multiple ports at once"""
+    data = request.get_json()
+    ports = data.get("ports", [])
+
+    if not ports or not isinstance(ports, list):
+        return jsonify({"error": "Ports array required"}), 400
+
+    results = []
+    for port in ports:
+        try:
+            port = int(port)
+            if port in port_processes:
+                results.append({"port": port, "status": "already_open"})
+            else:
+                success, pid = start_port_listener(port)
+                if success:
+                    results.append({"port": port, "status": "opened", "pid": pid})
+                else:
+                    results.append(
+                        {"port": port, "status": "failed", "error": str(pid)}
+                    )
+        except ValueError:
+            results.append({"port": port, "status": "invalid"})
+
+    return jsonify({"status": "success", "results": results}), 200
+
+
+@app.route("/api/ports/close-all", methods=["POST"])
+def close_all_ports():
+    """Close all open ports"""
+    closed = []
+    for port in list(port_processes.keys()):
+        success, result = stop_port_listener(port)
+        if success:
+            closed.append(port)
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "message": f"Closed {len(closed)} ports",
+                "closed_ports": closed,
+            }
+        ),
+        200,
+    )
+
+
+@app.route("/api/ports/status", methods=["GET"])
+def get_status():
+    """Get status of all open ports"""
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "open_ports": list(port_processes.keys()),
+                "count": len(port_processes),
+            }
+        ),
+        200,
+    )
+
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Health check endpoint"""
+    return jsonify({"status": "healthy"}), 200
 
 
 if __name__ == "__main__":
-    # Set default policy
-    os.system("iptables -P INPUT ACCEPT")
-
-    # Initialize custom chain
-    init_iptables()
-
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5050, debug=True)

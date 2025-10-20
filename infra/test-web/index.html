@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Port House Controller</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        text-align: center;
+      }
+
+      h1 {
+        color: white;
+        margin-bottom: 30px;
+        font-size: 2.5em;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .house {
+        position: relative;
+        width: 600px;
+        height: 500px;
+        margin: 0 auto;
+      }
+
+      /* Roof */
+      .roof {
+        width: 0;
+        height: 0;
+        border-left: 320px solid transparent;
+        border-right: 320px solid transparent;
+        border-bottom: 150px solid #8b4513;
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      /* House body */
+      .house-body {
+        width: 500px;
+        height: 350px;
+        background: #d4a574;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 3px solid #8b6914;
+      }
+
+      /* Door */
+      .door {
+        width: 80px;
+        height: 120px;
+        background: #654321;
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 2px solid #4a3319;
+        border-radius: 5px 5px 0 0;
+      }
+
+      .doorknob {
+        width: 8px;
+        height: 8px;
+        background: gold;
+        border-radius: 50%;
+        position: absolute;
+        right: 10px;
+        top: 60px;
+      }
+
+      /* Windows */
+      .window {
+        width: 90px;
+        height: 90px;
+        background: #87ceeb;
+        border: 4px solid #654321;
+        position: absolute;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+      }
+
+      .window:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+      }
+
+      .window.open {
+        background: #ffff99;
+        box-shadow: 0 0 20px rgba(255, 255, 0, 0.6);
+      }
+
+      .window.closed {
+        background: #4a5f7f;
+      }
+
+      /* Window cross */
+      .window::before {
+        content: "";
+        position: absolute;
+        width: 2px;
+        height: 100%;
+        background: #654321;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      .window::after {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: #654321;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      /* Window positions */
+      .window1 {
+        top: 80px;
+        left: 50px;
+      }
+      .window2 {
+        top: 80px;
+        right: 50px;
+      }
+      .window3 {
+        top: 200px;
+        left: 50px;
+      }
+      .window4 {
+        top: 200px;
+        right: 50px;
+      }
+      .window5 {
+        top: 140px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .window6 {
+        top: 260px;
+        left: 140px;
+      }
+      .window7 {
+        top: 260px;
+        right: 140px;
+      }
+
+      /* Window labels */
+      .window-label {
+        position: absolute;
+        bottom: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 12px;
+        white-space: nowrap;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+      }
+
+      .status {
+        margin-top: 40px;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .status h2 {
+        color: #333;
+        margin-bottom: 15px;
+      }
+
+      .port-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .port-badge {
+        background: #667eea;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+
+      .controls {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      button {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: #5568d3;
+      }
+
+      .error {
+        color: #e74c3c;
+        margin-top: 10px;
+      }
+
+      .success {
+        color: #27ae60;
+        margin-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏠 Port House Controller</h1>
+
+      <div class="house">
+        <div class="roof"></div>
+        <div class="house-body">
+          <div class="door">
+            <div class="doorknob"></div>
+          </div>
+
+          <div class="window window1 closed" data-port="20" onclick="togglePort(20)">
+            <div class="window-label">FTP Data (20)</div>
+          </div>
+
+          <div class="window window2 closed" data-port="21" onclick="togglePort(21)">
+            <div class="window-label">FTP (21)</div>
+          </div>
+
+          <div class="window window3 closed" data-port="22" onclick="togglePort(22)">
+            <div class="window-label">SSH (22)</div>
+          </div>
+
+          <div class="window window4 closed" data-port="23" onclick="togglePort(23)">
+            <div class="window-label">Telnet (23)</div>
+          </div>
+
+          <div class="window window5 closed" data-port="25" onclick="togglePort(25)">
+            <div class="window-label">SMTP (25)</div>
+          </div>
+
+          <div class="window window6 closed" data-port="69" onclick="togglePort(69)">
+            <div class="window-label">TFTP (69)</div>
+          </div>
+
+          <div class="window window7 closed" data-port="80" onclick="togglePort(80)">
+            <div class="window-label">HTTP (80)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="status">
+        <h2>Open Ports</h2>
+        <div class="port-list" id="portList">
+          <span style="color: #999">No ports open</span>
+        </div>
+        <div class="controls">
+          <button onclick="openAllPorts()">Open All Windows</button>
+          <button onclick="closeAllPorts()">Close All Windows</button>
+          <button onclick="refreshStatus()">Refresh Status</button>
+        </div>
+        <div id="message"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:5050/api";
+
+      async function togglePort(port) {
+        const windowEl = document.querySelector(`.window[data-port="${port}"]`);
+        const isOpen = windowEl.classList.contains("open");
+
+        try {
+          const endpoint = isOpen ? "/ports/close" : "/ports/open";
+          const response = await fetch(`${API_BASE}${endpoint}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ port: port }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            if (isOpen) {
+              windowEl.classList.remove("open");
+              windowEl.classList.add("closed");
+            } else {
+              windowEl.classList.remove("closed");
+              windowEl.classList.add("open");
+            }
+            showMessage(`Port ${port} ${isOpen ? "closed" : "opened"}`, "success");
+            await refreshStatus();
+          } else {
+            showMessage(`Error: ${data.error}`, "error");
+          }
+        } catch (error) {
+          showMessage(`Failed to connect to API: ${error.message}`, "error");
+        }
+      }
+
+      async function openAllPorts() {
+        const windows = document.querySelectorAll(".window");
+        const ports = Array.from(windows).map((w) => parseInt(w.dataset.port));
+
+        try {
+          const response = await fetch(`${API_BASE}/ports/open-multiple`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ ports: ports }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            windows.forEach((w) => {
+              w.classList.remove("closed");
+              w.classList.add("open");
+            });
+            showMessage("All windows opened!", "success");
+            await refreshStatus();
+          } else {
+            showMessage(`Error: ${data.error}`, "error");
+          }
+        } catch (error) {
+          showMessage(`Failed to connect to API: ${error.message}`, "error");
+        }
+      }
+
+      async function closeAllPorts() {
+        try {
+          const response = await fetch(`${API_BASE}/ports/close-all`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            const windows = document.querySelectorAll(".window");
+            windows.forEach((w) => {
+              w.classList.remove("open");
+              w.classList.add("closed");
+            });
+            showMessage("All windows closed!", "success");
+            await refreshStatus();
+          } else {
+            showMessage(`Error: ${data.error}`, "error");
+          }
+        } catch (error) {
+          showMessage(`Failed to connect to API: ${error.message}`, "error");
+        }
+      }
+
+      async function refreshStatus() {
+        try {
+          const response = await fetch(`${API_BASE}/ports/status`);
+          const data = await response.json();
+
+          if (response.ok) {
+            const portList = document.getElementById("portList");
+
+            if (data.open_ports.length === 0) {
+              portList.innerHTML = '<span style="color: #999;">No ports open</span>';
+            } else {
+              portList.innerHTML = data.open_ports
+                .map((port) => `<span class="port-badge">Port ${port}</span>`)
+                .join("");
+            }
+
+            // Update window states
+            const windows = document.querySelectorAll(".window");
+            windows.forEach((w) => {
+              const port = parseInt(w.dataset.port);
+              if (data.open_ports.includes(port)) {
+                w.classList.remove("closed");
+                w.classList.add("open");
+              } else {
+                w.classList.remove("open");
+                w.classList.add("closed");
+              }
+            });
+          }
+        } catch (error) {
+          showMessage(`Failed to refresh status: ${error.message}`, "error");
+        }
+      }
+
+      function showMessage(msg, type) {
+        const messageEl = document.getElementById("message");
+        messageEl.textContent = msg;
+        messageEl.className = type;
+        setTimeout(() => {
+          messageEl.textContent = "";
+          messageEl.className = "";
+        }, 3000);
+      }
+
+      // Refresh status on load
+      refreshStatus();
+
+      // Auto-refresh every 5 seconds
+      setInterval(refreshStatus, 5000);
+    </script>
+  </body>
+</html>

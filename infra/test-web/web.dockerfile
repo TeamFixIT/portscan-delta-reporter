@@ -1,23 +1,15 @@
 FROM python:3.11-alpine
 
-# Install iptables and dependencies
-RUN apk add --no-cache \
-    iptables \
-    ip6tables \
-    curl
+RUN apk add --no-cache socat
 
-# Install Flask
-RUN pip install --no-cache-dir flask
-
-# Create app directory
 WORKDIR /app
 
-# Copy application files
-COPY app.py /app/app.py
-COPY templates/index.html /app/templates/index.html
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port
-EXPOSE 5000
+COPY app.py .
+COPY index.html .
 
-# Run the application
-CMD ["python3", "app.py"]
+EXPOSE 5050
+
+CMD ["python", "app.py"]
