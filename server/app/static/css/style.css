@@ -1,5 +1,49 @@
 /* Custom styles for Port Scanner Delta Reporter */
 
+/* ============================================
+   COLOR VARIABLES
+   ============================================ */
+:root {
+    /* APP Colors */
+    --primary: #4da6ff;
+    --primary-dark: #3f54cd;
+    --secondary: #59c8ff;
+    --secondary-light: #12abf8;
+    
+    /* Neutral Colors */
+    --text: #333;
+    --text-muted: #666;
+    --text-light: #999;
+    --border: #e0e0e0;
+    --bg-light: #f8f9fa;
+    
+    /* Status Colors */
+    --success: #56ab2f;
+    --danger: #c33;
+    --danger-bg: #fee;
+    --success-bg: #efe;
+    
+    /* Spacing */
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 20px;
+    --space-lg: 30px;
+    --space-xl: 40px;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 15px;
+    --radius-xl: 16px;
+    
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
+    --shadow-primary: 0 4px 15px rgba(77, 166, 255, 0.3);
+    --shadow-primary-lg: 0 6px 20px rgba(77, 166, 255, 0.4);
+}
+
 body {
   background-color: #f8f9fa;
 }
@@ -53,35 +97,26 @@ body {
   margin: 0.25rem 0;
 }
 
-/* HERO STYLING */
-.hero-section {
-  padding-top: 48px;
-  padding-bottom: 24px;
+/* Literally just a cool button with a colour gradient */
+.btn-gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border: none;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
 }
 
-/* Slight upward nudge when centered so content sits a bit above exact center */
-.hero-section .row.align-items-center {
-  transform: translateY(-18px);
+.btn-gradient-primary:hover {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-light) 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary-lg);
 }
 
-@media (max-width: 767px) {
-  .hero-section .row.align-items-center {
-    transform: translateY(-6px);
-  }
-}
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 
-.hero-image-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 12px;
-  animation: fadeIn 1s ease-in; /* Optional: fade in on page load */
-}
-
-/* Gentle Float Animation for Hero Image */
 @keyframes float-gentle {
   0%,
   100% {
@@ -90,16 +125,6 @@ body {
   50% {
     transform: translateY(-15px);
   }
-}
-
-.hero-image {
-  max-width: 115%;
-  height: auto;
-  border-radius: 16px;
-  box-shadow: none;
-  animation: float-gentle 4s ease-in-out infinite;
-  margin-top: 0;
-  transition: transform 0.3s ease; /* Smooth transition for hover */
 }
 
 /*Fade-in animation on page load */
@@ -112,26 +137,6 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Left-align the middle column content */
-.hero-section .col-lg-5 {
-  text-align: left;
-  padding-left: 12px;
-}
-
-.hero-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  margin-top: 0;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.hero-subtitle {
-  font-size: 0.8rem;
-  margin-bottom: 2rem;
-  opacity: 0.95;
 }
 
 /* Status badge pulse animation */
@@ -147,17 +152,38 @@ body {
   }
 }
 
-.status-indicator.animated {
-  animation: statusPulse 1.6s ease-in-out infinite;
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
-  color: #6c757d;
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
 
 /* Dark theme */
 body.dark-theme {
@@ -250,4 +276,34 @@ body.dark-theme .alert {
   background-color: #2a2a2a;
   border-color: #3c3c3c;
   color: #fff;
+}
+
+/* ==============================================================
+   FULL-SCREEN PAGE OVERRIDES
+   For pages like login that need full-screen gradient
+
+   Joey note: I didn't want to alter base.html so I used this fix
+   ==============================================================*/
+
+/* Remove container constraints when login gradient is present */
+body:has(.login-gradient-bg) main.container {
+  max-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100vw !important;
+}
+
+
+/* Fix body to ensure full viewport */
+body:has(.login-gradient-bg) {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Ensure html/body fill viewport */
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
 }
