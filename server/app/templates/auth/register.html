@@ -1,147 +1,210 @@
-{% extends "base.html" %} {% block title %}Register - Port Detector{% endblock %} {% block content
-%}
-<div class="auth-container">
-  <div class="auth-card">
-    <div class="auth-header">
-      <h2><i class="fas fa-user-plus me-3"></i>Join Port Detector</h2>
-      <p class="mb-0">Create your account</p>
-    </div>
-    <div class="auth-body">
-      <form method="POST" id="registerForm">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="first_name" class="form-label">
-              <i class="fas fa-user me-2"></i>First Name
-            </label>
-            <input
-              type="text"
-              class="form-control"
-              id="first_name"
-              name="first_name"
-              placeholder="First name (optional)" />
+{% extends "base.html" %} {% block title %}Register - Port Detector{% endblock %} {% block content%}
+
+<!-- full-screen gradient background -->
+<div class="full-width-page min-vh-100 d-flex align-items-center justify-content-center" 
+     style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
+
+  <!-- Container -->  
+  <div class="container pt-lg-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+
+    <!-- Registration Card -->  
+        <div class="card shadow-lg rounded-3">
+
+      <!-- Card Header -->
+          <div class="card-header text-center py-4">
+            <h2 class="mb-2">
+              <i class="bi bi-person-plus-fill text-primary"></i>
+              Join Port Scanner
+            </h2>
+            <p class="text-muted mb-0">Create your account</p>
           </div>
-          <div class="col-md-6 mb-3">
-            <label for="last_name" class="form-label">
-              <i class="fas fa-user me-2"></i>Last Name
-            </label>
-            <input
-              type="text"
-              class="form-control"
-              id="last_name"
-              name="last_name"
-              placeholder="Last name (optional)" />
+
+          <!-- Card Body -->
+          <div class="card-body p-4">
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-circle me-2"></i>{{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
+            <!-- Registration Form -->
+            <form method="POST" id="registerForm">
+              
+              <!-- Name Row (2 columns) -->
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="first_name" class="form-label">
+                    <i class="bi bi-person me-2"></i>First Name
+                  </label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="first_name" 
+                         name="first_name"
+                         placeholder="First name (optional)">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                  <label for="last_name" class="form-label">
+                    <i class="bi bi-person me-2"></i>Last Name
+                  </label>
+                  <input type="text" 
+                         class="form-control" 
+                         id="last_name" 
+                         name="last_name"
+                         placeholder="Last name (optional)">
+                </div>
+              </div>
+              
+              <!-- Username -->
+              <div class="mb-3">
+                <label for="username" class="form-label">
+                  <i class="bi bi-at me-2"></i>Username <span class="text-danger">*</span>
+                </label>
+                <input type="text" 
+                       class="form-control" 
+                       id="username" 
+                       name="username"
+                       required 
+                       placeholder="Choose a username" 
+                       minlength="3">
+                <div class="form-text">At least 3 characters, letters, numbers, and underscores only</div>
+              </div>
+              
+              <!-- Email -->
+              <div class="mb-3">
+                <label for="email" class="form-label">
+                  <i class="bi bi-envelope me-2"></i>Email Address <span class="text-danger">*</span>
+                </label>
+                <input type="email" 
+                       class="form-control" 
+                       id="email" 
+                       name="email"
+                       required 
+                       placeholder="Enter your email address">
+              </div>
+              
+              <!-- Password -->
+              <div class="mb-3">
+                <label for="password" class="form-label">
+                  <i class="bi bi-lock me-2"></i>Password <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <input type="password" 
+                         class="form-control" 
+                         id="password" 
+                         name="password"
+                         required 
+                         placeholder="Create a strong password">
+                  <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                    <i class="bi bi-eye" id="toggleIcon"></i>
+                  </button>
+                </div>
+                
+                <!-- Password Requirements -->
+                <div class="mt-2" id="passwordRequirements">
+                  <small class="text-muted">Password must contain:</small>
+                  <ul class="small text-muted mt-1 mb-0">
+                    <li id="length" class="requirement-invalid">At least 8 characters</li>
+                    <li id="uppercase" class="requirement-invalid">One uppercase letter</li>
+                    <li id="lowercase" class="requirement-invalid">One lowercase letter</li>
+                    <li id="digit" class="requirement-invalid">One number</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- Confirm Password -->
+              <div class="mb-3">
+                <label for="confirm_password" class="form-label">
+                  <i class="bi bi-lock me-2"></i>Confirm Password <span class="text-danger">*</span>
+                </label>
+                <input type="password" 
+                       class="form-control" 
+                       id="confirm_password" 
+                       name="confirm_password"
+                       required 
+                       placeholder="Confirm your password">
+                <div class="invalid-feedback" id="passwordMatch"></div>
+              </div>
+              
+              <!-- Submit Button -->
+              <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-gradient-primary btn-lg" id="registerBtn">
+                  <i class="bi bi-person-plus-fill me-2"></i>Create Account
+                </button>
+              </div>
+              
+            </form>
+            
+            <!-- Divider -->
+            <div class="position-relative my-4">
+              <hr class="text-muted">
+              <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted divider-bg"
+                    style="font-size: 0.85rem;">
+                Already have an account?
+              </span>
+            </div>
+            
+            <!-- Sign In Link -->
+            <div class="d-grid">
+              <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+              </a>
+            </div> 
           </div>
         </div>
-
-        <div class="mb-3">
-          <label for="username" class="form-label">
-            <i class="fas fa-at me-2"></i>Username <span class="text-danger">*</span>
-          </label>
-          <input
-            type="text"
-            class="form-control"
-            id="username"
-            name="username"
-            required
-            placeholder="Choose a username"
-            minlength="3" />
-          <div class="form-text">At least 3 characters, letters, numbers, and underscores only</div>
-        </div>
-
-        <div class="mb-3">
-          <label for="email" class="form-label">
-            <i class="fas fa-envelope me-2"></i>Email Address <span class="text-danger">*</span>
-          </label>
-          <input
-            type="email"
-            class="form-control"
-            id="email"
-            name="email"
-            required
-            placeholder="Enter your email address" />
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label">
-            <i class="fas fa-lock me-2"></i>Password <span class="text-danger">*</span>
-          </label>
-          <div class="input-group">
-            <input
-              type="password"
-              class="form-control"
-              id="password"
-              name="password"
-              required
-              placeholder="Create a strong password" />
-            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-              <i class="fas fa-eye" id="toggleIcon"></i>
-            </button>
-          </div>
-          <div class="password-requirements mt-2" id="passwordRequirements">
-            <small class="text-muted">Password must contain:</small>
-            <ul class="small text-muted mt-1">
-              <li id="length" class="invalid">At least 8 characters</li>
-              <li id="uppercase" class="invalid">One uppercase letter</li>
-              <li id="lowercase" class="invalid">One lowercase letter</li>
-              <li id="digit" class="invalid">One number</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mb-3">
-          <label for="confirm_password" class="form-label">
-            <i class="fas fa-lock me-2"></i>Confirm Password <span class="text-danger">*</span>
-          </label>
-          <input
-            type="password"
-            class="form-control"
-            id="confirm_password"
-            name="confirm_password"
-            required
-            placeholder="Confirm your password" />
-          <div class="invalid-feedback" id="passwordMatch"></div>
-        </div>
-
-        <div class="d-grid">
-          <button type="submit" class="btn btn-primary btn-lg" id="registerBtn">
-            <i class="fas fa-user-plus me-2"></i>Create Account
-          </button>
-        </div>
-      </form>
-
-      <div class="text-center mt-4">
-        <p class="text-muted">Already have an account?</p>
-        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
-          <i class="fas fa-sign-in-alt me-2"></i>Sign In
-        </a>
       </div>
     </div>
   </div>
 </div>
-{% endblock %} {% block extra_css %}
+{% endblock %}
+
+{% block extra_css %}
 <style>
-  .password-requirements .valid {
+  /* Password requirement validation colors */
+  .requirement-valid {
     color: #28a745 !important;
   }
-  .password-requirements .valid:before {
+  .requirement-valid:before {
     content: "✓ ";
     font-weight: bold;
   }
-  .password-requirements .invalid {
+  .requirement-invalid {
     color: #dc3545;
   }
-  .password-requirements .invalid:before {
+  .requirement-invalid:before {
     content: "✗ ";
     font-weight: bold;
   }
+  
+  /* Form validation styling */
   .form-control.is-valid {
     border-color: #28a745;
   }
   .form-control.is-invalid {
     border-color: #dc3545;
   }
+  
+  /* Divider background for dark mode */
+  .divider-bg {
+    background-color: #ffffff;
+  }
+  
+  [data-bs-theme="dark"] .divider-bg {
+    background-color: #1e1e1e;
+  }
 </style>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+
+{% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const registerForm = document.getElementById("registerForm");
@@ -158,8 +221,14 @@
       passwordField.setAttribute("type", type);
       confirmPasswordField.setAttribute("type", type);
 
-      toggleIcon.classList.toggle("fa-eye");
-      toggleIcon.classList.toggle("fa-eye-slash");
+      // Toggle icon between eye and eye-slash
+      if (type === "password") {
+        toggleIcon.classList.remove("bi-eye-slash");
+        toggleIcon.classList.add("bi-eye");
+      } else {
+        toggleIcon.classList.remove("bi-eye");
+        toggleIcon.classList.add("bi-eye-slash");
+      }
     });
 
     // Real-time password validation
@@ -169,41 +238,41 @@
       // Length check
       const lengthCheck = document.getElementById("length");
       if (password.length >= 8) {
-        lengthCheck.classList.remove("invalid");
-        lengthCheck.classList.add("valid");
+        lengthCheck.classList.remove("requirement-invalid");
+        lengthCheck.classList.add("requirement-valid");
       } else {
-        lengthCheck.classList.remove("valid");
-        lengthCheck.classList.add("invalid");
+        lengthCheck.classList.remove("requirement-valid");
+        lengthCheck.classList.add("requirement-invalid");
       }
 
       // Uppercase check
       const uppercaseCheck = document.getElementById("uppercase");
       if (/[A-Z]/.test(password)) {
-        uppercaseCheck.classList.remove("invalid");
-        uppercaseCheck.classList.add("valid");
+        uppercaseCheck.classList.remove("requirement-invalid");
+        uppercaseCheck.classList.add("requirement-valid");
       } else {
-        uppercaseCheck.classList.remove("valid");
-        uppercaseCheck.classList.add("invalid");
+        uppercaseCheck.classList.remove("requirement-valid");
+        uppercaseCheck.classList.add("requirement-invalid");
       }
 
       // Lowercase check
       const lowercaseCheck = document.getElementById("lowercase");
       if (/[a-z]/.test(password)) {
-        lowercaseCheck.classList.remove("invalid");
-        lowercaseCheck.classList.add("valid");
+        lowercaseCheck.classList.remove("requirement-invalid");
+        lowercaseCheck.classList.add("requirement-valid");
       } else {
-        lowercaseCheck.classList.remove("valid");
-        lowercaseCheck.classList.add("invalid");
+        lowercaseCheck.classList.remove("requirement-valid");
+        lowercaseCheck.classList.add("requirement-invalid");
       }
 
       // Digit check
       const digitCheck = document.getElementById("digit");
       if (/\d/.test(password)) {
-        digitCheck.classList.remove("invalid");
-        digitCheck.classList.add("valid");
+        digitCheck.classList.remove("requirement-invalid");
+        digitCheck.classList.add("requirement-valid");
       } else {
-        digitCheck.classList.remove("valid");
-        digitCheck.classList.add("invalid");
+        digitCheck.classList.remove("requirement-valid");
+        digitCheck.classList.add("requirement-invalid");
       }
 
       checkPasswordMatch();
@@ -219,17 +288,19 @@
 
       if (confirmPassword === "") {
         confirmPasswordField.classList.remove("is-valid", "is-invalid");
+        matchDiv.style.display = "none";
         return;
       }
 
       if (password === confirmPassword) {
         confirmPasswordField.classList.remove("is-invalid");
         confirmPasswordField.classList.add("is-valid");
-        matchDiv.textContent = "";
+        matchDiv.style.display = "none";
       } else {
         confirmPasswordField.classList.remove("is-valid");
         confirmPasswordField.classList.add("is-invalid");
         matchDiv.textContent = "Passwords do not match";
+        matchDiv.style.display = "block";
       }
     }
 
@@ -258,7 +329,7 @@
 
       // Show loading state
       const originalText = registerBtn.innerHTML;
-      registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Account...';
+      registerBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Creating Account...';
       registerBtn.disabled = true;
 
       fetch('{{ url_for("auth.register") }}', {
@@ -271,8 +342,8 @@
         .then((response) => response.json())
         .then((data) => {
           if (data.success) {
-            // Show success message briefly before redirect
-            registerBtn.innerHTML = '<i class="fas fa-check me-2"></i>Account Created!';
+            // Show success message
+            registerBtn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Account Created!';
             registerBtn.classList.remove("btn-primary");
             registerBtn.classList.add("btn-success");
 
@@ -284,11 +355,11 @@
             const errors = data.errors || [data.error];
             errors.forEach((error) => {
               const alertDiv = document.createElement("div");
-              alertDiv.className = "alert alert-danger alert-dismissible fade show mt-3";
+              alertDiv.className = "alert alert-danger alert-dismissible fade show";
               alertDiv.innerHTML = `
-                        <i class="fas fa-exclamation-circle me-2"></i>${error}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    `;
+                <i class="bi bi-exclamation-circle me-2"></i>${error}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              `;
               registerForm.insertBefore(alertDiv, registerForm.firstChild);
             });
 

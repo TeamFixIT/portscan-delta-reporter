@@ -278,6 +278,13 @@ body.dark-theme .alert {
   color: #fff;
 }
 
+[data-bs-theme="dark"] .card-header {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+
+
 /* ==============================================================
    FULL-SCREEN PAGE OVERRIDES
    For pages like login that need full-screen gradient
@@ -285,8 +292,8 @@ body.dark-theme .alert {
    Joey note: I didn't want to alter base.html so I used this fix
    ==============================================================*/
 
-/* Remove container constraints when login gradient is present */
-body:has(.login-gradient-bg) main.container {
+/* Remove container constraints */
+body:has(.full-width-page) main.container {
   max-width: none !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -295,7 +302,7 @@ body:has(.login-gradient-bg) main.container {
 
 
 /* Fix body to ensure full viewport */
-body:has(.login-gradient-bg) {
+body:has(.full-width-page) {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
