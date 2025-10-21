@@ -1,174 +1,11 @@
-{% extends "base.html" %} {% block title %}Register - Port Detector{% endblock %} {% block content%}
-
-<!-- full-screen gradient background -->
-<div class="full-width-page min-vh-100 d-flex align-items-center justify-content-center" 
-     style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);">
-
-  <!-- Container -->  
-  <div class="container pt-lg-4">
-    <div class="row justify-content-center">
-      <div class="col-lg-8 col-md-10">
-
-    <!-- Registration Card -->  
-        <div class="card shadow-lg rounded-3">
-
-      <!-- Card Header -->
-          <div class="card-header text-center py-4">
-            <h2 class="mb-2">
-              <i class="bi bi-person-plus-fill text-primary"></i>
-              Join Port Scanner
-            </h2>
-            <p class="text-muted mb-0">Create your account</p>
-          </div>
-
-          <!-- Card Body -->
-          <div class="card-body p-4">
-
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-              {% if messages %}
-                {% for category, message in messages %}
-                  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-circle me-2"></i>{{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                  </div>
-                {% endfor %}
-              {% endif %}
-            {% endwith %}
-
-            <!-- Registration Form -->
-            <form method="POST" id="registerForm">
-              
-              <!-- Name Row (2 columns) -->
-              <div class="row">
-                <div class="col-md-6 mb-3">
-                  <label for="first_name" class="form-label">
-                    <i class="bi bi-person me-2"></i>First Name
-                  </label>
-                  <input type="text" 
-                         class="form-control" 
-                         id="first_name" 
-                         name="first_name"
-                         placeholder="First name (optional)">
-                </div>
-                
-                <div class="col-md-6 mb-3">
-                  <label for="last_name" class="form-label">
-                    <i class="bi bi-person me-2"></i>Last Name
-                  </label>
-                  <input type="text" 
-                         class="form-control" 
-                         id="last_name" 
-                         name="last_name"
-                         placeholder="Last name (optional)">
-                </div>
-              </div>
-              
-              <!-- Username -->
-              <div class="mb-3">
-                <label for="username" class="form-label">
-                  <i class="bi bi-at me-2"></i>Username <span class="text-danger">*</span>
-                </label>
-                <input type="text" 
-                       class="form-control" 
-                       id="username" 
-                       name="username"
-                       required 
-                       placeholder="Choose a username" 
-                       minlength="3">
-                <div class="form-text">At least 3 characters, letters, numbers, and underscores only</div>
-              </div>
-              
-              <!-- Email -->
-              <div class="mb-3">
-                <label for="email" class="form-label">
-                  <i class="bi bi-envelope me-2"></i>Email Address <span class="text-danger">*</span>
-                </label>
-                <input type="email" 
-                       class="form-control" 
-                       id="email" 
-                       name="email"
-                       required 
-                       placeholder="Enter your email address">
-              </div>
-              
-              <!-- Password -->
-              <div class="mb-3">
-                <label for="password" class="form-label">
-                  <i class="bi bi-lock me-2"></i>Password <span class="text-danger">*</span>
-                </label>
-                <div class="input-group">
-                  <input type="password" 
-                         class="form-control" 
-                         id="password" 
-                         name="password"
-                         required 
-                         placeholder="Create a strong password">
-                  <button class="btn btn-outline-secondary" type="button" id="togglePassword">
-                    <i class="bi bi-eye" id="toggleIcon"></i>
-                  </button>
-                </div>
-                
-                <!-- Password Requirements -->
-                <div class="mt-2" id="passwordRequirements">
-                  <small class="text-muted">Password must contain:</small>
-                  <ul class="small text-muted mt-1 mb-0">
-                    <li id="length" class="requirement-invalid">At least 8 characters</li>
-                    <li id="uppercase" class="requirement-invalid">One uppercase letter</li>
-                    <li id="lowercase" class="requirement-invalid">One lowercase letter</li>
-                    <li id="digit" class="requirement-invalid">One number</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <!-- Confirm Password -->
-              <div class="mb-3">
-                <label for="confirm_password" class="form-label">
-                  <i class="bi bi-lock me-2"></i>Confirm Password <span class="text-danger">*</span>
-                </label>
-                <input type="password" 
-                       class="form-control" 
-                       id="confirm_password" 
-                       name="confirm_password"
-                       required 
-                       placeholder="Confirm your password">
-                <div class="invalid-feedback" id="passwordMatch"></div>
-              </div>
-              
-              <!-- Submit Button -->
-              <div class="d-grid mb-3">
-                <button type="submit" class="btn btn-gradient-primary btn-lg" id="registerBtn">
-                  <i class="bi bi-person-plus-fill me-2"></i>Create Account
-                </button>
-              </div>
-              
-            </form>
-            
-            <!-- Divider -->
-            <div class="position-relative my-4">
-              <hr class="text-muted">
-              <span class="position-absolute top-50 start-50 translate-middle px-3 text-muted divider-bg"
-                    style="font-size: 0.85rem;">
-                Already have an account?
-              </span>
-            </div>
-            
-            <!-- Sign In Link -->
-            <div class="d-grid">
-              <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
-                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
-              </a>
-            </div> 
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block extra_css %}
+{% extends "base.html" %}{% block extra_css %}
 <style>
+  body {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    min-height: 100vh;
+    margin: 0;
+    background-attachment: fixed; /* Keeps gradient fixed during scroll */
+  }
   /* Password requirement validation colors */
   .requirement-valid {
     color: #28a745 !important;
@@ -184,7 +21,7 @@
     content: "✗ ";
     font-weight: bold;
   }
-  
+
   /* Form validation styling */
   .form-control.is-valid {
     border-color: #28a745;
@@ -192,19 +29,175 @@
   .form-control.is-invalid {
     border-color: #dc3545;
   }
-  
-  /* Divider background for dark mode */
-  .divider-bg {
-    background-color: #ffffff;
-  }
-  
-  [data-bs-theme="dark"] .divider-bg {
-    background-color: #1e1e1e;
-  }
 </style>
-{% endblock %}
+{% endblock %} {% block title %}Register - Port Detector{% endblock %} {% block content%}
 
-{% block extra_js %}
+<!-- full-screen gradient background -->
+<div class="min-vh-100 d-flex align-items-center justify-content-center">
+  <!-- Container -->
+  <div class="container pt-lg-4">
+    <div class="row justify-content-center">
+      <div class="col-lg-8 col-md-10">
+        <!-- Registration Card -->
+        <div class="card shadow-lg rounded-3">
+          <!-- Card Header -->
+          <div class="card-header text-center py-4">
+            <h2 class="mb-2">
+              <i class="bi bi-person-plus-fill text-primary"></i>
+              Join Port Scanner
+            </h2>
+            <p class="text-muted mb-0">Create your account</p>
+          </div>
+
+          <!-- Card Body -->
+          <div class="card-body p-4">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {%
+            for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              <i class="bi bi-exclamation-circle me-2"></i>{{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %} {% endif %} {% endwith %}
+
+            <!-- Registration Form -->
+            <form method="POST" id="registerForm">
+              <!-- Name Row (2 columns) -->
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="first_name" class="form-label">
+                    <i class="bi bi-person me-2"></i>First Name
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="first_name"
+                    name="first_name"
+                    placeholder="First name (optional)" />
+                </div>
+
+                <div class="col-md-6 mb-3">
+                  <label for="last_name" class="form-label">
+                    <i class="bi bi-person me-2"></i>Last Name
+                  </label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="last_name"
+                    name="last_name"
+                    placeholder="Last name (optional)" />
+                </div>
+              </div>
+
+              <!-- Username -->
+              <div class="mb-3">
+                <label for="username" class="form-label">
+                  <i class="bi bi-at me-2"></i>Username <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="username"
+                  name="username"
+                  required
+                  placeholder="Choose a username"
+                  minlength="3" />
+                <div class="form-text">
+                  At least 3 characters, letters, numbers, and underscores only
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div class="mb-3">
+                <label for="email" class="form-label">
+                  <i class="bi bi-envelope me-2"></i>Email Address
+                  <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="email"
+                  name="email"
+                  required
+                  placeholder="Enter your email address" />
+              </div>
+
+              <!-- Password -->
+              <div class="mb-3">
+                <label for="password" class="form-label">
+                  <i class="bi bi-lock me-2"></i>Password <span class="text-danger">*</span>
+                </label>
+                <div class="input-group">
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="password"
+                    name="password"
+                    required
+                    placeholder="Create a strong password" />
+                  <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                    <i class="bi bi-eye" id="toggleIcon"></i>
+                  </button>
+                </div>
+
+                <!-- Password Requirements -->
+                <div class="mt-2" id="passwordRequirements">
+                  <small class="text-muted">Password must contain:</small>
+                  <ul class="small text-muted mt-1 mb-0">
+                    <li id="length" class="requirement-invalid">At least 8 characters</li>
+                    <li id="uppercase" class="requirement-invalid">One uppercase letter</li>
+                    <li id="lowercase" class="requirement-invalid">One lowercase letter</li>
+                    <li id="digit" class="requirement-invalid">One number</li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div class="mb-3">
+                <label for="confirm_password" class="form-label">
+                  <i class="bi bi-lock me-2"></i>Confirm Password <span class="text-danger">*</span>
+                </label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="confirm_password"
+                  name="confirm_password"
+                  required
+                  placeholder="Confirm your password" />
+                <div class="invalid-feedback" id="passwordMatch"></div>
+              </div>
+
+              <!-- Submit Button -->
+              <div class="d-grid mb-3">
+                <button type="submit" class="btn btn-gradient-primary btn-lg" id="registerBtn">
+                  <i class="bi bi-person-plus-fill me-2"></i>Create Account
+                </button>
+              </div>
+            </form>
+
+            <!-- Divider -->
+            <div class="position-relative my-4">
+              <hr class="text-muted" />
+              <span
+                class="position-absolute top-50 start-50 translate-middle px-3 text-muted bg-body"
+                style="font-size: 0.85rem">
+                Already have an account?
+              </span>
+            </div>
+
+            <!-- Sign In Link -->
+            <div class="d-grid">
+              <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const registerForm = document.getElementById("registerForm");

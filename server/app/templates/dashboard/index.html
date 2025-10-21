@@ -2,10 +2,10 @@
 block content %}
 
 <div class="full-width-page d-flex">
-  
   <!-- SIDEBAR NAVIGATION -->
-  <div class="d-flex flex-column flex-shrink-0 p-3 border-end" style="width: 260px; min-height: calc(100vh - 56px);">
-    
+  <div
+    class="d-flex flex-column flex-shrink-0 p-3 border-end"
+    style="width: 260px; min-height: calc(100vh - 56px)">
     <!-- Sidebar Header -->
     <div class="pb-3 mb-3 border-bottom">
       <h5 class="mb-0 fs-4">
@@ -13,7 +13,7 @@ block content %}
         Navigation
       </h5>
     </div>
-    
+
     <!-- Navigation List -->
     <ul class="nav nav-pills flex-column mb-auto">
       <li class="nav-item mb-1">
@@ -22,46 +22,46 @@ block content %}
           Overview
         </a>
       </li>
-      
+
       <li class="nav-item mb-1">
         <a href="{{ url_for('dashboard.scans') }}" class="nav-link text-body">
           <i class="bi bi-radar me-2"></i>
           Scans
         </a>
       </li>
-      
+
       <li class="nav-item mb-1">
         <a href="{{ url_for('dashboard.reports') }}" class="nav-link text-body">
           <i class="bi bi-file-earmark-text me-2"></i>
           Reports
         </a>
       </li>
-      
+
       <li class="nav-item mb-1">
-        <a href="#" class="nav-link link-dark">
+        <a href="#" class="nav-link text-body">
           <i class="bi bi-exclamation-triangle me-2"></i>
           Alerts
         </a>
       </li>
-      
-      <li><hr class="my-3"></li>
-      
+
+      <li><hr class="my-3" /></li>
+
       <li class="nav-item mb-1">
-        <a href="{{ url_for('dashboard.clients') }}" class="nav-link link-dark">
+        <a href="{{ url_for('dashboard.clients') }}" class="nav-link text-body">
           <i class="bi bi-hdd-network me-2"></i>
           Clients
         </a>
       </li>
 
       <li class="nav-item mb-1">
-        <a href="{{ url_for('auth.profile') }}" class="nav-link link-dark">
+        <a href="{{ url_for('auth.profile') }}" class="nav-link text-body">
           <i class="bi bi-person me-2"></i>
           Profile
         </a>
       </li>
-      
+
       <li class="nav-item mb-1">
-        <a href="#" class="nav-link link-dark">
+        <a href="#" class="nav-link text-body">
           <i class="bi bi-gear me-2"></i>
           Settings
         </a>
@@ -71,7 +71,6 @@ block content %}
 
   <!-- MAIN CONTENT -->
   <div class="flex-fill p-4">
-    
     <!-- Header -->
     <div class="row">
       <div class="col-md-12">
@@ -82,7 +81,6 @@ block content %}
 
     <!-- Metrics Row -->
     <div class="row mt-4">
-      
       <!-- Active Clients -->
       <div class="col-md-3">
         <div class="card">
@@ -128,18 +126,14 @@ block content %}
           <div class="card-body text-center">
             <h5 class="card-title">Alerts</h5>
             <h2 class="text-danger">0</h2>
-            <a href="#" class="btn btn-outline-danger btn-sm">
-              View Alerts
-            </a>
+            <a href="#" class="btn btn-outline-danger btn-sm"> View Alerts </a>
           </div>
         </div>
       </div>
-      
     </div>
 
     <!-- Activity & Status Row -->
     <div class="row mt-4">
-      
       <!-- Recent Activity -->
       <div class="col-md-8">
         <div class="card">
@@ -176,8 +170,8 @@ block content %}
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     </div>
-  </div> 
+  </div>
 </div>
 {% endblock %}

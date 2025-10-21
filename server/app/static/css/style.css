@@ -1,60 +1,40 @@
 /* Custom styles for Port Scanner Delta Reporter */
 
 /* ============================================
-   COLOR VARIABLES
+   LIGHT & DARK THEME ROOT VARIABLES
    ============================================ */
-:root {
-    /* APP Colors */
-    --primary: #4da6ff;
-    --primary-dark: #3f54cd;
-    --secondary: #59c8ff;
-    --secondary-light: #12abf8;
-    
-    /* Neutral Colors */
-    --text: #333;
-    --text-muted: #666;
-    --text-light: #999;
-    --border: #e0e0e0;
-    --bg-light: #f8f9fa;
-    
-    /* Status Colors */
-    --success: #56ab2f;
-    --danger: #c33;
-    --danger-bg: #fee;
-    --success-bg: #efe;
-    
-    /* Spacing */
-    --space-xs: 8px;
-    --space-sm: 12px;
-    --space-md: 20px;
-    --space-lg: 30px;
-    --space-xl: 40px;
-    
-    /* Border Radius */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 15px;
-    --radius-xl: 16px;
-    
-    /* Shadows */
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.3);
-    --shadow-primary: 0 4px 15px rgba(77, 166, 255, 0.3);
-    --shadow-primary-lg: 0 6px 20px rgba(77, 166, 255, 0.4);
+:root,
+[data-bs-theme="light"] {
+  --primary: #4da6ff;
+  --primary-dark: #3f54cd;
+  --secondary: #59c8ff;
+  --secondary-light: #12abf8;
 }
 
+/* DARK THEME ROOT VARIABLES */
+[data-bs-theme="dark"],
+body.dark-theme {
+  --primary: #4da6ff;
+  --primary-dark: #3f54cd;
+  --secondary: #59c8ff;
+  --secondary-light: #12abf8;
+}
+
+/* Use Bootstrap variables for backgrounds and text */
 body {
-  background-color: #f8f9fa;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+.card {
+  background-color: var(--bs-card-bg);
+  color: var(--bs-card-color);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 
 .navbar-brand {
   font-weight: bold;
-}
-
-.card {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  border: 1px solid rgba(0, 0, 0, 0.125);
 }
 
 .card-body {
@@ -153,164 +133,42 @@ body {
 }
 
 @keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-
-/* Dark theme */
-body.dark-theme {
-  background-color: #121212;
-  color: #e0e0e0;
-}
-
-body.dark-theme .navbar {
-  background-color: #1f1f1f !important;
-}
-
-body.dark-theme .card {
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .report-card:hover {
-  box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .filter-card {
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
-}
-
-body.dark-theme .page-link {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .page-link:hover {
-  background-color: #2a2a2a;
-  color: #fff;
-}
-
-body.dark-theme .page-item.active .page-link {
-  background-color: #0d6efd;
-  border-color: #0a58ca;
-}
-
-body.dark-theme input.form-control,
-body.dark-theme textarea.form-control,
-body.dark-theme select.form-select {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
-body.dark-theme input.form-control:focus,
-body.dark-theme textarea.form-control:focus,
-body.dark-theme select.form-select:focus {
-  background-color: #2a2a2a;
-  color: #fff;
-  border-color: #007bff;
-  box-shadow: none;
-}
-
-body.dark-theme .form-check-label {
-  color: #ccc;
-}
-
-body.dark-theme .breadcrumb-item a {
-  color: #66b2ff;
-  text-decoration: none;
-}
-
-body.dark-theme .breadcrumb-item.active {
-  color: #bbb;
-}
-
-body.dark-theme .modal-content {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-}
-
-body.dark-theme .modal-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .modal-footer {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .btn-close {
-  filter: invert(1);
-}
-
-body.dark-theme .alert {
-  background-color: #2a2a2a;
-  border-color: #3c3c3c;
-  color: #fff;
-}
-
-[data-bs-theme="dark"] .card-header {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-
-
-/* ==============================================================
-   FULL-SCREEN PAGE OVERRIDES
-   For pages like login that need full-screen gradient
-
-   Joey note: I didn't want to alter base.html so I used this fix
-   ==============================================================*/
-
-/* Remove container constraints */
-body:has(.full-width-page) main.container {
-  max-width: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100vw !important;
-}
-
-
-/* Fix body to ensure full viewport */
-body:has(.full-width-page) {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* Ensure html/body fill viewport */
-html, body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
