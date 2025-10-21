@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app.py .
 COPY index.html .
+COPY ./assets ./assets
 
 EXPOSE 5050
 

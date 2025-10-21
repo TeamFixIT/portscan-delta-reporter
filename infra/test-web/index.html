@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Port House Controller</title>
+    <title>Multi-House Port Controller</title>
     <style>
       * {
         margin: 0;
@@ -13,191 +13,258 @@
 
       body {
         font-family: "Arial", sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
+        background: skyblue;
+        height: 100vh;
         display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 20px;
+        flex-direction: column;
+        overflow: hidden;
       }
 
-      .container {
+      /* HEADER */
+      .header {
         text-align: center;
+        color: white;
+        height: 10vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       h1 {
-        color: white;
-        margin-bottom: 30px;
         font-size: 2.5em;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
       }
 
-      .house {
+      /* SHARED VIEW BASE */
+      .street-view,
+      .focused-view {
         position: relative;
-        width: 600px;
-        height: 500px;
-        margin: 0 auto;
-      }
-
-      /* Roof */
-      .roof {
-        width: 0;
-        height: 0;
-        border-left: 320px solid transparent;
-        border-right: 320px solid transparent;
-        border-bottom: 150px solid #8b4513;
-        position: absolute;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-
-      /* House body */
-      .house-body {
-        width: 500px;
-        height: 350px;
-        background: #d4a574;
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 3px solid #8b6914;
-      }
-
-      /* Door */
-      .door {
-        width: 80px;
-        height: 120px;
-        background: #654321;
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        border: 2px solid #4a3319;
-        border-radius: 5px 5px 0 0;
-      }
-
-      .doorknob {
-        width: 8px;
-        height: 8px;
-        background: gold;
-        border-radius: 50%;
-        position: absolute;
-        right: 10px;
-        top: 60px;
-      }
-
-      /* Windows */
-      .window {
-        width: 90px;
-        height: 90px;
-        background: #87ceeb;
-        border: 4px solid #654321;
-        position: absolute;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 40px;
-      }
-
-      .window:hover {
-        transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-      }
-
-      .window.open {
-        background: #ffff99;
-        box-shadow: 0 0 20px rgba(255, 255, 0, 0.6);
-      }
-
-      .window.closed {
-        background: #4a5f7f;
-      }
-
-      /* Window cross */
-      .window::before {
-        content: "";
-        position: absolute;
-        width: 2px;
-        height: 100%;
-        background: #654321;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-
-      .window::after {
-        content: "";
-        position: absolute;
         width: 100%;
-        height: 2px;
-        background: #654321;
-        top: 50%;
-        transform: translateY(-50%);
+        height: 70vh;
+        overflow: hidden;
       }
 
-      /* Window positions */
-      .window1 {
-        top: 80px;
-        left: 50px;
-      }
-      .window2 {
-        top: 80px;
-        right: 50px;
-      }
-      .window3 {
-        top: 200px;
-        left: 50px;
-      }
-      .window4 {
-        top: 200px;
-        right: 50px;
-      }
-      .window5 {
-        top: 140px;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-      .window6 {
-        top: 260px;
-        left: 140px;
-      }
-      .window7 {
-        top: 260px;
-        right: 140px;
-      }
-
-      /* Window labels */
-      .window-label {
+      /* STREET LINE */
+      .horizon {
         position: absolute;
-        bottom: -35px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: repeating-linear-gradient(
+          to bottom,
+          #698b55 0,
+          /* start with a path color */ #698b55 70%,
+          #9b9b9b 70%,
+          #9b9b9b 100%
+        );
+      }
+
+      /* STREET HOUSES */
+      .street-house {
+        position: absolute;
+        bottom: 5%; /* aligns base of house on street line */
+        transform: translateX(-50%);
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .street-house img {
+        height: 120px;
+        transition: all 0.3s ease;
+      }
+
+      .house-name {
+        position: absolute;
+        bottom: -25px;
         left: 50%;
         transform: translateX(-50%);
         background: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        font-weight: bold;
+        padding: 4px 12px;
+        border-radius: 4px;
         font-size: 12px;
+        font-weight: bold;
         white-space: nowrap;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .street-house:hover .house-name {
+        opacity: 1;
+      }
+
+      /* FOCUSED VIEW */
+      .focused-view {
+        display: none;
+      }
+
+      .focused-view.active {
+        display: block;
+      }
+
+      .back-btn {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 10;
+        transition: all 0.3s;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      }
+
+      .back-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      /* XP-style floating controls */
+      #floatingControls {
+        position: absolute;
+        top: 20px;
+        left: 160px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 220px;
+        padding-bottom: 10px;
+        background: #ece9d8;
+        border: 2px solid #003399;
+        border-radius: 3px;
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+        font-family: "Tahoma", sans-serif;
+        z-index: 11;
+      }
+
+      /* Title bar like Windows XP */
+      #floatingControlsHeader {
+        background: linear-gradient(to bottom, #0a246a, #3a6ea5);
+        color: white;
+        font-weight: bold;
+        padding: 6px 10px;
+        cursor: move;
+        border-bottom: 1px solid #003399;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+        font-size: 21px;
+        letter-spacing: 0.3px;
+      }
+
+      /* XP-style buttons inside the box */
+      #floatingControls button {
+        background: #f0f0f0;
+        border: 1px solid #808080;
+        border-radius: 2px;
+        padding: 5px 8px;
+        margin: 0 10px;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.15s, box-shadow 0.15s;
+        text-align: left;
+      }
+
+      #floatingControls button:hover {
+        background: #e0e0e0;
+        box-shadow: inset 1px 1px #fff, inset -1px -1px #808080;
+      }
+
+      .house-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+      .house-svg {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 100%;
+      }
+
+      /* WINDOW BUTTONS */
+      .window-btn {
+        position: absolute;
+        width: 60px;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        padding: 0;
+      }
+
+      .window-btn img {
+        width: 100%;
+        height: 100%;
         pointer-events: none;
       }
 
-      .status {
-        margin-top: 40px;
+      .window-btn:hover {
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+      }
+
+      .window-label {
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
         background: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+        white-space: nowrap;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+        color: #333;
+      }
+
+      /* STATUS SECTION — Windows XP Style */
+      .status-container {
+        background: rgb(67, 67, 67);
+        height: 20vh;
+        display: flex;
+        align-items: center;
+      }
+
+      .status {
+        display: none;
+        width: 40vh;
+        max-width: 800px;
+        margin: 0 auto;
+        text-align: center;
         padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
+        padding-bottom: 10px;
+        background: #ece9d8;
+        border: 2px solid #003399;
+        border-radius: 3px;
+        box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.3);
+        font-family: "Tahoma", sans-serif;
+        z-index: 11;
       }
 
       .status h2 {
-        color: #333;
-        margin-bottom: 15px;
+        color: #003366;
+        font-family: "Tahoma", "Verdana", sans-serif;
+        font-size: 1.5em;
+        margin-bottom: 10px;
+        text-shadow: 1px 1px 0 #ffffff;
+      }
+      .focused-view.active + .status-container {
+        background: repeating-linear-gradient(
+          to bottom,
+          #698b55 0,
+          /* start with a path color */ #698b55 50%,
+          #9b9b9b 50%,
+          #9b9b9b 100%
+        );
+      }
+      .focused-view.active + .status-container .status {
+        display: block;
       }
 
       .port-list {
@@ -205,36 +272,40 @@
         flex-wrap: wrap;
         gap: 10px;
         justify-content: center;
+        min-height: 40px;
       }
 
       .port-badge {
-        background: #667eea;
-        color: white;
+        background: linear-gradient(to bottom, #a8c3ff 0%, #3a6de0 100%);
+        color: #ffffff;
         padding: 5px 15px;
         border-radius: 20px;
         font-size: 14px;
+        font-family: "Tahoma", sans-serif;
+        border: 1px solid #2f4fa1;
+        box-shadow: inset 0 1px 0 #d6e3ff, 0 1px 2px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+        display: inline-block;
+        transition: all 0.2s ease;
       }
 
       .controls {
-        margin-top: 20px;
+        margin-top: 15px;
         display: flex;
         gap: 10px;
         justify-content: center;
+        flex-wrap: wrap;
       }
 
       button {
-        background: #667eea;
-        color: white;
+        background: white;
+        color: black;
         border: none;
         padding: 10px 20px;
         border-radius: 5px;
         cursor: pointer;
         font-size: 14px;
         transition: background 0.3s;
-      }
-
-      button:hover {
-        background: #5568d3;
       }
 
       .error {
@@ -249,55 +320,35 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>🏠 Port House Controller</h1>
+    <div class="header">
+      <h1 id="viewName">Vintage Street</h1>
+    </div>
 
-      <div class="house">
-        <div class="roof"></div>
-        <div class="house-body">
-          <div class="door">
-            <div class="doorknob"></div>
-          </div>
+    <!-- Street View -->
+    <div class="street-view" id="streetView">
+      <div class="horizon"></div>
+      <!-- Houses will be dynamically added here -->
+    </div>
 
-          <div class="window window1 closed" data-port="20" onclick="togglePort(20)">
-            <div class="window-label">FTP Data (20)</div>
-          </div>
-
-          <div class="window window2 closed" data-port="21" onclick="togglePort(21)">
-            <div class="window-label">FTP (21)</div>
-          </div>
-
-          <div class="window window3 closed" data-port="22" onclick="togglePort(22)">
-            <div class="window-label">SSH (22)</div>
-          </div>
-
-          <div class="window window4 closed" data-port="23" onclick="togglePort(23)">
-            <div class="window-label">Telnet (23)</div>
-          </div>
-
-          <div class="window window5 closed" data-port="25" onclick="togglePort(25)">
-            <div class="window-label">SMTP (25)</div>
-          </div>
-
-          <div class="window window6 closed" data-port="69" onclick="togglePort(69)">
-            <div class="window-label">TFTP (69)</div>
-          </div>
-
-          <div class="window window7 closed" data-port="80" onclick="togglePort(80)">
-            <div class="window-label">HTTP (80)</div>
-          </div>
-        </div>
+    <!-- Focused View -->
+    <div class="focused-view" id="focusedView">
+      <div id="floatingControls">
+        <div id="floatingControlsHeader">Control Panel</div>
+        <button onclick="backToStreet()">← Back to Street</button>
+        <button onclick="openAllPorts()">Open All Windows</button>
+        <button onclick="closeAllPorts()">Close All Windows</button>
+        <button onclick="refreshStatus()">Refresh Status</button>
       </div>
+      <div class="house-container" id="houseContainer">
+        <img id="houseSvg" class="house-svg" src="" alt="House" />
+      </div>
+    </div>
 
-      <div class="status">
+    <div class="status-container">
+      <div id="portStatus" class="status">
         <h2>Open Ports</h2>
         <div class="port-list" id="portList">
           <span style="color: #999">No ports open</span>
-        </div>
-        <div class="controls">
-          <button onclick="openAllPorts()">Open All Windows</button>
-          <button onclick="closeAllPorts()">Close All Windows</button>
-          <button onclick="refreshStatus()">Refresh Status</button>
         </div>
         <div id="message"></div>
       </div>
@@ -306,9 +357,158 @@
     <script>
       const API_BASE = "http://localhost:5050/api";
 
+      // Configuration for each house
+      const houses = [
+        {
+          id: 1,
+          name: "Grandma's House",
+          svg: "house1.svg",
+          windows: [
+            { port: 23, name: "Telnet", x: 41, y: 68 },
+            { port: 25, name: "SMTP", x: 49, y: 68 },
+          ],
+        },
+        {
+          id: 2,
+          name: "Ferris Bueller House",
+          svg: "house2.svg",
+          windows: [
+            { port: 5432, name: "PostgreSQL", x: 32, y: 70 },
+            { port: 27017, name: "MongoDB", x: 39.5, y: 70 },
+            { port: 3306, name: "MySQL", x: 47, y: 70 },
+          ],
+        },
+        {
+          id: 3,
+          name: "Munster Mansion",
+          svg: "house3.svg",
+          windows: [
+            { port: 8080, name: "HTTP Alt", x: 39, y: 45 },
+            { port: 3000, name: "Node.js", x: 39, y: 75 },
+            { port: 5000, name: "Flask", x: 57, y: 45 },
+            { port: 8000, name: "Django", x: 57, y: 75 },
+          ],
+        },
+        {
+          id: 4,
+          name: "Brady Bunch House",
+          svg: "house4.svg",
+          windows: [
+            { port: 143, name: "IMAP", x: 35, y: 75 },
+            { port: 993, name: "IMAPS", x: 49, y: 75 },
+            { port: 110, name: "POP3", x: 60, y: 45 },
+            { port: 587, name: "SMTP TLS", x: 60, y: 75 },
+          ],
+        },
+      ];
+
+      let currentHouseIndex = null;
+      let windowStates = {};
+
+      function initStreetView() {
+        const streetView = document.getElementById("streetView");
+        const totalHouses = houses.length;
+
+        houses.forEach((house, index) => {
+          const houseDiv = document.createElement("div");
+          houseDiv.className = "street-house";
+          houseDiv.dataset.houseId = house.id;
+
+          // Position houses evenly along the street
+          const position = ((index + 1) / (totalHouses + 1)) * 100;
+          houseDiv.style.left = `${position}%`;
+          houseDiv.style.transform = "translateX(-50%)";
+
+          const img = document.createElement("img");
+          img.src = house.svg;
+          img.alt = house.name;
+
+          const label = document.createElement("div");
+          label.className = "house-name";
+          label.textContent = house.name;
+
+          houseDiv.appendChild(img);
+          houseDiv.appendChild(label);
+          houseDiv.onclick = () => focusOnHouse(index);
+
+          streetView.appendChild(houseDiv);
+        });
+      }
+
+      function focusOnHouse(index) {
+        currentHouseIndex = index;
+        const house = houses[index];
+
+        // Hide street view, show focused view
+        document.getElementById("streetView").style.display = "none";
+        document.getElementById("focusedView").classList.add("active");
+
+        // Update active state in street view
+        document.querySelectorAll(".street-house").forEach((h, i) => {
+          h.classList.toggle("active", i === index);
+        });
+
+        loadHouse(index);
+      }
+
+      function backToStreet() {
+        document.getElementById("streetView").style.display = "block";
+        document.getElementById("focusedView").classList.remove("active");
+        document.getElementById("viewName").textContent = "Vintage Street";
+
+        currentHouseIndex = null;
+
+        // Clear windows
+        const container = document.getElementById("houseContainer");
+        const existingWindows = container.querySelectorAll(".window-btn");
+        existingWindows.forEach((w) => w.remove());
+      }
+
+      function loadHouse(index) {
+        const house = houses[index];
+        const container = document.getElementById("houseContainer");
+        const houseSvg = document.getElementById("houseSvg");
+        const viewName = document.getElementById("viewName");
+
+        if (!house) return console.error("Invalid house index:", index);
+
+        viewName.textContent = house.name;
+
+        // Update house SVG
+        houseSvg.src = house.svg;
+
+        // Remove existing window buttons
+        const existingWindows = container.querySelectorAll(".window-btn");
+        existingWindows.forEach((w) => w.remove());
+
+        // Create window buttons
+        house.windows.forEach((window) => {
+          const btn = document.createElement("button");
+          btn.className = "window-btn";
+          btn.dataset.port = window.port;
+          btn.style.left = `${window.x}%`;
+          btn.style.top = `${window.y}%`;
+          btn.style.width = `${window.scale}px`;
+          btn.style.height = `${window.scale}px`;
+          btn.style.transform = "translate(-50%, -50%)";
+          btn.onclick = () => togglePort(window.port);
+
+          const img = document.createElement("img");
+          img.src = windowStates[window.port] ? "window-open.svg" : "window-closed.svg";
+          img.alt = `Window for port ${window.port}`;
+
+          const label = document.createElement("div");
+          label.className = "window-label";
+          label.textContent = `${window.name} (${window.port})`;
+
+          btn.appendChild(img);
+          btn.appendChild(label);
+          container.appendChild(btn);
+        });
+      }
+
       async function togglePort(port) {
-        const windowEl = document.querySelector(`.window[data-port="${port}"]`);
-        const isOpen = windowEl.classList.contains("open");
+        const isOpen = windowStates[port];
 
         try {
           const endpoint = isOpen ? "/ports/close" : "/ports/open";
@@ -323,13 +523,8 @@
           const data = await response.json();
 
           if (response.ok) {
-            if (isOpen) {
-              windowEl.classList.remove("open");
-              windowEl.classList.add("closed");
-            } else {
-              windowEl.classList.remove("closed");
-              windowEl.classList.add("open");
-            }
+            windowStates[port] = !isOpen;
+            updateWindowButton(port);
             showMessage(`Port ${port} ${isOpen ? "closed" : "opened"}`, "success");
             await refreshStatus();
           } else {
@@ -340,9 +535,22 @@
         }
       }
 
+      function updateWindowButton(port) {
+        const btn = document.querySelector(`.window-btn[data-port="${port}"]`);
+        if (btn) {
+          const img = btn.querySelector("img");
+          img.src = windowStates[port] ? "window-open.svg" : "window-closed.svg";
+        }
+      }
+
       async function openAllPorts() {
-        const windows = document.querySelectorAll(".window");
-        const ports = Array.from(windows).map((w) => parseInt(w.dataset.port));
+        if (currentHouseIndex === null) {
+          showMessage("Please select a house first", "error");
+          return;
+        }
+
+        const house = houses[currentHouseIndex];
+        const ports = house.windows.map((w) => w.port);
 
         try {
           const response = await fetch(`${API_BASE}/ports/open-multiple`, {
@@ -356,9 +564,9 @@
           const data = await response.json();
 
           if (response.ok) {
-            windows.forEach((w) => {
-              w.classList.remove("closed");
-              w.classList.add("open");
+            ports.forEach((port) => {
+              windowStates[port] = true;
+              updateWindowButton(port);
             });
             showMessage("All windows opened!", "success");
             await refreshStatus();
@@ -382,10 +590,9 @@
           const data = await response.json();
 
           if (response.ok) {
-            const windows = document.querySelectorAll(".window");
-            windows.forEach((w) => {
-              w.classList.remove("open");
-              w.classList.add("closed");
+            Object.keys(windowStates).forEach((port) => {
+              windowStates[port] = false;
+              updateWindowButton(parseInt(port));
             });
             showMessage("All windows closed!", "success");
             await refreshStatus();
@@ -414,15 +621,17 @@
             }
 
             // Update window states
-            const windows = document.querySelectorAll(".window");
-            windows.forEach((w) => {
-              const port = parseInt(w.dataset.port);
-              if (data.open_ports.includes(port)) {
-                w.classList.remove("closed");
-                w.classList.add("open");
-              } else {
-                w.classList.remove("open");
-                w.classList.add("closed");
+            data.open_ports.forEach((port) => {
+              windowStates[port] = true;
+              updateWindowButton(port);
+            });
+
+            // Mark ports not in open_ports as closed
+            Object.keys(windowStates).forEach((port) => {
+              const portNum = parseInt(port);
+              if (!data.open_ports.includes(portNum)) {
+                windowStates[portNum] = false;
+                updateWindowButton(portNum);
               }
             });
           }
@@ -441,7 +650,41 @@
         }, 3000);
       }
 
-      // Refresh status on load
+      // Make floating controls draggable
+      function dragElement(elmnt) {
+        let pos1 = 0,
+          pos2 = 0,
+          pos3 = 0,
+          pos4 = 0;
+        const header = document.getElementById(elmnt.id + "Header") || elmnt;
+
+        header.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+          e.preventDefault();
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+          document.addEventListener("mouseup", closeDragElement);
+          document.addEventListener("mousemove", elementDrag);
+        }
+
+        function elementDrag(e) {
+          e.preventDefault();
+          elmnt.style.top = elmnt.offsetTop - (pos4 - e.clientY) + "px";
+          elmnt.style.left = elmnt.offsetLeft - (pos3 - e.clientX) + "px";
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+        }
+
+        function closeDragElement() {
+          document.removeEventListener("mouseup", closeDragElement);
+          document.removeEventListener("mousemove", elementDrag);
+        }
+      }
+
+      dragElement(document.getElementById("floatingControls"));
+      // Initialize
+      initStreetView();
       refreshStatus();
 
       // Auto-refresh every 5 seconds
