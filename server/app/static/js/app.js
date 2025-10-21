@@ -1,6 +1,43 @@
 // Application JavaScript for Port Scanner Delta Reporter
 
 document.addEventListener("DOMContentLoaded", function () {
+  (() => {
+    "use strict";
+
+    // Get stored theme from localStorage
+    const getStoredTheme = () => localStorage.getItem("theme") || "light";
+
+    // Set theme in localStorage
+    const setStoredTheme = (theme) => localStorage.setItem("theme", theme);
+
+    // Apply theme by setting data-bs-theme on <html>
+    const setTheme = (theme) => {
+      document.documentElement.setAttribute("data-bs-theme", theme);
+      // Update button icon
+      const themeIcon = document.querySelector("#theme-toggle i");
+      if (themeIcon) {
+        themeIcon.classList.remove(theme === "dark" ? "bi-sun" : "bi-moon");
+        themeIcon.classList.add(theme === "dark" ? "bi-moon" : "bi-sun");
+      }
+    };
+
+    // Initialize theme on page load
+    window.addEventListener("DOMContentLoaded", () => {
+      const theme = getStoredTheme();
+      setTheme(theme);
+
+      // Toggle theme on button click
+      const themeToggle = document.querySelector("#theme-toggle");
+      if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+          const currentTheme =
+            document.documentElement.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+          setStoredTheme(currentTheme);
+          setTheme(currentTheme);
+        });
+      }
+    });
+  })();
   // Auto-dismiss alerts after 5 seconds
   const alerts = document.querySelectorAll(".alert");
   alerts.forEach(function (alert) {
@@ -14,28 +51,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
-
-  // === Theme Toggle ===
-  const toggle = document.getElementById("theme-toggle");
-  const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-  const savedTheme = localStorage.getItem("theme");
-
-  // Apply saved or system-preferred theme
-  if (savedTheme === "dark" || (!savedTheme && prefersDarkScheme.matches)) {
-    document.body.classList.add("dark-theme");
-    toggle.innerHTML = '<i class="bi bi-sun"></i>';
-  } else {
-    document.body.classList.remove("dark-theme");
-    toggle.innerHTML = '<i class="bi bi-moon"></i>';
-  }
-
-  // Toggle theme on button click
-  toggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark-theme");
-    const isDark = document.body.classList.contains("dark-theme");
-    toggle.innerHTML = isDark ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
-    localStorage.setItem("theme", isDark ? "dark" : "light");
   });
 
   // === Real-time client status updates (placeholder for WebSocket) ===

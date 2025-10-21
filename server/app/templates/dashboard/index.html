@@ -1,82 +1,174 @@
 {% extends "base.html" %} {% block title %}Dashboard - (Louis Change) Port Scanner Delta Reporter{% endblock %} {%
 block content %}
-<div class="row">
-  <div class="col-md-12">
-    <h1>Dashboard</h1>
-    <p class="lead">Port Scanner Delta Reporter Control Panel</p>
-  </div>
-</div>
 
-<div class="row mt-4">
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body text-center">
-        <h5 class="card-title">Active Clients</h5>
-        <h2 class="text-primary">{{ stats.clients }}</h2>
-        <a href="{{ url_for('dashboard.clients') }}" class="btn btn-outline-primary btn-sm"
-          >View Details</a
-        >
+<div class="full-width-page d-flex">
+  <!-- SIDEBAR NAVIGATION -->
+  <div
+    class="d-flex flex-column flex-shrink-0 p-3 border-end"
+    style="width: 260px; min-height: calc(100vh - 56px)">
+    <!-- Sidebar Header -->
+    <div class="pb-3 mb-3 border-bottom">
+      <h5 class="mb-0 fs-4">
+        <i class="bi bi-speedometer2 me-2 text-primary"></i>
+        Navigation
+      </h5>
+    </div>
+
+    <!-- Navigation List -->
+    <ul class="nav nav-pills flex-column mb-auto">
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('dashboard.index') }}" class="nav-link active">
+          <i class="bi bi-house-door me-2"></i>
+          Overview
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('dashboard.scans') }}" class="nav-link text-body">
+          <i class="bi bi-radar me-2"></i>
+          Scans
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('dashboard.reports') }}" class="nav-link text-body">
+          <i class="bi bi-file-earmark-text me-2"></i>
+          Reports
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a href="#" class="nav-link text-body">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Alerts
+        </a>
+      </li>
+
+      <li><hr class="my-3" /></li>
+
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('dashboard.clients') }}" class="nav-link text-body">
+          <i class="bi bi-hdd-network me-2"></i>
+          Clients
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('auth.profile') }}" class="nav-link text-body">
+          <i class="bi bi-person me-2"></i>
+          Profile
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a href="#" class="nav-link text-body">
+          <i class="bi bi-gear me-2"></i>
+          Settings
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="flex-fill p-4">
+    <!-- Header -->
+    <div class="row">
+      <div class="col-md-12">
+        <h1>Dashboard</h1>
+        <p class="lead">Port Scanner Delta Reporter Control Panel</p>
       </div>
     </div>
-  </div>
 
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body text-center">
-        <h5 class="card-title">Recent Scans (24h)</h5>
-        <h2 class="text-success">{{ stats.scans }}</h2>
-        <a href="{{ url_for('dashboard.scans') }}" class="btn btn-outline-success btn-sm"
-          >View Scans</a
-        >
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body text-center">
-        <h5 class="card-title">Delta Reports</h5>
-        <h2 class="text-warning">{{ stats.reports }}</h2>
-        <a href="{{ url_for('dashboard.reports') }}" class="btn btn-outline-warning btn-sm"
-          >View Reports</a
-        >
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row mt-4">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">
-        <h5>Recent Activity</h5>
-      </div>
-      <div class="card-body">
-        <p class="text-muted">No recent activity to display.</p>
-        <small>Start by connecting some Raspberry Pi clients and running scans.</small>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-4">
-    <div class="card">
-      <div class="card-header">
-        <h5>System Status</h5>
-      </div>
-      <div class="card-body">
-        <div class="d-flex justify-content-between">
-          <span>Server Status:</span>
-          <span class="badge bg-success">Online</span>
+    <!-- Metrics Row -->
+    <div class="row mt-4">
+      <!-- Active Clients -->
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Active Clients</h5>
+            <h2 class="text-primary">{{ stats.clients }}</h2>
+            <a href="{{ url_for('dashboard.clients') }}" class="btn btn-outline-primary btn-sm">
+              View Details
+            </a>
+          </div>
         </div>
-        <hr />
-        <div class="d-flex justify-content-between">
-          <span>Database:</span>
-          <span class="badge bg-success">Connected</span>
+      </div>
+
+      <!-- Recent Scans -->
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Recent Scans (24h)</h5>
+            <h2 class="text-success">{{ stats.scans }}</h2>
+            <a href="{{ url_for('dashboard.scans') }}" class="btn btn-outline-success btn-sm">
+              View Scans
+            </a>
+          </div>
         </div>
-        <hr />
-        <div class="d-flex justify-content-between">
-          <span>WebSocket:</span>
-          <span id="websocket-health" class="badge bg-success"> Connecting... </span>
+      </div>
+
+      <!-- Delta Reports -->
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Delta Reports</h5>
+            <h2 class="text-warning">{{ stats.reports }}</h2>
+            <a href="{{ url_for('dashboard.reports') }}" class="btn btn-outline-warning btn-sm">
+              View Reports
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alerts Placeholder -->
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Alerts</h5>
+            <h2 class="text-danger">0</h2>
+            <a href="#" class="btn btn-outline-danger btn-sm"> View Alerts </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Activity & Status Row -->
+    <div class="row mt-4">
+      <!-- Recent Activity -->
+      <div class="col-md-8">
+        <div class="card">
+          <div class="card-header">
+            <h5>Recent Activity</h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">No recent activity to display.</p>
+            <small>Start by connecting some Raspberry Pi clients and running scans.</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-header">
+            <h5>System Status</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex justify-content-between">
+              <span>Server Status:</span>
+              <span class="badge bg-success">Online</span>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between">
+              <span>Database:</span>
+              <span class="badge bg-success">Connected</span>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between">
+              <span>WebSocket:</span>
+              <span id="websocket-health" class="badge bg-success">Connecting...</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,16 +1,40 @@
 /* Custom styles for Port Scanner Delta Reporter */
 
+/* ============================================
+   LIGHT & DARK THEME ROOT VARIABLES
+   ============================================ */
+:root,
+[data-bs-theme="light"] {
+  --primary: #4da6ff;
+  --primary-dark: #3f54cd;
+  --secondary: #59c8ff;
+  --secondary-light: #12abf8;
+}
+
+/* DARK THEME ROOT VARIABLES */
+[data-bs-theme="dark"],
+body.dark-theme {
+  --primary: #4da6ff;
+  --primary-dark: #3f54cd;
+  --secondary: #59c8ff;
+  --secondary-light: #12abf8;
+}
+
+/* Use Bootstrap variables for backgrounds and text */
 body {
-  background-color: #f8f9fa;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
+}
+
+.card {
+  background-color: var(--bs-card-bg);
+  color: var(--bs-card-color);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 
 .navbar-brand {
   font-weight: bold;
-}
-
-.card {
-  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-  border: 1px solid rgba(0, 0, 0, 0.125);
 }
 
 .card-body {
@@ -53,35 +77,26 @@ body {
   margin: 0.25rem 0;
 }
 
-/* HERO STYLING */
-.hero-section {
-  padding-top: 48px;
-  padding-bottom: 24px;
+/* Literally just a cool button with a colour gradient */
+.btn-gradient-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  border: none;
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
 }
 
-/* Slight upward nudge when centered so content sits a bit above exact center */
-.hero-section .row.align-items-center {
-  transform: translateY(-18px);
+.btn-gradient-primary:hover {
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-light) 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-primary-lg);
 }
 
-@media (max-width: 767px) {
-  .hero-section .row.align-items-center {
-    transform: translateY(-6px);
-  }
-}
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 
-.hero-image-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 12px;
-  animation: fadeIn 1s ease-in; /* Optional: fade in on page load */
-}
-
-/* Gentle Float Animation for Hero Image */
 @keyframes float-gentle {
   0%,
   100% {
@@ -90,16 +105,6 @@ body {
   50% {
     transform: translateY(-15px);
   }
-}
-
-.hero-image {
-  max-width: 115%;
-  height: auto;
-  border-radius: 16px;
-  box-shadow: none;
-  animation: float-gentle 4s ease-in-out infinite;
-  margin-top: 0;
-  transition: transform 0.3s ease; /* Smooth transition for hover */
 }
 
 /*Fade-in animation on page load */
@@ -112,26 +117,6 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Left-align the middle column content */
-.hero-section .col-lg-5 {
-  text-align: left;
-  padding-left: 12px;
-}
-
-.hero-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  margin-top: 0;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.hero-subtitle {
-  font-size: 0.8rem;
-  margin-bottom: 2rem;
-  opacity: 0.95;
 }
 
 /* Status badge pulse animation */
@@ -147,107 +132,43 @@ body {
   }
 }
 
-.status-indicator.animated {
-  animation: statusPulse 1.6s ease-in-out infinite;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
-  color: #6c757d;
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Dark theme */
-body.dark-theme {
-  background-color: #121212;
-  color: #e0e0e0;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-body.dark-theme .navbar {
-  background-color: #1f1f1f !important;
-}
-
-body.dark-theme .card {
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .report-card:hover {
-  box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .filter-card {
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
-}
-
-body.dark-theme .page-link {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .page-link:hover {
-  background-color: #2a2a2a;
-  color: #fff;
-}
-
-body.dark-theme .page-item.active .page-link {
-  background-color: #0d6efd;
-  border-color: #0a58ca;
-}
-
-body.dark-theme input.form-control,
-body.dark-theme textarea.form-control,
-body.dark-theme select.form-select {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  border: 1px solid #444;
-}
-
-body.dark-theme input.form-control:focus,
-body.dark-theme textarea.form-control:focus,
-body.dark-theme select.form-select:focus {
-  background-color: #2a2a2a;
-  color: #fff;
-  border-color: #007bff;
-  box-shadow: none;
-}
-
-body.dark-theme .form-check-label {
-  color: #ccc;
-}
-
-body.dark-theme .breadcrumb-item a {
-  color: #66b2ff;
-  text-decoration: none;
-}
-
-body.dark-theme .breadcrumb-item.active {
-  color: #bbb;
-}
-
-body.dark-theme .modal-content {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-}
-
-body.dark-theme .modal-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .modal-footer {
-  border-top-color: rgba(255, 255, 255, 0.1);
-}
-
-body.dark-theme .btn-close {
-  filter: invert(1);
-}
-
-body.dark-theme .alert {
-  background-color: #2a2a2a;
-  border-color: #3c3c3c;
-  color: #fff;
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
