@@ -21,10 +21,6 @@ body.dark-theme {
 }
 
 /* Use Bootstrap variables for backgrounds and text */
-body {
-  background-color: var(--bs-body-bg);
-  color: var(--bs-body-color);
-}
 
 .card {
   background-color: var(--bs-card-bg);
