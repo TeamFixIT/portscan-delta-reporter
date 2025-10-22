@@ -134,7 +134,7 @@
       {% if results_pagination.items %} {% for result in results_pagination.items %} {% set
       result_index = loop.index %} {# store outer loop index manually #}
 
-      <div class="mb-4 border rounded p-3 bg-light">
+      <div class="mb-4 border rounded p-3 bg-body">
         <h6>
           <strong>Result ID:</strong> {{ result.result_id }}
           <span
@@ -150,7 +150,7 @@
         {% if result.parsed_results %}
         <div class="table-responsive">
           <table class="table table-bordered table-sm align-middle">
-            <thead class="table-light">
+            <thead class="table">
               <tr>
                 <th>Target</th>
                 <th>Hostname</th>

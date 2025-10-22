@@ -363,42 +363,50 @@
           id: 1,
           name: "Grandma's House",
           svg: "house1.svg",
+          sml_svg: "house1_sml.svg",
           windows: [
-            { port: 23, name: "Telnet", x: 41, y: 68 },
-            { port: 25, name: "SMTP", x: 49, y: 68 },
+            { port: 23, name: "Telnet", x: 41, y: 68, scale: 200 },
+            { port: 25, name: "SMTP", x: 49, y: 68, scale: 200 },
           ],
         },
         {
           id: 2,
           name: "Ferris Bueller House",
           svg: "house2.svg",
+          sml_svg: "house2_sml.svg",
           windows: [
-            { port: 5432, name: "PostgreSQL", x: 32, y: 70 },
-            { port: 27017, name: "MongoDB", x: 39.5, y: 70 },
-            { port: 3306, name: "MySQL", x: 47, y: 70 },
+            { port: 27017, name: "MongoDB", x: 34, y: 66, scale: 230 },
+            { port: 3306, name: "MySQL", x: 45, y: 66, scale: 230 },
           ],
         },
         {
           id: 3,
           name: "Munster Mansion",
           svg: "house3.svg",
+          sml_svg: "house3_sml.svg",
           windows: [
-            { port: 8080, name: "HTTP Alt", x: 39, y: 45 },
-            { port: 3000, name: "Node.js", x: 39, y: 75 },
-            { port: 5000, name: "Flask", x: 57, y: 45 },
-            { port: 8000, name: "Django", x: 57, y: 75 },
+            { port: 3000, name: "Node.js", x: 39, y: 55, scale: 200 },
+            { port: 8000, name: "Django", x: 57, y: 55, scale: 200 },
           ],
         },
         {
           id: 4,
           name: "Brady Bunch House",
           svg: "house4.svg",
+          sml_svg: "house4_sml.svg",
           windows: [
-            { port: 143, name: "IMAP", x: 35, y: 75 },
-            { port: 993, name: "IMAPS", x: 49, y: 75 },
-            { port: 110, name: "POP3", x: 60, y: 45 },
-            { port: 587, name: "SMTP TLS", x: 60, y: 75 },
+            { port: 143, name: "IMAP", x: 35, y: 70, scale: 150 },
+            { port: 993, name: "IMAPS", x: 49, y: 70, scale: 150 },
+            { port: 110, name: "POP3", x: 60, y: 40, scale: 150 },
+            { port: 587, name: "SMTP TLS", x: 60, y: 70, scale: 150 },
           ],
+        },
+        {
+          id: 5,
+          name: "Hacker House",
+          svg: "house5_sml.svg",
+          sml_svg: "house5_sml.svg",
+          windows: [],
         },
       ];
 
@@ -420,7 +428,7 @@
           houseDiv.style.transform = "translateX(-50%)";
 
           const img = document.createElement("img");
-          img.src = house.svg;
+          img.src = "assets/" + house.sml_svg;
           img.alt = house.name;
 
           const label = document.createElement("div");
@@ -475,7 +483,7 @@
         viewName.textContent = house.name;
 
         // Update house SVG
-        houseSvg.src = house.svg;
+        houseSvg.src = "assets/" + house.svg;
 
         // Remove existing window buttons
         const existingWindows = container.querySelectorAll(".window-btn");
@@ -494,7 +502,9 @@
           btn.onclick = () => togglePort(window.port);
 
           const img = document.createElement("img");
-          img.src = windowStates[window.port] ? "window-open.svg" : "window-closed.svg";
+          img.src = windowStates[window.port]
+            ? "assets/window-open.svg"
+            : "assets/window-closed.svg";
           img.alt = `Window for port ${window.port}`;
 
           const label = document.createElement("div");
@@ -539,7 +549,7 @@
         const btn = document.querySelector(`.window-btn[data-port="${port}"]`);
         if (btn) {
           const img = btn.querySelector("img");
-          img.src = windowStates[port] ? "window-open.svg" : "window-closed.svg";
+          img.src = windowStates[port] ? "assets/window-open.svg" : "assets/window-closed.svg";
         }
       }
 

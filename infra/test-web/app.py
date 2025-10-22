@@ -14,40 +14,10 @@ def index():
     return send_from_directory(".", "index.html")
 
 
-@app.route("/house1.svg")
-def house1_svg():
-    """Serve the SVG for House 1"""
-    return send_from_directory(".", "./assets/house1.svg")
-
-
-@app.route("/house2.svg")
-def house2_svg():
-    """Serve the SVG for House 2"""
-    return send_from_directory(".", "./assets/house2.svg")
-
-
-@app.route("/house3.svg")
-def house3_svg():
-    """Serve the SVG for House 3"""
-    return send_from_directory(".", "./assets/house3.svg")
-
-
-@app.route("/house4.svg")
-def house4_svg():
-    """Serve the SVG for House 4"""
-    return send_from_directory(".", "./assets/house4.svg")
-
-
-@app.route("/window-closed.svg")
-def window_closed_svg():
-    """Serve the SVG for Window Closed"""
-    return send_from_directory(".", "./assets/window-closed.svg")
-
-
-@app.route("/window-open.svg")
-def window_open_svg():
-    """Serve the SVG for Window Open"""
-    return send_from_directory(".", "./assets/window-open.svg")
+@app.route("/assets/<filename>")
+def serve_asset(filename):
+    """Serve static assets from the assets directory"""
+    return send_from_directory("./assets", filename)
 
 
 # Dictionary to track PIDs of socat processes by port
