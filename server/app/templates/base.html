@@ -14,21 +14,39 @@
       rel="stylesheet" />
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-  <!-- Favicon for browser tab -->
-  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/delta.png') }}" />
+    <!-- Favicon for browser tab -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/delta.png') }}" />
     {% block extra_css %}{% endblock %}
   </head>
   <body>
     <nav class="navbar navbar-expand-lg bg-body">
       <div class="container">
         <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
-          <img src="{{ url_for('static', filename='images/delta.png') }}" alt="Logo" style="height:32px;width:auto;margin-right:10px;">
+          <img
+            src="{{ url_for('static', filename='images/delta.png') }}"
+            alt="Logo"
+            style="height: 32px; width: auto; margin-right: 10px" />
           Port Scanner Delta Reporter
         </a>
-        <div class="navbar-nav ms-auto">
-          <a class="nav-link" href="{{ url_for('main.index') }}">Home</a>
-          <a class="nav-link" href="{{ url_for('dashboard.index') }}">Dashboard</a>
-          <a class="nav-link" href="{{ url_for('auth.login') }}">Login</a>
+        <div class="navbar-nav ms-auto d-flex align-items-center gap-2">
+          <a
+            class="btn rounded-pill px-4 py-2 fw-bold shadow-sm"
+            style="background: #1976d2; color: #fff; font-size: 1.08rem"
+            href="{{ url_for('main.index') }}"
+            >Home</a
+          >
+          <a
+            class="btn rounded-pill px-4 py-2 fw-bold shadow-sm"
+            style="background: #43a047; color: #fff; font-size: 1.08rem"
+            href="{{ url_for('dashboard.index') }}"
+            >Dashboard</a
+          >
+          <a
+            class="btn rounded-pill px-4 py-2 fw-bold shadow-sm"
+            style="background: #fbc02d; color: #212121; font-size: 1.08rem"
+            href="{{ url_for('auth.login') }}"
+            >Login</a
+          >
         </div>
         <button id="theme-toggle" class="btn btn-outline-primary btn-sm ms-3">
           <i class="bi bi-moon"></i>
