@@ -329,7 +329,7 @@ def logout():
 @login_required
 def profile():
     """User profile page"""
-    return render_template("auth/profile.html", user=current_user)
+    return render_template("auth/profile.html", user=current_user, show_sidebar=True)
 
 
 @bp.route("/profile/update", methods=["POST"])

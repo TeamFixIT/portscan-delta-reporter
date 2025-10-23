@@ -1,0 +1,127 @@
+<nav
+  class="d-flex flex-column flex-shrink-0 p-3 border-end"
+  style="width: 260px; min-height: 100vh">
+  <div class="pb-3 mb-3 border-bottom">
+    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+      <img
+        src="{{ url_for('static', filename='images/delta.png') }}"
+        alt="Logo"
+        style="height: 32px; width: auto; margin-right: 10px; flex-shrink: 0" />
+      <p class="text-break mb-0 text-wrap">Port Scanner Delta Reporter</p>
+    </a>
+  </div>
+
+  <ul id="sidebar-nav" class="nav nav-pills flex-column d-flex h-100">
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('dashboard.index') }}" class="nav-link">
+        <i class="bi bi-house-door me-2"></i>
+        Overview
+      </a>
+    </li>
+
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('dashboard.scans') }}" class="nav-link text-body">
+        <i class="bi bi-radar me-2"></i>
+        Scans
+      </a>
+    </li>
+
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('dashboard.reports') }}" class="nav-link text-body">
+        <i class="bi bi-file-earmark-text me-2"></i>
+        Reports
+      </a>
+    </li>
+
+    <li class="nav-item mb-1">
+      <div class="nav-link text-secondary text-decoration-line-through">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Alerts
+      </div>
+    </li>
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('dashboard.clients') }}" class="nav-link text-body">
+        <i class="bi bi-hdd-network me-2"></i>
+        Clients
+      </a>
+    </li>
+
+    <li class="mt-auto">
+      <hr class="my-3" />
+      <ul class="nav nav-pills flex-column">
+        {% if not current_user.is_authenticated %}
+        <li class="nav-item mb-1">
+          <a href="{{ url_for('auth.login') }}" class="nav-link text-body">
+            <i class="bi bi-person me-2"></i>
+            Login
+          </a>
+        </li>
+        {% else %}
+        <li class="nav-item mb-1">
+          <a href="{{ url_for('auth.profile') }}" class="nav-link text-body">
+            <i class="bi bi-person me-2"></i>
+            Profile
+          </a>
+        </li>
+        {% endif %}
+        <li class="nav-item mb-1">
+          <div class="nav-link text-secondary text-decoration-line-through">
+            <i class="bi bi-gear me-2"></i>
+            Settings
+          </div>
+        </li>
+        <li class="nav-item mb-1">
+          <div class="nav-link text-secondary text-decoration-line-through">
+            <i class="bi bi-graph-up me-2"></i>
+            Logs
+          </div>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("sidebar-nav");
+    if (!sidebar) return;
+    const links = Array.from(sidebar.querySelectorAll("a.nav-link"));
+    const storageKey = "sidebar:activeHref";
+
+    // Try to restore active link from localStorage
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const savedLink = links.find((a) => a.getAttribute("href") === saved);
+      if (savedLink) {
+        links.forEach((a) => a.classList.remove("active"));
+        savedLink.classList.add("active");
+      }
+    } else {
+      // Fallback: mark link active by matching current pathname
+      const currentPath = window.location.pathname;
+      const match = links.find((a) => {
+        try {
+          return new URL(a.href, window.location.origin).pathname === currentPath;
+        } catch (e) {
+          return a.getAttribute("href") === currentPath;
+        }
+      });
+      if (match) {
+        links.forEach((a) => a.classList.remove("active"));
+        match.classList.add("active");
+      }
+    }
+
+    // Update active state on click and persist
+    links.forEach((a) => {
+      a.addEventListener("click", function () {
+        links.forEach((l) => l.classList.remove("active"));
+        this.classList.add("active");
+        try {
+          localStorage.setItem(storageKey, this.getAttribute("href"));
+        } catch (e) {
+          /* ignore storage errors */
+        }
+      });
+    });
+  });
+</script>

@@ -31,7 +31,6 @@ body.dark-theme {
 .card {
   background-color: var(--bs-card-bg);
   color: var(--bs-card-color);
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
 }
 
