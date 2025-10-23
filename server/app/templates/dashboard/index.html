@@ -1,74 +1,7 @@
-{% extends "base.html" %} {% block title %}Dashboard - (Louis Change) Port Scanner Delta Reporter{% endblock %} {%
+{% extends "base.html" %} {% block title %}Dashboard - Port Scanner Delta Reporter{% endblock %} {%
 block content %}
 
 <div class="full-width-page d-flex">
-  <!-- SIDEBAR NAVIGATION -->
-  <div
-    class="d-flex flex-column flex-shrink-0 p-3 border-end"
-    style="width: 260px; min-height: calc(100vh - 56px)">
-    <!-- Sidebar Header -->
-    <div class="pb-3 mb-3 border-bottom">
-      <h5 class="mb-0 fs-4">
-        <i class="bi bi-speedometer2 me-2 text-primary"></i>
-        Navigation
-      </h5>
-    </div>
-
-    <!-- Navigation List -->
-    <ul class="nav nav-pills flex-column mb-auto">
-      <li class="nav-item mb-1">
-        <a href="{{ url_for('dashboard.index') }}" class="nav-link active">
-          <i class="bi bi-house-door me-2"></i>
-          Overview
-        </a>
-      </li>
-
-      <li class="nav-item mb-1">
-        <a href="{{ url_for('dashboard.scans') }}" class="nav-link text-body">
-          <i class="bi bi-radar me-2"></i>
-          Scans
-        </a>
-      </li>
-
-      <li class="nav-item mb-1">
-        <a href="{{ url_for('dashboard.reports') }}" class="nav-link text-body">
-          <i class="bi bi-file-earmark-text me-2"></i>
-          Reports
-        </a>
-      </li>
-
-      <li class="nav-item mb-1">
-        <a href="#" class="nav-link text-body">
-          <i class="bi bi-exclamation-triangle me-2"></i>
-          Alerts
-        </a>
-      </li>
-
-      <li><hr class="my-3" /></li>
-
-      <li class="nav-item mb-1">
-        <a href="{{ url_for('dashboard.clients') }}" class="nav-link text-body">
-          <i class="bi bi-hdd-network me-2"></i>
-          Clients
-        </a>
-      </li>
-
-      <li class="nav-item mb-1">
-        <a href="{{ url_for('auth.profile') }}" class="nav-link text-body">
-          <i class="bi bi-person me-2"></i>
-          Profile
-        </a>
-      </li>
-
-      <li class="nav-item mb-1">
-        <a href="#" class="nav-link text-body">
-          <i class="bi bi-gear me-2"></i>
-          Settings
-        </a>
-      </li>
-    </ul>
-  </div>
-
   <!-- MAIN CONTENT -->
   <div class="flex-fill p-4">
     <!-- Header -->

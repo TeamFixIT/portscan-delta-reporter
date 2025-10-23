@@ -59,6 +59,11 @@
               <i class="fas fa-key me-2"></i>Change Password
             </button>
           </li>
+          <li class="nav-item" role="presentation">
+            <a href="{{ url_for('auth.logout') }}">
+              <button class="nav-link"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </a>
+          </li>
         </ul>
 
         <!-- Tab content -->
@@ -236,69 +241,6 @@
     </div>
   </div>
 </div>
-{% endblock %} {% block extra_css %}
-<style>
-  .avatar-circle {
-    width: 80px;
-    height: 80px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-  }
-
-  .info-item {
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #667eea;
-  }
-
-  .info-item label {
-    display: block;
-    margin-bottom: 5px;
-    text-transform: uppercase;
-    font-weight: 600;
-    letter-spacing: 1px;
-  }
-
-  .password-requirements .valid {
-    color: #28a745 !important;
-  }
-  .password-requirements .valid:before {
-    content: "✓ ";
-    font-weight: bold;
-  }
-
-  .password-requirements .invalid {
-    color: #dc3545;
-  }
-
-  .password-requirements .invalid:before {
-    content: "✗ ";
-    font-weight: bold;
-  }
-
-  .form-control.is-valid {
-    border-color: #28a745;
-  }
-  .form-control.is-invalid {
-    border-color: #dc3545;
-  }
-
-  .nav-pills .nav-link {
-    color: #667eea;
-    border-radius: 25px;
-    margin-right: 10px;
-    transition: all 0.3s;
-  }
-
-  .nav-pills .nav-link:hover {
-    background: rgba(102, 126, 234, 0.1);
-  }
-</style>
 {% endblock %} {% block extra_js %}
 <script>
   document.addEventListener("DOMContentLoaded", function () {

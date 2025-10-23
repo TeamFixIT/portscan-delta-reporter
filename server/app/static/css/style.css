@@ -1,3 +1,9 @@
+#theme-toggle .bi-sun {
+  color: #ff9800;
+}
+#theme-toggle .bi-moon {
+  color: #2196f3;
+}
 /* Custom styles for Port Scanner Delta Reporter */
 
 /* ============================================
@@ -25,7 +31,6 @@ body.dark-theme {
 .card {
   background-color: var(--bs-card-bg);
   color: var(--bs-card-color);
-  box-shadow: var(--shadow-sm);
   border: 1px solid var(--border);
 }
 

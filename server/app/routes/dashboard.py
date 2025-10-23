@@ -46,6 +46,7 @@ def index():
             "scans": recent_scans,
             "reports": reports_count,
         },
+        show_sidebar=True,
     )
 
 
@@ -65,14 +66,14 @@ def scans():
             .order_by(ScanResult.started_at.desc())
             .all()
         )
-    return render_template("dashboard/scans.html", scans=scan_list)
+    return render_template("dashboard/scans.html", scans=scan_list, show_sidebar=True)
 
 
 @bp.route("/scans/create", methods=["GET"])
 @login_required
 def create_scan():
     """Render the create scan page"""
-    return render_template("dashboard/create_scan.html")
+    return render_template("dashboard/create_scan.html", show_sidebar=True)
 
 
 @bp.route("/scans/<int:scan_id>")
@@ -100,6 +101,7 @@ def view_scan(scan_id):
         scan=scan,
         tasks_pagination=tasks_pagination,
         results_pagination=results_pagination,
+        show_sidebar=True,
     )
 
 
@@ -115,7 +117,9 @@ def edit_scan(scan_id):
 def clients():
     """View connected clients"""
     client_list = Client.query.order_by(Client.last_seen.desc()).all()
-    return render_template("dashboard/clients.html", clients=client_list)
+    return render_template(
+        "dashboard/clients.html", clients=client_list, show_sidebar=True
+    )
 
 
 @bp.route("/reports")
@@ -125,7 +129,9 @@ def reports():
     Render the delta reports page.
     """
     reports_list = DeltaReport.query.all()
-    return render_template("dashboard/reports.html", reports=reports_list)
+    return render_template(
+        "dashboard/reports.html", reports=reports_list, show_sidebar=True
+    )
 
 
 @bp.route("/reports/<int:report_id>")
@@ -136,7 +142,9 @@ def view_delta_report(report_id):
     """
     report = DeltaReport.query.get_or_404(report_id)
 
-    return render_template("dashboard/view_report.html", report=report)
+    return render_template(
+        "dashboard/view_report.html", report=report, show_sidebar=True
+    )
 
 
 @bp.route("/reports/scan/<int:scan_id>")
@@ -158,7 +166,9 @@ def scan_history(scan_id):
         .all()
     )
 
-    return render_template("dashboard/scan_history.html", scan=scan, reports=reports)
+    return render_template(
+        "dashboard/scan_history.html", scan=scan, reports=reports, show_sidebar=True
+    )
 
 
 @bp.route("/delta/report/<int:report_id>/export")
