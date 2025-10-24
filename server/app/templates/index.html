@@ -283,3 +283,49 @@ Reporter - Murdoch University{% endblock %} {% block content %}
 <!-- system status moved into hero center column -->
 
 {% endblock %}
+{% block extra_js %}
+{{ super() }}
+<!-- Floating Help / User Manual Button only on index page -->
+<button
+  id="help-fab"
+  class="help-fab"
+  type="button"
+  data-bs-toggle="modal"
+  data-bs-target="#helpModal"
+  aria-label="Help and User Manual"
+>
+  <i class="bi bi-question-circle-fill"></i>
+  </button>
+
+<!-- Help Modal (index only) -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered help-modal-dialog">
+    <div class="modal-content help-modal">
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">Help & User Manual</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Quick resources to get you started:</p>
+        <ul class="list-unstyled help-list">
+          <li class="mb-2">
+            <i class="bi bi-book me-2"></i>
+            <a href="https://github.com/TeamFixIT/portscan-delta-reporter/tree/main/docs" target="_blank" rel="noopener">Project Documentation</a>
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-person-video3 me-2"></i>
+            <a href="https://github.com/TeamFixIT/portscan-delta-reporter/blob/main/docs/client-agent.md" target="_blank" rel="noopener">Client Agent Guide</a>
+          </li>
+          <li class="mb-2">
+            <i class="bi bi-info-circle me-2"></i>
+            <a href="https://github.com/TeamFixIT/portscan-delta-reporter#readme" target="_blank" rel="noopener">Repository README</a>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
