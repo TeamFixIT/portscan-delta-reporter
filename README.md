@@ -62,7 +62,7 @@ source venv/bin/activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Initialize database
+# initialise database
 python run.py init-db
 
 # Start server

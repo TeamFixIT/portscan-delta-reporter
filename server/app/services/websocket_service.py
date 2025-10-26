@@ -15,9 +15,9 @@ class WebSocketService:
         self.connected_users = {}
 
     def init_app(self, socketio):
-        """Initialize with SocketIO instance"""
+        """initialise with SocketIO instance"""
         self.socketio = socketio
-        logger.info("WebSocket service initialized")
+        logger.info("WebSocket service initialised")
 
     def register_connection(self, user_id, session_id):
         """Register a new WebSocket connection"""

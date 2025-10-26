@@ -80,7 +80,7 @@ class ScanResult(db.Model):
             if not target or not client_id:
                 return False
 
-            # Initialize target_results and parsed_results if needed
+            # initialise target_results and parsed_results if needed
             if self.target_results is None:
                 self.target_results = {}
             if self.parsed_results is None:

@@ -1,0 +1,8 @@
+# Port Scanner Delta Reporter - Development Dependencies
+
+# Include production dependencies
+-r requirements.txt
+
+# Security Scanning
+bandit==1.8.6
+safety==3.6.2

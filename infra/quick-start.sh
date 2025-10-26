@@ -162,11 +162,11 @@ else
     $DOCKER_COMPOSE_CMD cp "$db_path" server:/app/instance/app.db
     echo -e "${GREEN}✓ Copied $db_path to ../server/instance/app.db${NC}"
 fi
-# Initialize database
+# initialise database
 echo -e "${BLUE}[5/6]${NC} Initializing database..."
 if [ ! -f ../server/instance/app.db ]; then
     if ! $DOCKER_COMPOSE_CMD exec server flask db init 2>/dev/null; then
-        echo -e "${YELLOW}Database migrations already initialized${NC}"
+        echo -e "${YELLOW}Database migrations already initialised${NC}"
     fi
     $DOCKER_COMPOSE_CMD exec server flask db migrate -m "Initial migration" || {
         echo -e "${RED}✗ Migration failed, resetting database...${NC}"
@@ -207,7 +207,7 @@ EOF
 else
     echo -e "${YELLOW}Skipping admin user creation${NC}"
 fi
-echo -e "${GREEN}✓ Database initialized${NC}"
+echo -e "${GREEN}✓ Database initialised${NC}"
 # Wait for server to be ready
 echo -e "${BLUE}[6/6]${NC} Waiting for server to start..."
 max_attempts=30

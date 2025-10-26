@@ -256,7 +256,7 @@ class SchedulerService:
             self.init_app(app)
 
     def init_app(self, app):
-        """Initialize the scheduler with Flask app"""
+        """initialise the scheduler with Flask app"""
         global _app_instance
         self.app = app
         _app_instance = app  # Store at module level for scheduled jobs
@@ -479,7 +479,7 @@ class SchedulerService:
         """Remove all scheduled jobs from the scheduler"""
         try:
             if not self.scheduler:
-                logger.warning("Scheduler not initialized")
+                logger.warning("Scheduler not initialised")
                 return False
 
             jobs = self.scheduler.get_jobs()
@@ -578,6 +578,6 @@ scheduler_service = SchedulerService()
 
 
 def init_scheduler(app):
-    """Initialize the scheduler with the Flask app"""
+    """initialise the scheduler with the Flask app"""
     scheduler_service.init_app(app)
     return scheduler_service

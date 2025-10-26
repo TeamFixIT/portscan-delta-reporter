@@ -1,106 +1,59 @@
 #!/usr/bin/env python3
 """
 Flask Application Entry Point
-
-Run this file to start the Port Scanner Delta Reporter server.
+This allows running the app with: python -m app
 """
-
 import os
-import click
-from flask.cli import with_appcontext
-from app import create_app, db, socketio, scheduler
-from app.models.user import User
-from app.models.scan import Scan
-from app.models.scan_result import ScanResult
-from config import get_config
-
-# Create app instance
-app = create_app(get_config())
+from app import create_app, socketio
 
 
-@app.shell_context_processor
-def make_shell_context():
-    """Register shell context objects"""
-    return {"db": db, "User": User, "Scan": Scan, "ScanResult": ScanResult}
+def main():
+    """Main entry point for the application"""
+    from pathlib import Path
 
+    # Check if database exists
+    BASE_DIR = Path(__file__).resolve().parent
+    db_path = BASE_DIR / "data" / "app.db"
+    migrations_dir = BASE_DIR / "migrations"
 
-@app.cli.command()
-@with_appcontext
-def init_db():
-    """Initialize database with tables"""
-    db.create_all()
-    click.echo("Database initialized.")
+    first_run = not db_path.exists() or not migrations_dir.exists()
+    print(first_run)
+    if first_run:
+        print("\n" + "=" * 60)
+        print("FIRST TIME SETUP REQUIRED")
+        print("=" * 60)
+        print("\nIt looks like this is your first time running the application.")
+        print("Please run the following commands to set up the database:\n")
+        print("  1. flask setup          # Initialize database and migrations")
+        print("  2. flask create-admin   # Create an admin user")
+        print("  3. portscanner-server   # Start the server")
+        print("\nOr run: flask setup && flask create-admin && portscanner-server")
+        print("=" * 60 + "\n")
+        return
 
+    # Create app instance
+    app = create_app()
 
-@app.cli.command()
-@with_appcontext
-def create_admin():
-    """Create admin user"""
-    username = click.prompt("Admin username")
-    email = click.prompt("Admin email")
-    password = click.prompt("Admin password", hide_input=True)
-
-    try:
-        admin_user = User.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name="Admin",
-            last_name="User",
-        )
-        admin_user.is_admin = True
-        db.session.commit()
-
-        click.echo(f"Admin user {username} created successfully.")
-
-    except ValueError as e:
-        click.echo(f"Error creating admin user: {e}", err=True)
-
-
-from app.scheduler import (
-    scheduler_service,
-)  # or wherever SchedulerService is defined
-
-
-@app.cli.command()
-@with_appcontext
-def reset_db():
-    """Reset database and clear all APScheduler jobs."""
-    if click.confirm("This will delete all data and all scheduled jobs. Continue?"):
-        # Clear all scheduled jobs
-        try:
-            cleared = scheduler_service.clear_all_jobs()
-            if cleared:
-                click.echo("All scheduled jobs cleared successfully.")
-            else:
-                click.echo("No jobs cleared (scheduler not active).")
-        except Exception as e:
-            click.echo(f"Warning: Could not clear scheduled jobs: {e}")
-
-        # Reset the database
-        db.drop_all()
-        db.create_all()
-
-        click.echo("Database reset successfully.")
-
-
-if __name__ == "__main__":
     # Get configuration
-    config_name = os.environ.get("FLASK_ENV", "development")
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", 5000))
+    debug = os.getenv("FLASK_ENV") == "development"
 
-    if config_name == "development":
+    print(f"\nStarting Port Scanner Delta Reporter on {host}:{port}")
+    print(f"Debug mode: {debug}\n")
+
+    if debug:
         # Development server with debug mode
         app.run(
             host="localhost",
-            port=int(os.environ.get("PORT", 5000)),
+            port=port,
             debug=True,
             threaded=True,
         )
     else:
         # Production - should use gunicorn or similar WSGI server
-        app.run(
-            host="0.0.0.0",
-            port=int(os.environ.get("PORT", 5000)),
-            debug=False,
-            threaded=True,
-        )
+        socketio.run(app, host=host, port=port, threaded=True)
+
+
+if __name__ == "__main__":
+    main()

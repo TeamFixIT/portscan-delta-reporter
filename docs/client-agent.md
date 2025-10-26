@@ -113,7 +113,7 @@ client = PortScannerClient(config_file="config.yml")
 
 1. **Client ID Generation**: Creates unique identifier based on MAC address
 2. **Configuration Loading**: Loads settings from YAML configuration file
-3. **nmap Scanner Setup**: Initializes the python-nmap scanner instance
+3. **nmap Scanner Setup**: initialises the python-nmap scanner instance
 
 ### Scan Execution Process
 

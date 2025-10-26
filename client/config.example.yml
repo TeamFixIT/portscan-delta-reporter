@@ -1,4 +1,4 @@
-# Port Scanner Client Configuration
+# Port Scanner Client Configuration Example
 
 # Server connection settings
 server_url: "http://localhost:5000" # Change to your server address
@@ -19,4 +19,4 @@ retry_attempts: 3
 retry_delay: 5
 
 # Scan range for this client (optional, e.g. '192.168.1.0/24')
-scan_range: "192.168.0.0/24"
+# scan_range: "192.168.0.0/24"

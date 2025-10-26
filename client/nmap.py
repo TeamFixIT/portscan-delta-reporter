@@ -86,7 +86,7 @@ class PortScanner(object):
         ),
     ):
         """
-        Initialize PortScanner module
+        initialise PortScanner module
 
         * detects nmap on the system and nmap version
         * may raise PortScannerError exception if nmap is not found in the path
@@ -764,7 +764,7 @@ class PortScannerAsync:
 
     def __init__(self):
         """
-        Initialize the module
+        initialise the module
 
         * detects nmap on the system and nmap version
         * may raise PortScannerError exception if nmap is not found in the path
@@ -904,7 +904,7 @@ class PortScannerYield(PortScannerAsync):
 
     def __init__(self):
         """
-        Initialize the module
+        initialise the module
 
         * detects nmap on the system and nmap version
         * may raise PortScannerError exception if nmap is not found in the path

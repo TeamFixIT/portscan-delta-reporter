@@ -11,6 +11,7 @@ import json
 import logging
 import socket
 import subprocess
+import os
 import sys
 import time
 import threading
@@ -874,6 +875,24 @@ def main():
 
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
+
+    if os.name != "nt":  # Unix/Linux
+        if os.geteuid() != 0:
+            logger.critical(
+                "Running without root limits Nmap to connect scans only — no TCP-SYN, UDP, or OS detection."
+            )
+        else:
+            # On Windows, you can optionally skip or log a warning
+            logger.critical(
+                "Running without Administrator limits Nmap to connect scans only — no TCP-SYN, UDP, or OS detection."
+            )
+
+    # Create client
+    try:
+        client = PortScannerClient(args.config)
+    except Exception as e:
+        logger.error(f"Failed to create client: {e}")
+        sys.exit(1)
 
     # Create client
     try:

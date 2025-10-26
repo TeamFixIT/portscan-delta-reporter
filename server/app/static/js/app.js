@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     };
 
-    // Initialize theme on page load
+    // initialise theme on page load
     window.addEventListener("DOMContentLoaded", () => {
       const theme = getStoredTheme();
       setTheme(theme);
@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 5000);
   });
 
-  // Initialize tooltips
+  // initialise tooltips
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
   tooltipTriggerList.map(function (tooltipTriggerEl) {
     return new bootstrap.Tooltip(tooltipTriggerEl);

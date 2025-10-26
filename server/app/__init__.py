@@ -7,15 +7,20 @@ Port Scanner Delta Reporter server.
 
 import os
 import logging
+import click
+from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_session import Session
-from config import Config
+from dotenv import load_dotenv
 
-# Initialize extensions
+
+load_dotenv()
+
+# initialise extensions
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
@@ -33,23 +38,51 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def create_app(config_class=Config):
+def create_app():
     """
     Application factory pattern for Flask app creation
-
-    Args:
-        config_class: Configuration class to use
 
     Returns:
         Flask: Configured Flask application
     """
-    app = Flask(__name__)
-    app.config.from_object(config_class)
+    BASE_DIR = Path(__file__).resolve().parent.parent
 
-    # Initialize extensions with app
+    app = Flask(__name__, instance_relative_config=False)
+
+    user_db = os.getenv("SQLALCHEMY_DATABASE_URI")
+    if user_db:
+        db_uri = user_db
+    else:
+        # Default: SQLite in ./data/app.db (relative to BASE_DIR)
+        db_dir = BASE_DIR / "data"
+        db_dir.mkdir(exist_ok=True)
+        db_path = db_dir / "app.db"
+        db_uri = f"sqlite:///{db_path}"
+
+    if db_uri.startswith("sqlite:///") and ":memory:" not in db_uri:
+        db_path = db_uri.replace("sqlite:///", "", 1)
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
+    # === CONFIG FROM ENV VARS ===
+    app.config.update(
+        SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret-key-change-in-production"),
+        SQLALCHEMY_DATABASE_URI=db_uri,
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SESSION_TYPE="filesystem",
+        SESSION_FILE_DIR="/tmp/flask_session",
+    )
+
+    # Ensure session directory exists
+    Path(app.config["SESSION_FILE_DIR"]).mkdir(parents=True, exist_ok=True)
+
+    # initialise extensions with app
     db.init_app(app)
     login_manager.init_app(app)
-    migrate.init_app(app, db)
+
+    # Initialize migrations directory if it doesn't exist
+    migrations_dir = BASE_DIR / "migrations"
+    migrate.init_app(app, db, directory=str(migrations_dir))
+
     socketio.init_app(app, cors_allowed_origins="*")
     sess.init_app(app)
 
@@ -64,7 +97,18 @@ def create_app(config_class=Config):
 
         return User.query.get(int(user_id))
 
-    # Initialize scheduler
+    # Import models to ensure they are registered with SQLAlchemy
+    from app.models import (
+        user,
+        client,
+        scan,
+        scan_result,
+        scan_task,
+        delta_report,
+        setting,
+    )
+
+    # initialise scheduler and websocket
     scheduler_service.init_app(app)
     websocket_service.init_app(socketio)
 
@@ -75,6 +119,7 @@ def create_app(config_class=Config):
     from app.routes.api import bp as api_bp
     from app.routes.scan import bp as scan_bp
     from app.routes.dashboard import bp as dashboard_bp
+    from app.routes.settings import bp as settings_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -82,6 +127,7 @@ def create_app(config_class=Config):
     app.register_blueprint(scan_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
     app.register_blueprint(delta_bp, url_prefix="/api")
+    app.register_blueprint(settings_bp, url_prefix="/settings")
 
     # Register error handlers
     @app.errorhandler(404)
@@ -97,17 +143,6 @@ def create_app(config_class=Config):
         db.session.rollback()
         return render_template("errors/500.html"), 500
 
-    # Create database tables
-    with app.app_context():
-        db.create_all()
-
-        try:
-            if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-                scheduler_service.start()
-            logger.info("Scheduler service started successfully")
-        except Exception as e:
-            logger.error(f"Failed to start scheduler: {str(e)}")
-
     # Register scheduler shutdown on app teardown
     @app.teardown_appcontext
     def shutdown_scheduler(exception=None):
@@ -116,7 +151,7 @@ def create_app(config_class=Config):
     # Add scheduler commands to Flask CLI
     @app.cli.command()
     def init_scheduler():
-        """Initialize and start the scheduler"""
+        """initialise and start the scheduler"""
         scheduler_service.start()
         print("Scheduler started")
 
@@ -142,26 +177,216 @@ def create_app(config_class=Config):
 
         print(f"Reloaded {len(scans)} scheduled scans")
 
-    # Register error handlers
-    @app.errorhandler(404)
-    def not_found_error(error):
-        from flask import render_template
-
-        return render_template("errors/404.html"), 404
-
-    @app.errorhandler(500)
-    def internal_error(error):
-        from flask import render_template
-
-        db.session.rollback()
-        return render_template("errors/500.html"), 500
-
-    # Create database tables
-    with app.app_context():
+    @app.cli.command()
+    def init_db():
+        """Initialise database with tables"""
         db.create_all()
+        click.echo("Database tables created.")
+
+        # Initialize settings after creating tables
+        try:
+            from app.services.settings_service import settings_service
+
+            settings_service.initialise_defaults()
+            click.echo("Default settings initialised.")
+        except Exception as e:
+            click.echo(f"Warning: Could not initialize settings: {e}", err=True)
+
+    @app.cli.command()
+    def init_settings():
+        """initialise default settings in database"""
+        from app.services.settings_service import settings_service
+
+        settings_service.initialise_defaults()
+        print("Default settings initialised")
+
+    @app.cli.command()
+    def reset_db():
+        """Reset database and clear all APScheduler jobs."""
+        if click.confirm("This will delete all data and all scheduled jobs. Continue?"):
+            # Clear all scheduled jobs
+            try:
+                cleared = scheduler_service.clear_all_jobs()
+                if cleared:
+                    click.echo("All scheduled jobs cleared successfully.")
+                else:
+                    click.echo("No jobs cleared (scheduler not active).")
+            except Exception as e:
+                click.echo(f"Warning: Could not clear scheduled jobs: {e}")
+
+            # Reset the database
+            db.drop_all()
+            db.create_all()
+
+            click.echo("Database reset successfully.")
+
+    @app.cli.command()
+    @click.option("--message", "-m", default=None, help="Migration message")
+    def new_migration(message):
+        """Create a new migration after model changes"""
+        from flask_migrate import migrate as create_migration
+
+        migrations_dir = BASE_DIR / "migrations"
+
+        if not migrations_dir.exists():
+            click.echo(
+                "Error: Migrations not initialized. Run 'flask setup' first.", err=True
+            )
+            return
+
+        if not message:
+            message = click.prompt("Enter migration message")
+
+        click.echo(f"Creating migration: {message}")
+        try:
+            create_migration(message=message, directory=str(migrations_dir))
+            click.echo("✓ Migration created successfully.")
+            click.echo("\nTo apply the migration, run: flask db upgrade")
+        except Exception as e:
+            click.echo(f"✗ Error creating migration: {e}", err=True)
+
+    @app.cli.command()
+    def create_admin():
+        """Create admin user"""
+        from app.models.user import User
+
+        username = click.prompt("Admin username")
+        email = click.prompt("Admin email")
+        password = click.prompt("Admin password", hide_input=True)
+
+        try:
+            admin_user = User.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name="Admin",
+                last_name="User",
+            )
+            admin_user.is_admin = True
+            db.session.commit()
+
+            click.echo(f"Admin user {username} created successfully.")
+
+        except ValueError as e:
+            click.echo(f"Error creating admin user: {e}", err=True)
+
+    @app.cli.command()
+    def setup():
+        """Complete setup: initialize migrations, create tables, and setup defaults"""
+        from flask_migrate import (
+            init as migrate_init,
+            migrate as create_migration,
+            upgrade,
+        )
+
+        migrations_dir = BASE_DIR / "migrations"
+
+        # Step 1: Initialize Flask-Migrate if needed
+        if not migrations_dir.exists():
+            click.echo("Step 1/4: Initializing Flask-Migrate...")
+            migrate_init(directory=str(migrations_dir))
+            click.echo("✓ Migrations directory created.")
+        else:
+            click.echo("✓ Migrations directory already exists.")
+
+        # Step 2: Check if we need to create initial migration
+        versions_dir = migrations_dir / "versions"
+        has_migrations = versions_dir.exists() and any(versions_dir.glob("*.py"))
+
+        if not has_migrations:
+            click.echo("\nStep 2/4: Creating initial migration...")
+            try:
+                create_migration(
+                    message="Initial migration", directory=str(migrations_dir)
+                )
+                click.echo("✓ Initial migration created.")
+            except Exception as e:
+                click.echo(f"✗ Error creating migration: {e}", err=True)
+                click.echo("\nTrying to create tables directly...")
+                db.create_all()
+                click.echo("✓ Database tables created directly.")
+        else:
+            click.echo("\n✓ Migrations already exist.")
+
+        # Step 3: Run migrations
+        click.echo("\nStep 3/4: Applying migrations...")
+        try:
+            upgrade(directory=str(migrations_dir))
+            click.echo("✓ Database migrations applied.")
+        except Exception as e:
+            click.echo(f"Warning: Migration upgrade failed: {e}", err=True)
+            click.echo("Checking if tables need to be created...")
+            inspector = db.inspect(db.engine)
+            tables = inspector.get_table_names()
+            if not tables:
+                click.echo("Creating tables directly...")
+                db.create_all()
+                click.echo("✓ Database tables created.")
+
+        # Step 4: Initialize settings
+        click.echo("\nStep 4/4: Initializing default settings...")
+        try:
+            from app.services.settings_service import settings_service
+
+            settings_service.initialise_defaults()
+            click.echo("✓ Default settings initialised.")
+        except Exception as e:
+            click.echo(f"Warning: Could not initialize settings: {e}", err=True)
+
+        click.echo("\n" + "=" * 60)
+        click.echo("Setup complete!")
+        click.echo("=" * 60)
+        click.echo("\nNext steps:")
+        click.echo("  1. Create an admin user: flask create-admin")
+        click.echo("  2. Run the server: portscanner-server")
+        click.echo("\nOr run both: flask create-admin && portscanner-server")
+        click.echo("=" * 60)
+
+    with app.app_context():
+        # Check if database and tables exist
+        database_ready = False
+        try:
+            inspector = db.inspect(db.engine)
+            tables = inspector.get_table_names()
+            database_ready = len(tables) > 0
+
+            if database_ready:
+                logger.info(f"Database ready with {len(tables)} tables")
+
+                # Run migrations if migrations directory exists
+                migrations_dir = BASE_DIR / "migrations"
+                if migrations_dir.exists():
+                    try:
+                        from flask_migrate import upgrade
+
+                        upgrade(directory=str(migrations_dir))
+                        logger.info("Database migrations applied")
+                    except Exception as e:
+                        logger.warning(f"Migration upgrade skipped: {e}")
+
+                # Initialize settings
+                try:
+                    from app.services.settings_service import settings_service
+
+                    settings_service.initialise_defaults()
+                    logger.info("Settings initialized")
+                except Exception as e:
+                    logger.warning(f"Settings init failed: {e}")
+
+                # Start scheduler only in production or reloader
+                if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN"):
+                    scheduler_service.start()
+                    logger.info("Scheduler started")
+            else:
+                logger.warning("=" * 60)
+                logger.warning("DATABASE NOT INITIALIZED")
+                logger.warning("=" * 60)
+                logger.warning("No database tables found.")
+                logger.warning("Please run 'flask setup' to initialize the database.")
+                logger.warning("=" * 60)
+
+        except Exception as e:
+            logger.error(f"Database initialization check failed: {e}")
+            logger.warning("Please run 'flask setup' to initialize the database.")
 
     return app
-
-
-# Import models to ensure they are registered with SQLAlchemy
-from app.models import user, client, scan, scan_result, scan_task, delta_report

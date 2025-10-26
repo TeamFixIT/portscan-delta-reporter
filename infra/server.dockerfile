@@ -36,7 +36,7 @@ if [ -f ./setup.sh ]; then\n\
     ./setup.sh\n\
 fi\n\
 \n\
-# Initialize database if not already initialized\n\
+# initialise database if not already initialised\n\
 if [ ! -f /app/instance/app.db ]; then\n\
     echo "Initializing database..."\n\
     flask init-db\n\

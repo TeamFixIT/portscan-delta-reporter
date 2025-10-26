@@ -17,7 +17,7 @@ class WebSocketClient {
   }
 
   init() {
-    // Initialize Socket.IO connection
+    // initialise Socket.IO connection
     this.socket = io({
       reconnection: true,
       reconnectionDelay: this.reconnectDelay,
@@ -203,7 +203,7 @@ class WebSocketClient {
   }
 }
 
-// Initialize WebSocket client when DOM is ready
+// initialise WebSocket client when DOM is ready
 let wsClient = null;
 
 document.addEventListener("DOMContentLoaded", function () {

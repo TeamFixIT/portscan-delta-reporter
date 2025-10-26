@@ -16,7 +16,7 @@ docker compose stop $SERVER_CONTAINER
 echo "Removing database file from $VOLUME_NAME..."
 docker run --rm -v $VOLUME_NAME:/data alpine sh -c "rm -f /data/portscan.db"
 
-# Step 3: Restart the server to reinitialize the database
+# Step 3: Restart the server to reinitialise the database
 echo "Restarting $SERVER_CONTAINER..."
 docker compose up -d $SERVER_CONTAINER
 
@@ -35,4 +35,4 @@ else
   exit 1
 fi
 
-echo "You may need to re-run quick-start.sh to re-register clients and initialize the system."
+echo "You may need to re-run quick-start.sh to re-register clients and initialise the system."
