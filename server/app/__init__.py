@@ -68,7 +68,7 @@ def create_app():
     migrations_dir = BASE_DIR / "migrations"
     migrate.init_app(app, db, directory=str(migrations_dir))
 
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent")
     sess.init_app(app)
 
     # Configure Flask-Login

@@ -3,8 +3,14 @@
 Flask Application Entry Point
 This allows running the app with: python -m app
 """
+from gevent import monkey
+
+monkey.patch_all()
+
 import os
 from app import create_app, socketio
+
+app = create_app()
 
 
 def main():
@@ -31,9 +37,6 @@ def main():
         print("=" * 60 + "\n")
         return
 
-    # Create app instance
-    app = create_app()
-
     # Get configuration
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", 5000))
@@ -44,12 +47,7 @@ def main():
 
     if debug:
         # Development server with debug mode
-        app.run(
-            host="localhost",
-            port=port,
-            debug=True,
-            threaded=True,
-        )
+        socketio.run(app, host=host, port=port, debug=True)
     else:
         # Production - should use gunicorn or similar WSGI server
         socketio.run(app, host=host, port=port)
