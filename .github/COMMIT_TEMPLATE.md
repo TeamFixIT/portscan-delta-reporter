@@ -129,14 +129,6 @@ Closes #42
 ```
 
 ```
-fix(client): resolve MAC address detection on newer Pi models
-
-The netifaces library returns different interface names on
-Pi 4 Model B Rev 1.5. Updated detection logic to handle
-various interface naming patterns.
-```
-
-```
 docs: update installation guide with separate venv setup
 
 Add instructions for creating isolated virtual environments

@@ -52,7 +52,7 @@ def main():
         )
     else:
         # Production - should use gunicorn or similar WSGI server
-        socketio.run(app, host=host, port=port, threaded=True)
+        socketio.run(app, host=host, port=port)
 
 
 if __name__ == "__main__":

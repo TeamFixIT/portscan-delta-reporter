@@ -1,0 +1,228 @@
+{% extends "base.html" %} {% block title %}Admin Configs{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col">
+      <h1><i class="bi bi-gear-fill me-2"></i>Application Configs</h1>
+      <p class="text-muted">
+        Manage and persist application configuration (requires restart to apply)
+      </p>
+    </div>
+  </div>
+
+  <!-- Alert for restart required -->
+  <div
+    id="restartAlert"
+    class="alert alert-warning alert-dismissible fade"
+    role="alert"
+    style="display: none">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Restart Required:</strong> Changes will apply after restarting the server.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+
+  <!-- Success/Error messages -->
+  <div id="messageContainer"></div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-tabs mb-4" id="configsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link active"
+        id="env-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#env-config"
+        type="button">
+        <i class="bi bi-file-earmark-code me-1"></i>Environment
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="email-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#email-configs"
+        type="button">
+        <i class="bi bi-envelope me-1"></i>Email
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="auth-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#auth-configs"
+        type="button">
+        <i class="bi bi-shield-lock me-1"></i>Authentication
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="security-tab"
+        data-bs-toggle="tab"
+        data-bs-target="#security-configs"
+        type="button">
+        <i class="bi bi-lock me-1"></i>Security
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content" id="configsTabContent">
+    <!-- ENVIRONMENT -->
+    <div class="tab-pane fade show active" id="env-config" role="tabpanel">
+      {% include 'admin/configs/_env.html' %}
+    </div>
+
+    <!-- EMAIL -->
+    <div class="tab-pane fade" id="email-configs" role="tabpanel">
+      {% include 'admin/configs/_email.html' %}
+    </div>
+
+    <!-- AUTH -->
+    <div class="tab-pane fade" id="auth-configs" role="tabpanel">
+      {% include 'admin/configs/_auth.html' %}
+    </div>
+
+    <!-- SECURITY -->
+    <div class="tab-pane fade" id="security-configs" role="tabpanel">
+      {% include 'admin/configs/_security.html' %}
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ---------- Helper: Alerts ---------- */
+  function showMessage(message, type = "success") {
+    const container = document.getElementById("messageContainer");
+    const alert = document.createElement("div");
+    alert.className = `alert alert-${type} alert-dismissible fade show mt-2`;
+    alert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    container.appendChild(alert);
+    setTimeout(() => alert.remove(), 5000);
+  }
+
+  /* ---------- Tab Persistence via URL Hash ---------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const tabs = document.querySelectorAll('#configsTabs button[data-bs-toggle="tab"]');
+
+    // Activate tab from URL hash
+    const hash = window.location.hash;
+    if (hash) {
+      const tabTrigger = document.querySelector(`#configsTabs button[data-bs-target="${hash}"]`);
+      if (tabTrigger) new bootstrap.Tab(tabTrigger).show();
+    }
+
+    // Update URL hash when switching tabs
+    tabs.forEach((tab) => {
+      tab.addEventListener("shown.bs.tab", (e) => {
+        const target = e.target.getAttribute("data-bs-target");
+        history.replaceState(null, null, target);
+      });
+    });
+  });
+
+  /* ---------- Make readonly fields editable on click ---------- */
+  document.querySelectorAll("input[readonly], select").forEach((el) => {
+    el.addEventListener("click", function () {
+      this.removeAttribute("readonly");
+      this.focus();
+    });
+  });
+
+  /* ---------- Unified Form Submit Handler ---------- */
+  document.querySelectorAll("form").forEach((form) => {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {};
+      new FormData(form).forEach((value, key) => {
+        // Normalize checkbox boolean values
+        const el = form.querySelector(`[name="${key}"]`);
+        if (el && el.type === "checkbox") data[key] = el.checked ? "true" : "false";
+        else if (value) data[key] = value;
+      });
+
+      try {
+        const resp = await fetch("/admin/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        });
+        const res = await resp.json();
+
+        if (res.success) {
+          showMessage(res.message || "Configuration saved.", "success");
+        } else {
+          showMessage(res.error || "Failed to save configuration.", "danger");
+        }
+      } catch (err) {
+        showMessage("Error: " + err.message, "danger");
+      }
+    });
+  });
+
+  /* ---------- Utility Buttons ---------- */
+  // Reload Values
+  document.getElementById("reloadEnvBtn")?.addEventListener("click", () => {
+    if ("caches" in window)
+      caches.keys().then((names) => names.forEach((name) => caches.delete(name)));
+    location.reload();
+  });
+
+  // Generate Secret Key
+  document.getElementById("generateKeyBtn")?.addEventListener("click", () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const key = Array.from(
+      { length: 50 },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+    const input = document.getElementById("secret_key");
+    input.disabled = false;
+    input.type = "text";
+    input.value = key;
+  });
+
+  // Test DB
+  document.getElementById("testDbBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("testDbBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing...';
+    try {
+      const resp = await fetch("/admin/test/database", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ database_uri: document.getElementById("db_uri").value }),
+      });
+      const res = await resp.json();
+      showMessage(res.success ? res.message : res.error, res.success ? "success" : "danger");
+    } catch (err) {
+      showMessage("Error: " + err.message, "danger");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Test';
+    }
+  });
+
+  // Test Email
+  document.getElementById("testEmailBtn")?.addEventListener("click", async () => {
+    const btn = document.getElementById("testEmailBtn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending...';
+    try {
+      const resp = await fetch("/admin/test/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const res = await resp.json();
+      showMessage(res.success ? res.message : res.error, res.success ? "success" : "danger");
+    } catch (err) {
+      showMessage("Error: " + err.message, "danger");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-send me-1"></i>Send Test Email';
+    }
+  });
+</script>
+{% endblock %}

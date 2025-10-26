@@ -30,6 +30,7 @@ sess = Session()
 # Import scheduler & websocket service
 from app.scheduler import scheduler_service
 from app.services.websocket_service import websocket_service
+from .config import Config
 
 # Configure logging
 logging.basicConfig(
@@ -47,33 +48,17 @@ def create_app():
     """
     BASE_DIR = Path(__file__).resolve().parent.parent
 
-    app = Flask(__name__, instance_relative_config=False)
+    app = Flask(__name__, instance_relative_config=True)
 
-    user_db = os.getenv("SQLALCHEMY_DATABASE_URI")
-    if user_db:
-        db_uri = user_db
-    else:
-        # Default: SQLite in ./data/app.db (relative to BASE_DIR)
-        db_dir = BASE_DIR / "data"
-        db_dir.mkdir(exist_ok=True)
-        db_path = db_dir / "app.db"
-        db_uri = f"sqlite:///{db_path}"
+    app.config.from_prefixed_env()
 
-    if db_uri.startswith("sqlite:///") and ":memory:" not in db_uri:
-        db_path = db_uri.replace("sqlite:///", "", 1)
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-
-    # === CONFIG FROM ENV VARS ===
-    app.config.update(
-        SECRET_KEY=os.getenv("SECRET_KEY", "dev-secret-key-change-in-production"),
-        SQLALCHEMY_DATABASE_URI=db_uri,
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SESSION_TYPE="filesystem",
-        SESSION_FILE_DIR="/tmp/flask_session",
-    )
+    app.config.from_object(Config)
 
     # Ensure session directory exists
     Path(app.config["SESSION_FILE_DIR"]).mkdir(parents=True, exist_ok=True)
+
+    # Ensure instance directory exists
+    Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
     # initialise extensions with app
     db.init_app(app)
@@ -105,7 +90,6 @@ def create_app():
         scan_result,
         scan_task,
         delta_report,
-        setting,
     )
 
     # initialise scheduler and websocket
@@ -119,7 +103,7 @@ def create_app():
     from app.routes.api import bp as api_bp
     from app.routes.scan import bp as scan_bp
     from app.routes.dashboard import bp as dashboard_bp
-    from app.routes.settings import bp as settings_bp
+    from app.routes.configs import bp as configs_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -127,7 +111,7 @@ def create_app():
     app.register_blueprint(scan_bp, url_prefix="/api")
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
     app.register_blueprint(delta_bp, url_prefix="/api")
-    app.register_blueprint(settings_bp, url_prefix="/settings")
+    app.register_blueprint(configs_bp, url_prefix="/admin")
 
     # Register error handlers
     @app.errorhandler(404)
@@ -183,22 +167,22 @@ def create_app():
         db.create_all()
         click.echo("Database tables created.")
 
-        # Initialize settings after creating tables
+        # Initialize configs after creating tables
         try:
-            from app.services.settings_service import settings_service
+            from app.services.configs_service import configs_service
 
-            settings_service.initialise_defaults()
-            click.echo("Default settings initialised.")
+            configs_service.initialise_defaults()
+            click.echo("Default configs initialised.")
         except Exception as e:
-            click.echo(f"Warning: Could not initialize settings: {e}", err=True)
+            click.echo(f"Warning: Could not initialize configs: {e}", err=True)
 
     @app.cli.command()
-    def init_settings():
-        """initialise default settings in database"""
-        from app.services.settings_service import settings_service
+    def init_configs():
+        """initialise default configs in database"""
+        from app.services.configs_service import configs_service
 
-        settings_service.initialise_defaults()
-        print("Default settings initialised")
+        configs_service.initialise_defaults()
+        print("Default configs initialised")
 
     @app.cli.command()
     def reset_db():
@@ -323,15 +307,15 @@ def create_app():
                 db.create_all()
                 click.echo("✓ Database tables created.")
 
-        # Step 4: Initialize settings
-        click.echo("\nStep 4/4: Initializing default settings...")
+        # Step 4: Initialize configs
+        click.echo("\nStep 4/4: Initializing default configs...")
         try:
-            from app.services.settings_service import settings_service
+            from app.services.configs_service import configs_service
 
-            settings_service.initialise_defaults()
-            click.echo("✓ Default settings initialised.")
+            configs_service.initialise_defaults()
+            click.echo("✓ Default configs initialised.")
         except Exception as e:
-            click.echo(f"Warning: Could not initialize settings: {e}", err=True)
+            click.echo(f"Warning: Could not initialize configs: {e}", err=True)
 
         click.echo("\n" + "=" * 60)
         click.echo("Setup complete!")
@@ -363,16 +347,6 @@ def create_app():
                         logger.info("Database migrations applied")
                     except Exception as e:
                         logger.warning(f"Migration upgrade skipped: {e}")
-
-                # Initialize settings
-                try:
-                    from app.services.settings_service import settings_service
-
-                    settings_service.initialise_defaults()
-                    logger.info("Settings initialized")
-                except Exception as e:
-                    logger.warning(f"Settings init failed: {e}")
-
                 # Start scheduler only in production or reloader
                 if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN"):
                     scheduler_service.start()

@@ -593,7 +593,6 @@ Key Python packages used:
 - `requests`: HTTP communication with server
 - `python-nmap`: nmap integration and result parsing
 - `psutil`: System information and process monitoring
-- `netifaces`: Network interface information
 - `pyyaml`: Configuration file parsing (planned)
 
 ### Reference Links
