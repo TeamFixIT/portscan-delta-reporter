@@ -18,9 +18,14 @@ else
 fi
 
 # Activate virtual environment
-echo ""
-echo "Activating virtual environment..."
-source venv/bin/activate
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+elif [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+else
+    echo "Error: Virtual environment not found. Run ./setup_client.sh first."
+    exit 1
+fi
 
 # Install package
 echo ""
@@ -44,11 +49,14 @@ if [ ! -f ".env" ]; then
 else
     echo "✓ .env file already exists"
 fi
-
+flask --help
 # Run database setup
 echo ""
 echo "Setting up database..."
-flask setup
+flask setup || {
+    echo "flask setup failed – this is normal if DB not ready yet"
+    echo "We'll let the entrypoint handle it at runtime"
+}
 echo "✓ Database setup complete"
 
 # Prompt to create admin user

@@ -15,11 +15,7 @@ services:
       - FLASK_APP=run.py
     volumes:
       - ../server:/app
-      - ./server.env:/app/.env:ro
-
-    depends_on:
-      redis:
-        condition: service_started
+      - ./server.env:/app/.env
     networks:
       testnet:
         ipv4_address: 172.20.0.2
@@ -29,31 +25,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-
-  # Redis service for server
-  redis:
-    image: redis:alpine
-    container_name: server-redis
-    command: redis-server
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.5
-    expose:
-      - "6379"
-
-  # Web service for testing port scanning
-  port_controller:
-    build:
-      context: ./test-web
-      dockerfile: web.dockerfile
-    container_name: port_controller
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.6
-    ports:
-      - "5050:5050"
-    stdin_open: true
-    tty: true
 
   # Raspberry Pi 4 client simulator
   rpi-client:
@@ -94,82 +65,45 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - SERVER_URL=http://localhost:5000
-
-  # Test target: SSH server
-  target-ssh:
-    image: linuxserver/openssh-server:latest
-    container_name: target-ssh
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=UTC
-      - PASSWORD_ACCESS=true
-      - USER_NAME=testuser
-      - USER_PASSWORD=testpass123
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.8
-    expose:
-      - "2222"
-
-  # Test target: Database server
-  target-db:
-    image: mysql:8.0
-    container_name: target-db
-    environment:
-      - MYSQL_ROOT_PASSWORD=rootpass123
-      - MYSQL_DATABASE=testdb
-      - MYSQL_USER=testuser
-      - MYSQL_PASSWORD=testpass123
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.10
-    expose:
-      - "3306"
-
-  # Test target: FTP server
-  target-ftp:
-    image: stilliard/pure-ftpd:hardened
-    platform: linux/amd64
-    container_name: target-ftp
-    environment:
-      - PUBLICHOST=172.20.0.13
-      - FTP_USER_NAME=testuser
-      - FTP_USER_PASS=testpass123
-      - FTP_USER_HOME=/home/testuser
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.18
-    expose:
-      - "21"
-      - "30000-30009"
-
-  # Test target: Redis cache
-  target-redis:
-    image: redis:alpine
-    container_name: target-redis
-    command: redis-server --requirepass testpass123
-    networks:
-      testnet:
-        ipv4_address: 172.20.0.19
-    expose:
-      - "6379"
-
-  # Test target: Custom multi-port service
-  target-multiport:
+  socat1:
     image: alpine:latest
-    container_name: target-multiport
-    command: >
-      sh -c "apk add --no-cache netcat-openbsd &&
-             nc -l -p 8080 & nc -l -p 8443 & nc -l -p 9000 & nc -l -p 22 & wait"
+    container_name: socat1
+    command: sh -c "apk add --no-cache socat && tail -f /dev/null"
     networks:
       testnet:
-        ipv4_address: 172.20.0.20
-    expose:
-      - "22"
-      - "8080"
-      - "8443"
-      - "9000"
+        ipv4_address: 172.20.0.11
+
+  socat2:
+    image: alpine:latest
+    container_name: socat2
+    command: sh -c "apk add --no-cache socat && tail -f /dev/null"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.12
+
+  socat3:
+    image: alpine:latest
+    container_name: socat3
+    command: sh -c "apk add --no-cache socat && tail -f /dev/null"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.13
+
+  socat4:
+    image: alpine:latest
+    container_name: socat4
+    command: sh -c "apk add --no-cache socat && tail -f /dev/null"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.14
+
+  socat5:
+    image: alpine:latest
+    container_name: socat5
+    command: sh -c "apk add --no-cache socat && tail -f /dev/null"
+    networks:
+      testnet:
+        ipv4_address: 172.20.0.15
 
 networks:
   testnet:

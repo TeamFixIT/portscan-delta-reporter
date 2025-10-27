@@ -54,7 +54,7 @@
         background: repeating-linear-gradient(
           to bottom,
           #698b55 0,
-          /* start with a path color */ #698b55 70%,
+          #698b55 70%,
           #9b9b9b 70%,
           #9b9b9b 100%
         );
@@ -63,7 +63,7 @@
       /* STREET HOUSES */
       .street-house {
         position: absolute;
-        bottom: 5%; /* aligns base of house on street line */
+        bottom: 5%;
         transform: translateX(-50%);
         transition: all 0.3s ease;
         cursor: pointer;
@@ -258,7 +258,7 @@
         background: repeating-linear-gradient(
           to bottom,
           #698b55 0,
-          /* start with a path color */ #698b55 50%,
+          #698b55 50%,
           #9b9b9b 50%,
           #9b9b9b 100%
         );
@@ -357,11 +357,12 @@
     <script>
       const API_BASE = "http://localhost:5050/api";
 
-      // Configuration for each house
+      // Configuration for each house - now maps to Docker services
       const houses = [
         {
           id: 1,
           name: "Grandma's House",
+          service: "socat1",
           svg: "house1.svg",
           sml_svg: "house1_sml.svg",
           windows: [
@@ -372,6 +373,7 @@
         {
           id: 2,
           name: "Ferris Bueller House",
+          service: "socat2",
           svg: "house2.svg",
           sml_svg: "house2_sml.svg",
           windows: [
@@ -382,6 +384,7 @@
         {
           id: 3,
           name: "Munster Mansion",
+          service: "socat3",
           svg: "house3.svg",
           sml_svg: "house3_sml.svg",
           windows: [
@@ -392,6 +395,7 @@
         {
           id: 4,
           name: "Brady Bunch House",
+          service: "socat4",
           svg: "house4.svg",
           sml_svg: "house4_sml.svg",
           windows: [
@@ -404,6 +408,7 @@
         {
           id: 5,
           name: "Hacker House",
+          service: "socat5",
           svg: "house5_sml.svg",
           sml_svg: "house5_sml.svg",
           windows: [],
@@ -411,7 +416,7 @@
       ];
 
       let currentHouseIndex = null;
-      let windowStates = {};
+      let windowStates = {}; // {service: {port: boolean}}
 
       function initStreetView() {
         const streetView = document.getElementById("streetView");
@@ -457,6 +462,7 @@
         });
 
         loadHouse(index);
+        refreshStatus();
       }
 
       function backToStreet() {
@@ -489,6 +495,11 @@
         const existingWindows = container.querySelectorAll(".window-btn");
         existingWindows.forEach((w) => w.remove());
 
+        // Initialize window states for this service
+        if (!windowStates[house.service]) {
+          windowStates[house.service] = {};
+        }
+
         // Create window buttons
         house.windows.forEach((window) => {
           const btn = document.createElement("button");
@@ -502,7 +513,7 @@
           btn.onclick = () => togglePort(window.port);
 
           const img = document.createElement("img");
-          img.src = windowStates[window.port]
+          img.src = windowStates[house.service][window.port]
             ? "assets/window-open.svg"
             : "assets/window-closed.svg";
           img.alt = `Window for port ${window.port}`;
@@ -518,7 +529,16 @@
       }
 
       async function togglePort(port) {
-        const isOpen = windowStates[port];
+        if (currentHouseIndex === null) return;
+
+        const house = houses[currentHouseIndex];
+        const service = house.service;
+        const isOpen = windowStates[service]?.[port] || false;
+
+        // Optimistically update UI immediately
+        if (!windowStates[service]) windowStates[service] = {};
+        windowStates[service][port] = !isOpen;
+        updateWindowButton(port);
 
         try {
           const endpoint = isOpen ? "/ports/close" : "/ports/open";
@@ -527,29 +547,42 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ port: port }),
+            body: JSON.stringify({
+              service: service,
+              port: port,
+            }),
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            windowStates[port] = !isOpen;
-            updateWindowButton(port);
-            showMessage(`Port ${port} ${isOpen ? "closed" : "opened"}`, "success");
+            showMessage(`Port ${port} ${isOpen ? "closed" : "opened"} on ${service}`, "success");
             await refreshStatus();
           } else {
+            // Revert on error
+            windowStates[service][port] = isOpen;
+            updateWindowButton(port);
             showMessage(`Error: ${data.error}`, "error");
           }
         } catch (error) {
+          // Revert on error
+          windowStates[service][port] = isOpen;
+          updateWindowButton(port);
           showMessage(`Failed to connect to API: ${error.message}`, "error");
         }
       }
 
       function updateWindowButton(port) {
+        if (currentHouseIndex === null) return;
+
+        const house = houses[currentHouseIndex];
+        const service = house.service;
         const btn = document.querySelector(`.window-btn[data-port="${port}"]`);
+
         if (btn) {
           const img = btn.querySelector("img");
-          img.src = windowStates[port] ? "assets/window-open.svg" : "assets/window-closed.svg";
+          const isOpen = windowStates[service]?.[port] || false;
+          img.src = isOpen ? "assets/window-open.svg" : "assets/window-closed.svg";
         }
       }
 
@@ -560,7 +593,15 @@
         }
 
         const house = houses[currentHouseIndex];
+        const service = house.service;
         const ports = house.windows.map((w) => w.port);
+
+        // Optimistically update UI immediately
+        if (!windowStates[service]) windowStates[service] = {};
+        ports.forEach((port) => {
+          windowStates[service][port] = true;
+          updateWindowButton(port);
+        });
 
         try {
           const response = await fetch(`${API_BASE}/ports/open-multiple`, {
@@ -568,48 +609,84 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ ports: ports }),
+            body: JSON.stringify({
+              service: service,
+              ports: ports,
+            }),
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            ports.forEach((port) => {
-              windowStates[port] = true;
-              updateWindowButton(port);
-            });
             showMessage("All windows opened!", "success");
             await refreshStatus();
           } else {
+            // Revert on error
+            ports.forEach((port) => {
+              windowStates[service][port] = false;
+              updateWindowButton(port);
+            });
             showMessage(`Error: ${data.error}`, "error");
           }
         } catch (error) {
+          // Revert on error
+          ports.forEach((port) => {
+            windowStates[service][port] = false;
+            updateWindowButton(port);
+          });
           showMessage(`Failed to connect to API: ${error.message}`, "error");
         }
       }
 
       async function closeAllPorts() {
+        if (currentHouseIndex === null) {
+          showMessage("Please select a house first", "error");
+          return;
+        }
+
+        const house = houses[currentHouseIndex];
+        const service = house.service;
+
+        // Optimistically update UI immediately
+        const previousStates = {};
+        if (windowStates[service]) {
+          Object.keys(windowStates[service]).forEach((port) => {
+            previousStates[port] = windowStates[service][port];
+            windowStates[service][port] = false;
+            updateWindowButton(parseInt(port));
+          });
+        }
+
         try {
           const response = await fetch(`${API_BASE}/ports/close-all`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
+            body: JSON.stringify({
+              service: service,
+            }),
           });
 
           const data = await response.json();
 
           if (response.ok) {
-            Object.keys(windowStates).forEach((port) => {
-              windowStates[port] = false;
-              updateWindowButton(parseInt(port));
-            });
             showMessage("All windows closed!", "success");
             await refreshStatus();
           } else {
+            // Revert on error
+            Object.keys(previousStates).forEach((port) => {
+              windowStates[service][port] = previousStates[port];
+              updateWindowButton(parseInt(port));
+            });
             showMessage(`Error: ${data.error}`, "error");
           }
         } catch (error) {
+          // Revert on error
+          Object.keys(previousStates).forEach((port) => {
+            windowStates[service][port] = previousStates[port];
+            updateWindowButton(parseInt(port));
+          });
           showMessage(`Failed to connect to API: ${error.message}`, "error");
         }
       }
@@ -620,33 +697,51 @@
           const data = await response.json();
 
           if (response.ok) {
-            const portList = document.getElementById("portList");
-
-            if (data.open_ports.length === 0) {
-              portList.innerHTML = '<span style="color: #999;">No ports open</span>';
-            } else {
-              portList.innerHTML = data.open_ports
-                .map((port) => `<span class="port-badge">Port ${port}</span>`)
-                .join("");
-            }
-
-            // Update window states
-            data.open_ports.forEach((port) => {
-              windowStates[port] = true;
-              updateWindowButton(port);
-            });
-
-            // Mark ports not in open_ports as closed
-            Object.keys(windowStates).forEach((port) => {
-              const portNum = parseInt(port);
-              if (!data.open_ports.includes(portNum)) {
-                windowStates[portNum] = false;
-                updateWindowButton(portNum);
+            // Update window states from all services
+            data.services.forEach((serviceStatus) => {
+              const serviceName = serviceStatus.service;
+              if (!windowStates[serviceName]) {
+                windowStates[serviceName] = {};
               }
+
+              // Reset all ports for this service to closed
+              Object.keys(windowStates[serviceName]).forEach((port) => {
+                windowStates[serviceName][port] = false;
+              });
+
+              // Set open ports to true
+              serviceStatus.open_ports.forEach((port) => {
+                windowStates[serviceName][port] = true;
+              });
             });
+
+            // Update UI if we're viewing a specific house
+            if (currentHouseIndex !== null) {
+              const house = houses[currentHouseIndex];
+              const service = house.service;
+              const portList = document.getElementById("portList");
+
+              const servicePorts = windowStates[service] || {};
+              const openPorts = Object.keys(servicePorts)
+                .filter((port) => servicePorts[port])
+                .map((port) => parseInt(port));
+
+              if (openPorts.length === 0) {
+                portList.innerHTML = '<span style="color: #999;">No ports open</span>';
+              } else {
+                portList.innerHTML = openPorts
+                  .map((port) => `<span class="port-badge">Port ${port}</span>`)
+                  .join("");
+              }
+
+              // Update window buttons
+              house.windows.forEach((window) => {
+                updateWindowButton(window.port);
+              });
+            }
           }
         } catch (error) {
-          showMessage(`Failed to refresh status: ${error.message}`, "error");
+          console.error("Failed to refresh status:", error);
         }
       }
 
@@ -693,7 +788,8 @@
       }
 
       dragElement(document.getElementById("floatingControls"));
-      // initialise
+
+      // Initialize
       initStreetView();
       refreshStatus();
 

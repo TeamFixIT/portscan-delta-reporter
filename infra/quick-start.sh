@@ -163,7 +163,7 @@ else
     echo -e "${GREEN}✓ Copied $db_path to ../server/instance/app.db${NC}"
 fi
 # initialise database
-echo -e "${BLUE}[5/6]${NC} Initializing database..."
+echo -e "${BLUE}[5/6]${NC} Initialising database..."
 if [ ! -f ../server/instance/app.db ]; then
     if ! $DOCKER_COMPOSE_CMD exec server flask db init 2>/dev/null; then
         echo -e "${YELLOW}Database migrations already initialised${NC}"

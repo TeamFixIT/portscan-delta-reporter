@@ -18,9 +18,14 @@ else
 fi
 
 # Activate virtual environment
-echo ""
-echo "Activating virtual environment..."
-source venv/bin/activate
+if [ -f "venv/bin/activate" ]; then
+    source venv/bin/activate
+elif [ -f "venv/Scripts/activate" ]; then
+    source venv/Scripts/activate
+else
+    echo "Error: Virtual environment not found. Run ./setup_client.sh first."
+    exit 1
+fi
 
 # Upgrade pip
 echo ""

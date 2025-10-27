@@ -1,14 +1,5 @@
 # Port Scanner Test Environment - Quick Reference
 
-## 🚀 Quick Start
-
-```bash
-cd infra
-./test-environment.sh start    # Start everything
-./test-environment.sh test     # Run test scan
-./test-environment.sh stop     # Stop everything
-```
-
 ## 🎯 Test Targets
 
 | Service     | IP          | Ports                | Purpose               |

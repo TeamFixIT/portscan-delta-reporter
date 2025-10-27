@@ -104,13 +104,6 @@ flask reset-db
 flask create-admin
 ```
 
-### Settings Management
-
-```bash
-# Initialize/reset default settings
-flask init-settings
-```
-
 ### Scheduler Management
 
 ```bash
@@ -133,7 +126,7 @@ flask reload-schedules
 pip install gunicorn
 
 # Run with gunicorn
-gunicorn -w 4 -b 0.0.0.0:5000 "app:create_app()"
+gunicorn -w 4 -b 0.0.0.0:5000 "app:run"
 ```
 
 ### Using systemd (Linux)

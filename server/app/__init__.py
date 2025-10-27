@@ -27,6 +27,8 @@ migrate = Migrate()
 socketio = SocketIO()
 sess = Session()
 
+__all__ = ["create_app", "socketio", "db", "login_manager", "migrate", "sess"]
+
 # Import scheduler & websocket service
 from app.scheduler import scheduler_service
 from app.services.websocket_service import websocket_service
@@ -307,16 +309,6 @@ def create_app():
                 db.create_all()
                 click.echo("✓ Database tables created.")
 
-        # Step 4: Initialize configs
-        click.echo("\nStep 4/4: Initializing default configs...")
-        try:
-            from app.services.configs_service import configs_service
-
-            configs_service.initialise_defaults()
-            click.echo("✓ Default configs initialised.")
-        except Exception as e:
-            click.echo(f"Warning: Could not initialize configs: {e}", err=True)
-
         click.echo("\n" + "=" * 60)
         click.echo("Setup complete!")
         click.echo("=" * 60)
@@ -326,41 +318,7 @@ def create_app():
         click.echo("\nOr run both: flask create-admin && portscanner-server")
         click.echo("=" * 60)
 
-    with app.app_context():
-        # Check if database and tables exist
-        database_ready = False
-        try:
-            inspector = db.inspect(db.engine)
-            tables = inspector.get_table_names()
-            database_ready = len(tables) > 0
-
-            if database_ready:
-                logger.info(f"Database ready with {len(tables)} tables")
-
-                # Run migrations if migrations directory exists
-                migrations_dir = BASE_DIR / "migrations"
-                if migrations_dir.exists():
-                    try:
-                        from flask_migrate import upgrade
-
-                        upgrade(directory=str(migrations_dir))
-                        logger.info("Database migrations applied")
-                    except Exception as e:
-                        logger.warning(f"Migration upgrade skipped: {e}")
-                # Start scheduler only in production or reloader
-                if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN"):
-                    scheduler_service.start()
-                    logger.info("Scheduler started")
-            else:
-                logger.warning("=" * 60)
-                logger.warning("DATABASE NOT INITIALIZED")
-                logger.warning("=" * 60)
-                logger.warning("No database tables found.")
-                logger.warning("Please run 'flask setup' to initialize the database.")
-                logger.warning("=" * 60)
-
-        except Exception as e:
-            logger.error(f"Database initialization check failed: {e}")
-            logger.warning("Please run 'flask setup' to initialize the database.")
+    # === DO NOT RUN ANYTHING AT IMPORT TIME ===
+    # Database check and scheduler startup moved to run.py
 
     return app
