@@ -1,290 +1,247 @@
-<!-- Public Landing Page -->
-{% extends "base.html" %} {% block extra_css %} {% endblock %} {% block title %}Port Scanner Delta
+{% extends "base.html" %} {% block extra_css %}{% endblock %} {% block title %}Port Scanner Delta
 Reporter - Murdoch University{% endblock %} {% block content %}
 
-<!-- Background & Formatting -->
-<div class="container-fluid py-3">
-  <div class="row align-items-center g-4">
-    <!-- LEFT SIDE - Image -->
-    <section class="py-3">
-      <div class="container">
-        <div class="row align-items-center g-5">
-          <!-- LEFT: Image -->
-          <div class="col-lg-3 text-center">
-            <img
-              src="{{ url_for('static', filename='images/delta.png') }}"
-              alt="Delta icon"
-              class="img-fluid rounded"
-              style="max-width: 250px; animation: float-gentle 4s ease-in-out infinite"
-              onerror="this.style.display='none';" />
-          </div>
+<!-- Hero / Landing -->
+<section class="container-fluid py-5">
+  <div class="container">
+    <div class="row align-items-center g-4">
+      <!-- LEFT: Image -->
+      <div class="col-lg-3 text-center">
+        <img
+          src="{{ url_for('static', filename='images/delta.png') }}"
+          alt="Delta icon"
+          class="img-fluid rounded"
+          style="max-width: 250px; animation: float-gentle 4s ease-in-out infinite"
+          onerror="this.style.display='none';" />
+      </div>
 
-      <!-- CENTRE - Title & Description -->
+      <!-- CENTER: Title & Description -->
       <div class="col-lg-5">
-        <h1 class="hero-title">Port Scanner & Delta Reporter</h1>
-        <p class="slogan text-primary fw-bold mb-2" style="font-size:1.3rem;letter-spacing:1px;">Scan. Detect. Report. Protect.</p>
-  <p class="hero-subtitle" style="font-size:1.1rem;">
+        <h1 class="hero-title">Port Scanner &amp; Delta Reporter</h1>
+        <p class="slogan text-primary fw-bold mb-2" style="font-size: 1.3rem; letter-spacing: 1px">
+          Scan. Detect. Report. Protect.
+        </p>
+        <p class="hero-subtitle" style="font-size: 1.1rem">
           A Network Security Monitoring Tool for Murdoch University
         </p>
-        <div class="status-badge my-2">
-          <span class="status-indicator status-online animated"></span>
-          <span class="text-muted" style="font-size:1.18rem;"
+
+        <!-- System status -->
+        <div class="status-badge my-3 d-flex align-items-center gap-2">
+          <i
+            class="bi bi-circle-fill text-success"
+            style="font-size: 12px; animation: statusPulse 1.6s ease-in-out infinite"></i>
+          <span class="text-muted" style="font-size: 1.05rem"
             >System Status: <strong class="text-success">Online</strong></span
           >
         </div>
       </div>
 
-            <!-- Status Badge -->
-            <div
-              class="d-flex align-items-center justify-content-center justify-content-lg-start gap-2">
-              <i
-                class="bi bi-circle-fill text-success"
-                style="font-size: 12px; animation: statusPulse 1.6s ease-in-out infinite"></i>
-              <span class="text-muted">
-                System Status: <strong class="text-success">Online</strong>
-              </span>
-            </div>
+      <!-- RIGHT: Login / Welcome Panel -->
+      <div class="col-lg-4">
+        {% if current_user.is_authenticated %}
+        <div class="card shadow text-center p-4">
+          <i class="bi bi-person-check-fill display-5 text-primary mb-3"></i>
+          <h5 class="mb-2">Welcome back, <strong>{{ current_user.username }}</strong></h5>
+          <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary w-100 mt-3"
+            >Go to Dashboard</a
+          >
+        </div>
+        {% else %}
+        <div class="card shadow p-4">
+          <h4 class="text-center mb-4">Sign In</h4>
+
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for
+          category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="alert"
+              aria-label="Close"></button>
+          </div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <!-- Microsoft SSO Button -->
+          <div class="mb-3">
+            <a
+              href="{{ url_for('auth.entra_login') }}"
+              class="btn btn-lg w-100 border shadow-sm d-flex align-items-center justify-content-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 21 21"
+                class="me-2"
+                aria-hidden="true"
+                focusable="false">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+              </svg>
+              <span>Sign in with Microsoft</span>
+            </a>
           </div>
 
-          <!-- RIGHT: Login / Welcome Panel -->
-          <div class="col-lg-4">
-            {% if current_user.is_authenticated %}
-            <div class="card shadow text-center p-4">
-              <i class="bi bi-person-check-fill display-5 text-primary mb-3"></i>
-              <h5>Welcome back, <strong>{{ current_user.username }}</strong></h5>
-              <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary w-100 mt-3">
-                Go to Dashboard
-              </a>
-            </div>
-            {% else %}
-            <div class="card shadow p-4">
-              <h4 class="text-center mb-4">Sign In</h4>
+          <!-- Divider -->
+          <div class="position-relative my-3">
+            <hr class="text-muted" />
+            <span
+              class="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small text-nowrap"
+              >Or sign in with username</span
+            >
+          </div>
 
-              <!-- Flash Messages -->
-              {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {%
-              for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          <!-- Login Form -->
+          {% if form is defined %}
+          <form method="POST" action="{{ url_for('auth.login') }}">
+            {{ form.hidden_tag() }}
+
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else
+                ""), placeholder="Enter your username") }}
               </div>
-              {% endfor %} {% endif %} {% endwith %}
-
-
-              <!-- Microsoft SSO Button -->
-              <div class="mb-">
-                <a href="{{ url_for('auth.entra_login') }}" class="btn btn-lg w-100 border shadow-sm">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 21 21"
-                    class="me-2">
-                    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
-                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
-                    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
-                  </svg>
-                  Sign in with Microsoft
-                </a>
+              {% if form.username.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.username.errors %}{{ error }}{% endfor %}
               </div>
-
-              <!-- Divider -->
-              <div class="position-relative my-3">
-                <hr class="text-muted" />
-                <span class="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small text-nowrap">
-                  Or sign in with username
-                </span>
-              </div>
-
-              <!-- Login Form -->
-              {% if form is defined %}
-              <form method="POST" action="{{ url_for('auth.login') }}">
-                {{ form.hidden_tag() }}
-
-                <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
-                  <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    {{ form.username(class="form-control" + (" is-invalid" if form.username.errors
-                    else ""), placeholder="Enter your username") }}
-                  </div>
-                  {% if form.username.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.username.errors %}{{ error }}{% endfor %}
-                  </div>
-                  {% endif %}
-                </div>
-
-                <div class="mb-3">
-                  <label for="password" class="form-label">Password</label>
-                  <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    {{ form.password(class="form-control" + (" is-invalid" if form.password.errors
-                    else ""), placeholder="••••••••") }}
-                  </div>
-                  {% if form.password.errors %}
-                  <div class="invalid-feedback d-block">
-                    {% for error in form.password.errors %}{{ error }}{% endfor %}
-                  </div>
-                  {% endif %}
-                </div>
-
-                <div class="mb-3 form-check">
-                  {{ form.remember(class="form-check-input", id="remember") }}
-                  <label class="form-check-label" for="remember">Remember me</label>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">
-                  <i class="bi bi-box-arrow-in-right"></i> Sign In
-                </button>
-              </form>
-              {% else %}
-              <!-- Fallback if form object not provided -->
-              <form method="POST" action="{{ url_for('auth.login') }}">
-                <div class="mb-3">
-                  <label for="username" class="form-label">Username</label>
-                  <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input
-                      type="text"
-                      name="username"
-                      id="username"
-                      class="form-control"
-                      placeholder="Enter your username"
-                      required />
-                  </div>
-                </div>
-
-                <div class="mb-3">
-                  <label for="password" class="form-label">Password</label>
-                  <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input
-                      type="password"
-                      name="password"
-                      id="password"
-                      class="form-control"
-                      placeholder="••••••••"
-                      required />
-                  </div>
-                </div>
-
-                <div class="mb-3 form-check">
-                  <input type="checkbox" name="remember" id="remember" class="form-check-input" />
-                  <label class="form-check-label" for="remember">Remember me</label>
-                </div>
-
-                <button type="submit" class="btn btn-gradient-primary w-100">
-                  <i class="bi bi-box-arrow-in-right"></i> Sign In
-                </button>
-              </form>
               {% endif %}
-
-              <!-- Register Link -->
-              <div class="text-center mt-4">
-                <p class="text-muted mb-2">Don't have an account?</p>
-                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary">
-                  <i class="bi bi-person-plus me-2"></i>Create Account
-                </a>
-              </div>
-
             </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Key Features Section (compact three-column layout) -->
-    <section class="py-5 bg-body border-top">
-      <div class="container text-center">
-        <h2 class="fw-bold mb-3">Key Features</h2>
-        <p class="text-muted mb-5">Why choose Port Scanner & Delta Reporter?</p>
-
-        <div class="row g-4">
-          <div class="col-md-4">
-            <div class="card shadow text-center p-4">
-              <div class="card-body">
-                <i class="bi bi-lightning-charge text-primary display-6 mb-3"></i>
-                <h5>Fast Scanning</h5>
-                <p class="text-muted">
-                  Quickly scan networks and ports with optimized performance and reliability.
-                </p>
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else
+                ""), placeholder="••••••••") }}
               </div>
+              {% if form.password.errors %}
+              <div class="invalid-feedback d-block">
+                {% for error in form.password.errors %}{{ error }}{% endfor %}
+              </div>
+              {% endif %}
             </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card shadow text-center p-4">
-              <div class="card-body">
-                <i class="bi bi-bar-chart-line text-success display-6 mb-3"></i>
-                <h5>Delta Reporting</h5>
-                <p class="text-muted">
-                  Track changes and differences in scan results for actionable insights and alerts.
-                </p>
+
+            <div class="mb-3 form-check">
+              {{ form.remember(class="form-check-input", id="remember") }}
+              <label class="form-check-label" for="remember">Remember me</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </button>
+          </form>
+          {% else %}
+
+          <!-- Fallback if form object not provided -->
+          <form method="POST" action="{{ url_for('auth.login') }}">
+            <div class="mb-3">
+              <label for="username" class="form-label">Username</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-person"></i></span>
+                <input
+                  type="text"
+                  name="username"
+                  id="username"
+                  class="form-control"
+                  placeholder="Enter your username"
+                  required />
               </div>
             </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card shadow text-center p-4">
-              <div class="card-body">
-                <i class="bi bi-shield-lock text-warning display-6 mb-3"></i>
-                <h5>Secure Architecture</h5>
-                <p class="text-muted">
-                  Built with security best practices to protect your data and infrastructure.
-                </p>
+
+            <div class="mb-3">
+              <label for="password" class="form-label">Password</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input
+                  type="password"
+                  name="password"
+                  id="password"
+                  class="form-control"
+                  placeholder="••••••••"
+                  required />
               </div>
             </div>
+
+            <div class="mb-3 form-check">
+              <input type="checkbox" name="remember" id="remember" class="form-check-input" />
+              <label class="form-check-label" for="remember">Remember me</label>
+            </div>
+
+            <button type="submit" class="btn btn-gradient-primary w-100">
+              <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </button>
+          </form>
+
+          {% endif %}
+
+          <!-- Register Link -->
+          <div class="text-center mt-4">
+            <p class="text-muted mb-2">Don't have an account?</p>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary">
+              <i class="bi bi-person-plus me-2"></i>Create Account
+            </a>
           </div>
         </div>
-      </div>
-    </section>
-  </div>
-  {% endblock %}
-</div>
-<!-- Close hero-section -->
-
-<!-- Key Features Section (compact three-column layout) -->
-<div class="container mt-3">
-  <div class="row text-center mb-2">
-  <h3 class="fw-bold mb-1" style="font-size:1.6rem;">Key Features</h3>
-  <p class="text-muted mb-2" style="font-size:1.1rem;">Why choose Port Scanner & Delta Reporter?</p>
-  </div>
-  <div class="row g-2 justify-content-center">
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm p-2" style="min-height: 170px;">
-        <div class="card-body py-2 px-2 text-center">
-          <i class="bi bi-lightning-charge text-primary" style="font-size:1.3rem;"></i>
-          <h6 class="card-title mt-2 mb-1" style="font-size:1.15rem;">Fast Scanning</h6>
-          <p class="card-text mb-1" style="font-size:1.05rem;">Quickly scan networks and ports with optimized performance and reliability.</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm p-2">
-        <div class="card-body py-2 px-2 text-center">
-          <i class="bi bi-bar-chart-line text-success" style="font-size:1.3rem;"></i>
-          <h6 class="card-title mt-2 mb-1" style="font-size:1.15rem;">Delta Reporting</h6>
-          <p class="card-text mb-1" style="font-size:1.05rem;">Track changes and differences in scan results for actionable insights and alerts.</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="card h-100 shadow-sm p-2">
-        <div class="card-body py-2 px-2 text-center">
-          <i class="bi bi-plug" style="font-size:1.3rem;color:#fbc02d;"></i>
-          <h6 class="card-title mt-2 mb-1" style="font-size:1.15rem;">Easy Integration</h6>
-          <p class="card-text mb-1" style="font-size:1.05rem;">Seamlessly connect with your existing systems and workflows for flexible deployment and automation.</p>
-        </div>
+        {% endif %}
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- system status moved into hero center column -->
+<!-- Key Features Section -->
+<section class="py-5 bg-body border-top">
+  <div class="container text-center">
+    <h2 class="fw-bold mb-3">Key Features</h2>
+    <p class="text-muted mb-5">Why choose Port Scanner &amp; Delta Reporter?</p>
 
-{% endblock %}
-{% block extra_js %}
-{{ super() }}
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="card shadow text-center p-4">
+          <div class="card-body">
+            <i class="bi bi-lightning-charge text-primary display-6 mb-3"></i>
+            <h5>Fast Scanning</h5>
+            <p class="text-muted">
+              Quickly scan networks and ports with optimized performance and reliability.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow text-center p-4">
+          <div class="card-body">
+            <i class="bi bi-bar-chart-line text-success display-6 mb-3"></i>
+            <h5>Delta Reporting</h5>
+            <p class="text-muted">
+              Track changes and differences in scan results for actionable insights and alerts.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow text-center p-4">
+          <div class="card-body">
+            <i class="bi bi-shield-lock text-warning display-6 mb-3"></i>
+            <h5>Secure Architecture</h5>
+            <p class="text-muted">
+              Built with security best practices to protect your data and infrastructure.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %} {% block extra_js %} {{ super() }}
+
 <!-- Floating Help / User Manual Button only on index page -->
 <button
   id="help-fab"
@@ -292,33 +249,52 @@ Reporter - Murdoch University{% endblock %} {% block content %}
   type="button"
   data-bs-toggle="modal"
   data-bs-target="#helpModal"
-  aria-label="Help and User Manual"
->
+  aria-label="Help and User Manual">
   <i class="bi bi-question-circle-fill"></i>
-  </button>
+</button>
 
 <!-- Help Modal (index only) -->
-<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+<div
+  class="modal fade"
+  id="helpModal"
+  tabindex="-1"
+  aria-labelledby="helpModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered help-modal-dialog">
     <div class="modal-content help-modal">
       <div class="modal-header">
-        <h5 class="modal-title" id="helpModalLabel">Help & User Manual</h5>
+        <h5 class="modal-title" id="helpModalLabel">Help &amp; User Manual</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <p class="mb-3">Quick resources to get you started:</p>
-        <ul class="list-unstyled help-list">
+        <ul class="list-unstyled help-list mb-0">
           <li class="mb-2">
-            <i class="bi bi-book me-2"></i>
-            <a href="https://github.com/TeamFixIT/portscan-delta-reporter/tree/main/docs" target="_blank" rel="noopener">Project Documentation</a>
+            <i class="bi bi-book me-2"></i
+            ><a
+              href="https://github.com/TeamFixIT/portscan-delta-reporter/tree/main/docs"
+              target="_blank"
+              rel="noopener"
+              >Project Documentation</a
+            >
           </li>
           <li class="mb-2">
-            <i class="bi bi-person-video3 me-2"></i>
-            <a href="https://github.com/TeamFixIT/portscan-delta-reporter/blob/main/docs/client-agent.md" target="_blank" rel="noopener">Client Agent Guide</a>
+            <i class="bi bi-person-video3 me-2"></i
+            ><a
+              href="https://github.com/TeamFixIT/portscan-delta-reporter/blob/main/docs/client-agent.md"
+              target="_blank"
+              rel="noopener"
+              >Client Agent Guide</a
+            >
           </li>
           <li class="mb-2">
-            <i class="bi bi-info-circle me-2"></i>
-            <a href="https://github.com/TeamFixIT/portscan-delta-reporter#readme" target="_blank" rel="noopener">Repository README</a>
+            <i class="bi bi-info-circle me-2"></i
+            ><a
+              href="https://github.com/TeamFixIT/portscan-delta-reporter#readme"
+              target="_blank"
+              rel="noopener"
+              >Repository README</a
+            >
           </li>
         </ul>
       </div>
@@ -328,4 +304,5 @@ Reporter - Murdoch University{% endblock %} {% block content %}
     </div>
   </div>
 </div>
+
 {% endblock %}

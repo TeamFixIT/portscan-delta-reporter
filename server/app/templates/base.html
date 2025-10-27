@@ -37,6 +37,9 @@
           <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
+        <div
+          id="websocket-alerts"
+          class="toast-container position-fixed bottom-0 start-0 p-3"></div>
       </main>
       <div class="position-absolute top-0 end-0 m-4">
         <button id="theme-toggle" class="btn btn-outline-primary btn-sm ms-3">
@@ -44,19 +47,6 @@
         </button>
       </div>
     </div>
-
-    <main class="container mt-4">
-      {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for
-      category, message in messages %}
-      <div
-        class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
-        role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-      {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
-      <div id="websocket-alerts" class="toast-container position-fixed bottom-0 start-0 p-3"></div>
-    </main>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script
