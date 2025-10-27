@@ -3,10 +3,10 @@
 Reporter - Murdoch University{% endblock %} {% block content %}
 
 <!-- Background & Formatting -->
-<div class="container-fluid py-5">
+<div class="container-fluid py-3">
   <div class="row align-items-center g-4">
     <!-- LEFT SIDE - Image -->
-    <section class="py-5">
+    <section class="py-3">
       <div class="container">
         <div class="row align-items-center g-5">
           <!-- LEFT: Image -->
@@ -58,6 +58,33 @@ Reporter - Murdoch University{% endblock %} {% block content %}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
               </div>
               {% endfor %} {% endif %} {% endwith %}
+
+
+              <!-- Microsoft SSO Button -->
+              <div class="mb-">
+                <a href="{{ url_for('auth.entra_login') }}" class="btn btn-lg w-100 border shadow-sm">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 21 21"
+                    class="me-2">
+                    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+                    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+                    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+                  </svg>
+                  Sign in with Microsoft
+                </a>
+              </div>
+
+              <!-- Divider -->
+              <div class="position-relative my-3">
+                <hr class="text-muted" />
+                <span class="position-absolute top-50 start-50 translate-middle bg-body px-3 text-muted small text-nowrap">
+                  Or sign in with username
+                </span>
+              </div>
 
               <!-- Login Form -->
               {% if form is defined %}
@@ -137,11 +164,20 @@ Reporter - Murdoch University{% endblock %} {% block content %}
                   <label class="form-check-label" for="remember">Remember me</label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">
+                <button type="submit" class="btn btn-gradient-primary w-100">
                   <i class="bi bi-box-arrow-in-right"></i> Sign In
                 </button>
               </form>
               {% endif %}
+
+              <!-- Register Link -->
+              <div class="text-center mt-4">
+                <p class="text-muted mb-2">Don't have an account?</p>
+                <a href="{{ url_for('auth.register') }}" class="btn btn-outline-secondary">
+                  <i class="bi bi-person-plus me-2"></i>Create Account
+                </a>
+              </div>
+
             </div>
             {% endif %}
           </div>
@@ -192,10 +228,6 @@ Reporter - Murdoch University{% endblock %} {% block content %}
         </div>
       </div>
     </section>
-    <!-- Footer -->
-    <div class="text-center mt-3">
-      <small class="text-muted"> Need access? Contact your system administrator. </small>
-    </div>
   </div>
   {% endblock %}
 </div>
