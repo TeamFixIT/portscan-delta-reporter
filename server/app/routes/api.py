@@ -15,7 +15,7 @@ from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
-from app import websocket_service
+
 import uuid
 import json
 
@@ -495,10 +495,7 @@ def receive_scan_results(client_id):
         if data["status"] == "completed":
             if task:
                 task.complete()
-                websocket_service.broadcast_alert(
-                    f"Scan task {task_id} completed by client {client_id}",
-                    "info",
-                )
+                
         elif data["status"] == "failed":
             if task:
                 task.mark_failed()

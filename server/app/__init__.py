@@ -27,11 +27,8 @@ migrate = Migrate()
 socketio = SocketIO()
 sess = Session()
 
-__all__ = ["create_app", "socketio", "db", "login_manager", "migrate", "sess"]
-
 # Import scheduler & websocket service
 from app.scheduler import scheduler_service
-from app.services.websocket_service import websocket_service
 from .config import Config
 
 # Configure logging
@@ -39,7 +36,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
 
 def create_app():
     """
@@ -50,7 +46,7 @@ def create_app():
     """
     BASE_DIR = Path(__file__).resolve().parent.parent
 
-    app = Flask(__name__, instance_relative_config=True)
+    app = Flask(__name__)
 
     app.config.from_prefixed_env()
 
@@ -96,7 +92,6 @@ def create_app():
 
     # initialise scheduler and websocket
     scheduler_service.init_app(app)
-    websocket_service.init_app(socketio)
 
     # Register blueprints
     from app.routes.main import bp as main_bp
@@ -133,13 +128,6 @@ def create_app():
     @app.teardown_appcontext
     def shutdown_scheduler(exception=None):
         pass  # Scheduler persists across requests
-
-    # Add scheduler commands to Flask CLI
-    @app.cli.command()
-    def init_scheduler():
-        """initialise and start the scheduler"""
-        scheduler_service.start()
-        print("Scheduler started")
 
     @app.cli.command()
     def list_jobs():
@@ -318,7 +306,14 @@ def create_app():
         click.echo("\nOr run both: flask create-admin && portscanner-server")
         click.echo("=" * 60)
 
-    # === DO NOT RUN ANYTHING AT IMPORT TIME ===
-    # Database check and scheduler startup moved to run.py
+    # Create database tables
+    with app.app_context():
+        if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+            try:
+                scheduler_service.start()
+                logger.info("Scheduler service started successfully")
+            except Exception as e:
+                logger.error(f"Failed to start scheduler: {str(e)}")
 
     return app
+``
