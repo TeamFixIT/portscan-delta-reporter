@@ -67,6 +67,7 @@ dependencies = [
     "WTForms==3.2.1",
     "gunicorn==23.0.0",
     "gevent==25.9.1",
+    "authlib==1.6.5"
 ]
 
 [project.optional-dependencies]

@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv, set_key
 from pathlib import Path
+from datetime import timedelta
 
 # Load environment variables
 load_dotenv()
@@ -31,24 +32,110 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = (
         os.getenv("SQLALCHEMY_TRACK_MODIFICATIONS", "False").lower() == "true"
     )
-    SESSION_TYPE = os.getenv("SESSION_TYPE", "filesystem")
-    SESSION_FILE_DIR = os.getenv("SESSION_FILE_DIR", "/tmp/flask_session")
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+    # Session configuration
+    SESSION_TYPE = "filesystem"
+    SESSION_FILE_DIR = BASE_DIR / "flask_session"
+    SESSION_PERMANENT = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    SESSION_COOKIE_SECURE = (
+        os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
+    )
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
 
-    # Email, and Entra ID configs
-    MAIL_SERVER = os.getenv("MAIL_SERVER")
-    MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
-    MAIL_USE_TLS = os.getenv("MAIL_USE_TLS", "true").lower() in ("true", "on", "1")
-    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
-    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
-    MAIL_SENDER = os.getenv("MAIL_SENDER", "Port Detector <noreply@portdetector.com>")
+    # Flask-Security-Too settings
+    SECURITY_PASSWORD_SALT = (
+        os.environ.get("SECURITY_PASSWORD_SALT")
+        or "super-secret-salt-change-in-production"
+    )
+    SECURITY_PASSWORD_HASH = "argon2"  # Modern, secure password hashing
 
-    ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
-    ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
-    ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
-    ENTRA_REDIRECT_PATH = "/auth/entra/callback"
-    ENTRA_AUTHORITY = f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}"
-    ENTRA_SCOPE = ["User.Read"]
-    # ... other configs
+    # Registration settings
+    SECURITY_REGISTERABLE = True
+    SECURITY_SEND_REGISTER_EMAIL = False  # Set to True if you configure email
+    SECURITY_CONFIRMABLE = False  # Set to True to require email confirmation
+    SECURITY_USERNAME_ENABLED = True
+    SECURITY_USERNAME_REQUIRED = True
+
+    # Login/logout settings
+    SECURITY_URL_PREFIX = "/auth"
+    SECURITY_POST_LOGIN_VIEW = "/dashboard"
+
+    # Session and tracking
+    SECURITY_TRACKABLE = True  # Track login IP and timestamps
+    SECURITY_LOGIN_WITHOUT_CONFIRMATION = True
+
+    # Two-factor authentication (optional)
+    SECURITY_TWO_FACTOR = (
+        os.environ.get("SECURITY_TWO_FACTOR", "False").lower() == "true"
+    )
+    SECURITY_TWO_FACTOR_REQUIRED = False
+
+    # Password requirements
+    SECURITY_PASSWORD_LENGTH_MIN = 8
+    SECURITY_PASSWORD_COMPLEXITY_CHECKER = "zxcvbn"
+
+    # Token settings
+    SECURITY_TOKEN_AUTHENTICATION_HEADER = "Authentication-Token"
+    SECURITY_TOKEN_MAX_AGE = 86400  # 24 hours
+
+    WTF_CSRF_CHECK_DEFAULT = False
+
+    # CSRF protection
+    SECURITY_CSRF_PROTECT_MECHANISMS = ["session", "basic"]
+    SECURITY_CSRF_IGNORE_UNAUTH_ENDPOINTS = True
+
+    # Flash message categories
+    SECURITY_FLASH_MESSAGES = True
+
+    # OAuth Settings - Azure AD / Microsoft Entra ID
+    AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID")
+    AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET")
+    AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "common")
+
+    # OAuth Settings - Google
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+    # OAuth Settings - GitHub
+    GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID")
+    GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET")
+
+    # Email configuration (optional, for Flask-Security email features)
+    MAIL_SERVER = os.environ.get("MAIL_SERVER")
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587))
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "True").lower() == "true"
+    MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+    MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "noreply@example.com")
+
+    # Security headers
+    SECURITY_HSTS_ENABLED = (
+        os.environ.get("SECURITY_HSTS_ENABLED", "False").lower() == "true"
+    )
+    SECURITY_CONTENT_SECURITY_POLICY = {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+    }
+
+    # Application settings
+    APP_NAME = os.environ.get("APP_NAME", "Port Scanner Delta Reporter")
+
+    # Logging
+    LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+    LOG_DIR = BASE_DIR / "logs"
+
+    # Scheduler
+    SCHEDULER_API_ENABLED = True
+
+    # Rate limiting (optional)
+    RATELIMIT_ENABLED = os.environ.get("RATELIMIT_ENABLED", "False").lower() == "true"
+    RATELIMIT_STORAGE_URL = os.environ.get("RATELIMIT_STORAGE_URL", "memory://")
 
 
 def get_config_value(key):

@@ -20,7 +20,7 @@ class Client(db.Model):
 
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
     approved_at = db.Column(db.DateTime, nullable=True)
-    approved_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    approved_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_hidden = db.Column(db.Boolean, default=False)

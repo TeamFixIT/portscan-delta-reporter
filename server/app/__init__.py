@@ -1,8 +1,5 @@
 """
-Flask Application Factory
-
-This module creates and configures the Flask application for the
-Port Scanner Delta Reporter server.
+Flask Application Factory with Flask-Security-Too and Authlib
 """
 
 import os
@@ -10,23 +7,26 @@ import click
 from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_security import Security, SQLAlchemyUserDatastore
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flask_session import Session
+from flask_wtf.csrf import CSRFProtect
+from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
-# initialise extensions
+# Initialize extensions
 db = SQLAlchemy()
-login_manager = LoginManager()
+security = Security()
 migrate = Migrate()
-socketio = SocketIO()
 sess = Session()
+oauth = OAuth()
 
-# Import scheduler
+azure = None  # Placeholder for Azure OAuth client
+
+# Import configuration and logging
 from app.logging_config import setup_logging, get_logger
 from app.scheduler import scheduler_service
 from .config import Config
@@ -46,7 +46,6 @@ def create_app():
     app = Flask(__name__)
 
     app.config.from_prefixed_env()
-
     app.config.from_object(Config)
 
     # Ensure session directory exists
@@ -55,27 +54,23 @@ def create_app():
     # Ensure instance directory exists
     Path(app.instance_path).mkdir(parents=True, exist_ok=True)
 
-    # initialise extensions with app
+    # Initialize extensions with app
     db.init_app(app)
-    login_manager.init_app(app)
 
-    # initialise migrations directory if it doesn't exist
+    # Initialize migrations
     migrations_dir = BASE_DIR / "migrations"
     migrate.init_app(app, db, directory=str(migrations_dir))
 
-    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent")
     sess.init_app(app)
 
-    # Configure Flask-Login
-    login_manager.login_view = "auth.login"
-    login_manager.login_message = "Please log in to access this page."
-    login_manager.login_message_category = "info"
+    # Initialize OAuth
+    oauth.init_app(app)
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        from app.models.user import User
+    csrf = CSRFProtect()
+    csrf.init_app(app)
 
-        return User.query.get(int(user_id))
+    # Register OAuth providers
+    register_oauth_providers(app, oauth)
 
     # Import models to ensure they are registered with SQLAlchemy
     from app.models import (
@@ -86,14 +81,19 @@ def create_app():
         scan_task,
         delta_report,
     )
+    from app.models.user import User, Role
 
-    # initialise scheduler and websocket
+    # Setup Flask-Security
+    user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+    security.init_app(app, user_datastore)
+
+    # Initialize scheduler and websocket
     scheduler_service.init_app(app)
 
-    # Create database tables
+    # Create database tables and setup
     with app.app_context():
+        db.create_all()
         if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-
             try:
                 setup_logging(
                     app=app,
@@ -104,6 +104,11 @@ def create_app():
                 logger.info("Scheduler service started successfully")
             except Exception as e:
                 logger.error(f"Failed to start scheduler: {str(e)}")
+
+        # Create default role if it doesn't exist
+        if not user_datastore.find_role("user"):
+            user_datastore.create_role(name="user", description="Default user role")
+        db.session.commit()
 
     # Register blueprints
     from app.routes.main import bp as main_bp
@@ -138,10 +143,57 @@ def create_app():
         db.session.rollback()
         return render_template("errors/500.html"), 500
 
-    # Register scheduler shutdown on app teardown
-    @app.teardown_appcontext
-    def shutdown_scheduler(exception=None):
-        pass  # Scheduler persists across requests
+    # Flask-Security context processor
+    @security.context_processor
+    def security_context_processor():
+        return dict()
+
+    # Register CLI commands
+    register_cli_commands(app, user_datastore, BASE_DIR)
+
+    return app
+
+
+def register_oauth_providers(app, oauth):
+    """Register OAuth providers with Authlib"""
+
+    # Azure AD / Microsoft Entra ID
+    if app.config.get("AZURE_CLIENT_ID"):
+        azure = oauth.register(
+            name="azure",
+            client_id=app.config["AZURE_CLIENT_ID"],
+            client_secret=app.config["AZURE_CLIENT_SECRET"],
+            server_metadata_url=f"https://login.microsoftonline.com/{app.config.get('AZURE_TENANT_ID')}/v2.0/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile User.Read"},
+        )
+
+    # Google OAuth
+    if app.config.get("GOOGLE_CLIENT_ID"):
+        google = oauth.register(
+            name="google",
+            client_id=app.config["GOOGLE_CLIENT_ID"],
+            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
+
+    # GitHub OAuth
+    if app.config.get("GITHUB_CLIENT_ID"):
+        github = oauth.register(
+            name="github",
+            client_id=app.config["GITHUB_CLIENT_ID"],
+            client_secret=app.config["GITHUB_CLIENT_SECRET"],
+            access_token_url="https://github.com/login/oauth/access_token",
+            access_token_params=None,
+            authorize_url="https://github.com/login/oauth/authorize",
+            authorize_params=None,
+            api_base_url="https://api.github.com/",
+            client_kwargs={"scope": "user:email"},
+        )
+
+
+def register_cli_commands(app, user_datastore, BASE_DIR):
+    """Register Flask CLI commands"""
 
     @app.cli.command()
     def list_jobs():
@@ -167,7 +219,7 @@ def create_app():
 
     @app.cli.command()
     def init_db():
-        """Initialise database with tables"""
+        """Initialize database with tables"""
         db.create_all()
         click.echo("Database tables created.")
 
@@ -175,11 +227,8 @@ def create_app():
     def reset_db():
         """Reset database and clear all APScheduler jobs."""
         if click.confirm("This will delete all data and all scheduled jobs. Continue?"):
-            # Clear all scheduled jobs
-            # Reset the database
             db.drop_all()
             db.create_all()
-
             click.echo("Database reset successfully.")
 
     @app.cli.command()
@@ -192,7 +241,7 @@ def create_app():
 
         if not migrations_dir.exists():
             click.echo(
-                "Error: Migrations not initialised. Run 'flask setup' first.", err=True
+                'Error: Migrations not initialized. Run "flask setup" first.', err=True
             )
             return
 
@@ -211,30 +260,43 @@ def create_app():
     def create_admin():
         """Create admin user"""
         from app.models.user import User
+        import uuid
 
         username = click.prompt("Admin username")
         email = click.prompt("Admin email")
         password = click.prompt("Admin password", hide_input=True)
 
         try:
-            admin_user = User.create_user(
+            # Create or get admin role
+            admin_role = user_datastore.find_or_create_role(
+                name="admin", description="Administrator role"
+            )
+
+            # Create user
+            user = user_datastore.create_user(
                 username=username,
                 email=email,
                 password=password,
                 first_name="Admin",
                 last_name="User",
+                active=True,
+                fs_uniquifier=str(uuid.uuid4()),
             )
-            admin_user.is_admin = True
+
+            # Add admin role
+            user_datastore.add_role_to_user(user, admin_role)
+
             db.session.commit()
 
             click.echo(f"Admin user {username} created successfully.")
 
-        except ValueError as e:
+        except Exception as e:
+            db.session.rollback()
             click.echo(f"Error creating admin user: {e}", err=True)
 
     @app.cli.command()
     def setup():
-        """Complete setup: initialise migrations, create tables, and setup defaults"""
+        """Complete setup: initialize migrations, create tables, and setup defaults"""
         from flask_migrate import (
             init as migrate_init,
             migrate as create_migration,
@@ -243,13 +305,13 @@ def create_app():
 
         migrations_dir = BASE_DIR / "migrations"
 
-        # Step 1: initialise Flask-Migrate if needed
+        # Step 1: Initialize Flask-Migrate if needed
         if not migrations_dir.exists():
             click.echo("Step 1/4: Initializing Flask-Migrate...")
             migrate_init(directory=str(migrations_dir))
-            click.echo("Migrations directory created.")
+            click.echo("✓ Migrations directory created.")
         else:
-            click.echo("Migrations directory already exists.")
+            click.echo("✓ Migrations directory already exists.")
 
         # Step 2: Check if we need to create initial migration
         versions_dir = migrations_dir / "versions"
@@ -261,29 +323,34 @@ def create_app():
                 create_migration(
                     message="Initial migration", directory=str(migrations_dir)
                 )
-                click.echo("Initial migration created.")
+                click.echo("✓ Initial migration created.")
             except Exception as e:
                 click.echo(f"✗ Error creating migration: {e}", err=True)
                 click.echo("\nTrying to create tables directly...")
                 db.create_all()
-                click.echo("Database tables created directly.")
+                click.echo("✓ Database tables created directly.")
         else:
-            click.echo("\nMigrations already exist.")
+            click.echo("\n✓ Migrations already exist.")
 
         # Step 3: Run migrations
         click.echo("\nStep 3/4: Applying migrations...")
         try:
             upgrade(directory=str(migrations_dir))
-            click.echo("Database migrations applied.")
+            click.echo("✓ Database migrations applied.")
         except Exception as e:
             click.echo(f"Warning: Migration upgrade failed: {e}", err=True)
-            click.echo("Checking if tables need to be created...")
-            inspector = db.inspect(db.engine)
-            tables = inspector.get_table_names()
-            if not tables:
-                click.echo("Creating tables directly...")
-                db.create_all()
-                click.echo("Database tables created.")
+
+        # Step 4: Create default roles
+        click.echo("\nStep 4/4: Creating default roles...")
+        try:
+            user_datastore.find_or_create_role(
+                name="admin", description="Administrator"
+            )
+            user_datastore.find_or_create_role(name="user", description="Standard user")
+            db.session.commit()
+            click.echo("✓ Default roles created.")
+        except Exception as e:
+            click.echo(f"Warning: Could not create roles: {e}", err=True)
 
         click.echo("\n" + "=" * 60)
         click.echo("Setup complete!")
@@ -293,5 +360,3 @@ def create_app():
         click.echo("  2. Run the server: portscanner-server")
         click.echo("\nOr run both: flask create-admin && portscanner-server")
         click.echo("=" * 60)
-
-    return app

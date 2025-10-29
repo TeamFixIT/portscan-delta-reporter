@@ -114,7 +114,7 @@ block content %}
           <!-- Microsoft SSO Button -->
           <div class="mb-3">
             <a
-              href="{{ url_for('auth.entra_login') }}"
+              href="{{ url_for('auth.oauth_login', provider='azure') }}"
               class="btn btn-lg w-100 btn-outline-secondary d-flex align-items-center justify-content-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
