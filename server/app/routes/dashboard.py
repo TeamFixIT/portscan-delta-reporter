@@ -14,12 +14,15 @@ from flask import (
     flash,
     send_file,
 )
+import os
+from pathlib import Path
 from flask_login import login_required, current_user
 from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
 from app.models.delta_report import DeltaReport
+from app.models.alert import Alert
 import csv
 import json
 import io
@@ -73,7 +76,7 @@ def scans():
 @login_required
 def create_scan():
     """Render the create scan page"""
-    return render_template("dashboard/create_scan.html", show_sidebar=True)
+    return render_template("dashboard/create_scan.html")
 
 
 @bp.route("/scans/<int:scan_id>")
@@ -392,3 +395,90 @@ def compare_reports():
         return redirect(url_for("dashboard.reports"))
 
     return redirect(url_for("dashboard.view_delta_report", report_id=delta_report.id))
+
+
+@bp.route("/logs")
+@login_required
+def logs():
+    """Display log files"""
+    logs_dir = Path(__file__).parent.parent.parent / "logs"
+
+    # Fixed log files
+    log_names = ["app.log", "error.log", "scheduler.log"]
+    log_files = []
+
+    for log_name in log_names:
+        log_file = logs_dir / log_name
+        if log_file.exists() and log_file.is_file():
+            stats = log_file.stat()
+            # Get last 50 lines for preview
+            try:
+                with open(log_file, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                    last_lines = lines[-50:] if len(lines) > 50 else lines
+                    preview = "".join(last_lines)
+                    total_lines = len(lines)
+            except Exception:
+                preview = "Error reading file"
+                total_lines = 0
+
+            log_files.append(
+                {
+                    "name": log_name,
+                    "size": stats.st_size,
+                    "modified": datetime.fromtimestamp(stats.st_mtime),
+                    "preview": preview,
+                    "total_lines": total_lines,
+                }
+            )
+        else:
+            # File doesn't exist yet
+            log_files.append(
+                {
+                    "name": log_name,
+                    "size": 0,
+                    "modified": None,
+                    "preview": "Log file not created yet",
+                    "total_lines": 0,
+                }
+            )
+
+    return render_template(
+        "dashboard/logs.html", log_files=log_files, show_sidebar=True
+    )
+
+
+@bp.route("/logs/<filename>/download")
+@login_required
+def download_log(filename):
+    """Download log file"""
+    # Only allow the three specific log files
+    allowed_files = ["app.log", "error.log", "schedule.log"]
+    if filename not in allowed_files:
+        abort(403)
+
+    logs_dir = Path(__file__).parent.parent.parent / "logs"
+    log_file = logs_dir / filename
+
+    if not log_file.exists() or not log_file.is_file():
+        abort(404)
+
+    return send_file(log_file, as_attachment=True, download_name=filename)
+
+
+@bp.route("/alerts")
+def alerts():
+    alerts = Alert.query.order_by(Alert.created_at.desc()).all()
+    return render_template("dashboard/alerts.html", alerts=alerts, show_sidebar=True)
+
+
+@bp.route("/alerts/<int:alert_id>/status", methods=["POST"])
+def update_alert_status(alert_id):
+    data = request.get_json()
+    alert = Alert.query.get_or_404(alert_id)
+    if data.get("status") == "actioned":
+        alert.mark_actioned()
+    elif data.get("status") == "ignored":
+        alert.mark_ignored()
+    db.session.commit()
+    return jsonify({"message": "Status updated"}), 200

@@ -16,9 +16,12 @@ from flask_login import login_required, current_user
 from functools import wraps
 from app.config import update_config, get_config_value, validate_and_prepare_db_path
 from app import db
-import logging
 
-logger = logging.getLogger(__name__)
+
+# Import logger from centralized logging config
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 

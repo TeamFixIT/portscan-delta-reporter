@@ -6,6 +6,10 @@ from app.models.scan import Scan
 from typing import Optional, Dict, List, Tuple
 from sqlalchemy import and_
 
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
+
 
 class DeltaReportService:
     """Service for managing delta reports"""
@@ -59,7 +63,7 @@ class DeltaReportService:
             db.session.add(delta_report)
             db.session.commit()
 
-            print(f"✓ Delta report generated: {delta_report.id}")
+            print(f"Delta report generated: {delta_report.id}")
             return delta_report
 
         except Exception as e:

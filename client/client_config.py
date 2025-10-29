@@ -148,7 +148,7 @@ def configure():
         cfg_path.write_text(
             yaml.safe_dump(data, sort_keys=False, default_flow_style=False)
         )
-        print(f"\n✓ Configuration saved to {cfg_path}")
+        print(f"\nConfiguration saved to {cfg_path}")
         print("\nYou can now run: portscanner-client")
         return 0
     except Exception as e:

@@ -1,119 +1,154 @@
-// Application JavaScript for Port Scanner Delta Reporter
+// ===========================================
+// Port Scanner Delta Reporter - Application JS
+// ===========================================
 
-document.addEventListener("DOMContentLoaded", function () {
-  (() => {
-    "use strict";
+document.addEventListener("DOMContentLoaded", () => {
+  "use strict";
 
-    // Get stored theme from localStorage
-    const getStoredTheme = () => localStorage.getItem("theme") || "light";
+  // -----------------------------
+  // Theme Handling
+  // -----------------------------
 
-    // Set theme in localStorage
-    const setStoredTheme = (theme) => localStorage.setItem("theme", theme);
+  // Helper – set theme + storage + icon
+  const applyTheme = (theme) => {
+    document.documentElement.setAttribute("data-bs-theme", theme);
+    localStorage.setItem("theme", theme);
 
-    // Apply theme by setting data-bs-theme on <html>
-    const setTheme = (theme) => {
-      document.documentElement.setAttribute("data-bs-theme", theme);
-      // Update button icon
-      const themeIcon = document.querySelector("#theme-toggle i");
-      if (themeIcon) {
-        themeIcon.classList.remove(theme === "dark" ? "bi-sun" : "bi-moon");
-        themeIcon.classList.add(theme === "dark" ? "bi-moon" : "bi-sun");
-      }
-    };
+    const themeIcon = document.querySelector("#theme-toggle i");
+    if (themeIcon) {
+      themeIcon.classList.remove(theme === "dark" ? "bi-sun" : "bi-moon");
+      themeIcon.classList.add(theme === "dark" ? "bi-moon" : "bi-sun");
+    }
+  };
 
-    // initialise theme on page load
-    window.addEventListener("DOMContentLoaded", () => {
-      const theme = getStoredTheme();
-      setTheme(theme);
-
-      // Toggle theme on button click
-      const themeToggle = document.querySelector("#theme-toggle");
-      if (themeToggle) {
-        themeToggle.addEventListener("click", () => {
-          const currentTheme =
-            document.documentElement.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
-          setStoredTheme(currentTheme);
-          setTheme(currentTheme);
-        });
-      }
+  const current = document.documentElement.getAttribute("data-bs-theme");
+  applyTheme(current); // updates icon & checkbox
+  const themeToggle = document.querySelector("#theme-toggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const next =
+        document.documentElement.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
+      applyTheme(next);
     });
-  })();
-  // Auto-dismiss alerts after 5 seconds
+  }
+
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener("change", (e) => {
+    // Only auto-switch if the user has *not* manually chosen a theme
+    if (!localStorage.getItem("theme")) {
+      applyTheme(e.matches ? "dark" : "light");
+    }
+  });
+
+  // -----------------------------
+  // Auto-dismiss Bootstrap alerts
+  // -----------------------------
   const alerts = document.querySelectorAll(".alert");
-  alerts.forEach(function (alert) {
-    setTimeout(function () {
-      const bsAlert = new bootstrap.Alert(alert);
+  alerts.forEach((alert) => {
+    setTimeout(() => {
+      const bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
       bsAlert.close();
     }, 5000);
   });
 
-  // initialise tooltips
+  // -----------------------------
+  // Bootstrap Tooltips
+  // -----------------------------
   const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl);
-  });
+  tooltipTriggerList.map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
 
-  // Initialize tooltip for Help FAB explicitly (since it also triggers a modal)
+  // Explicit tooltip for Help FAB (since it also opens a modal)
   const helpFab = document.getElementById("help-fab");
+  const helpModal = document.getElementById("helpModal");
+
   if (helpFab) {
-    new bootstrap.Tooltip(helpFab, { title: "Help / User Manual", placement: "left" });
+    new bootstrap.Tooltip(helpFab, {
+      title: "Help / User Manual",
+      placement: "left",
+    });
   }
 
-  // === Theme Toggle ===
-  const toggle = document.getElementById("theme-toggle");
-  const prefersDarkScheme = window.matchMedia("(prefers-color-scheme: dark)");
-  const savedTheme = localStorage.getItem("theme");
-
-  // Apply saved or system-preferred theme
-  if (savedTheme === "dark" || (!savedTheme && prefersDarkScheme.matches)) {
-    document.body.classList.add("dark-theme");
-    toggle.innerHTML = '<i class="bi bi-sun"></i>';
-  } else {
-    document.body.classList.remove("dark-theme");
-    toggle.innerHTML = '<i class="bi bi-moon"></i>';
+  if (helpFab && helpModal) {
+    helpModal.addEventListener("shown.bs.modal", () => helpFab.classList.add("open"));
+    helpModal.addEventListener("hidden.bs.modal", () => helpFab.classList.remove("open"));
   }
 
-  // Toggle theme on button click
-  toggle.addEventListener("click", () => {
-    document.body.classList.toggle("dark-theme");
-    const isDark = document.body.classList.contains("dark-theme");
-    toggle.innerHTML = isDark ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  });
+  // -----------------------------
+  // Server-Sent Events (SSE)
+  // -----------------------------
+  const initSSE = () => {
+    try {
+      const eventSource = new EventSource("/api/stream");
 
-  // Enlarge help icon when Help modal is open
-  const helpModalEl = document.getElementById("helpModal");
-  if (helpFab && helpModalEl) {
-    helpModalEl.addEventListener("shown.bs.modal", () => helpFab.classList.add("open"));
-    helpModalEl.addEventListener("hidden.bs.modal", () => helpFab.classList.remove("open"));
-  }
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("📡 SSE:", data);
+          showAlert(data.message, data.type);
+        } catch (err) {
+          console.error("Error parsing SSE event:", err);
+        }
+      };
 
-  // === Real-time client status updates (placeholder for WebSocket) ===
-  function updateClientStatus() {
-    // TODO: Implement WebSocket connection for real-time updates
-    console.log("Client status update check");
-  }
+      eventSource.onerror = (err) => {
+        console.error("SSE connection error:", err);
+        // Optionally: retry connection after delay
+      };
+    } catch (err) {
+      console.error("Failed to initialize SSE:", err);
+    }
+  };
 
-  // Check for updates every 30 seconds
-  setInterval(updateClientStatus, 30000);
+  // -----------------------------
+  // Alert Display Function
+  // -----------------------------
+  const showAlert = (message, type = "info") => {
+    const container = document.getElementById("alert-container") || createAlertContainer();
+
+    const alertDiv = document.createElement("div");
+    alertDiv.className = `alert alert-${type} fade show`;
+    alertDiv.textContent = message;
+
+    container.appendChild(alertDiv);
+
+    // Auto-remove after 5s
+    setTimeout(() => {
+      const bsAlert = bootstrap.Alert.getOrCreateInstance(alertDiv);
+      bsAlert.close();
+    }, 5000);
+  };
+
+  const createAlertContainer = () => {
+    const container = document.createElement("div");
+    container.id = "alert-container";
+    container.style.position = "fixed";
+    container.style.top = "1rem";
+    container.style.right = "1rem";
+    container.style.zIndex = "1055"; // above modals
+    document.body.appendChild(container);
+    return container;
+  };
+
+  // -----------------------------
+  // Initialize SSE Connection
+  // -----------------------------
+  initSSE();
 });
 
-// === Utility functions ===
+// ===========================================
+// Utility Functions
+// ===========================================
+
 function formatTimestamp(timestamp) {
   return new Date(timestamp).toLocaleString();
 }
 
 function formatDuration(seconds) {
-  if (seconds < 60) {
-    return `${seconds.toFixed(1)}s`;
-  } else if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`;
-  } else {
-    return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-  }
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.floor(seconds % 60)}s`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
 }
 
-// Format Date
 function formatDate(dateString) {
   const date = new Date(dateString);
   const now = new Date();

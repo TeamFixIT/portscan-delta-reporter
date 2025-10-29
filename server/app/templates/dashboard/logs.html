@@ -1,0 +1,98 @@
+{% extends "base.html" %} {% block content %}
+<div class="container-fluid mt-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Logs</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="mb-0">System Logs</h2>
+    </div>
+    <button class="btn btn-outline-secondary" onclick="location.reload()">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+  </div>
+
+  <div class="row">
+    {% for log in log_files %}
+    <div class="col-12 mb-4">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i
+              class="bi bi-file-text-fill {% if log.name == 'error.log' %}text-danger{% elif log.name == 'schedule.log' %}text-info{% else %}text-primary{% endif %}"></i>
+            {{ log.name }}
+          </h5>
+          <div>
+            {% if log.modified %}
+            <span class="badge bg-secondary me-2"> {{ (log.size / 1024) | round(2) }} KB </span>
+            <span class="badge bg-secondary me-2"> {{ log.total_lines }} lines </span>
+            <span class="text-muted small me-3">
+              Updated: {{ log.modified.strftime('%Y-%m-%d %H:%M:%S') }}
+            </span>
+            <a
+              href="{{ url_for('dashboard.download_log', filename=log.name) }}"
+              class="btn btn-sm btn-success">
+              <i class="bi bi-download"></i> Download
+            </a>
+            {% else %}
+            <span class="badge bg-warning text-dark">Not created</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <pre
+            class="log-preview bg-dark text-light p-3 m-0"
+            style="
+              max-height: 400px;
+              overflow-y: auto;
+              font-size: 0.85rem;
+              font-family: 'Courier New', monospace;
+            ">
+{{ log.preview }}</pre
+          >
+        </div>
+        {% if log.total_lines > 50 %}
+        <div class="card-footer text-muted small">
+          Showing last 50 lines of {{ log.total_lines }} total lines. Download to view complete log.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>
+  .log-preview {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .log-preview::-webkit-scrollbar {
+    width: 8px;
+  }
+  .log-preview::-webkit-scrollbar-track {
+    background: #2b2b2b;
+  }
+  .log-preview::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+  }
+  .log-preview::-webkit-scrollbar-thumb:hover {
+    background: #777;
+  }
+</style>
+
+<script>
+  // Auto-scroll each log preview to bottom
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".log-preview").forEach((pre) => {
+      pre.scrollTop = pre.scrollHeight;
+    });
+  });
+</script>
+{% endblock %}

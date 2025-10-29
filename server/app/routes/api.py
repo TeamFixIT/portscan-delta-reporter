@@ -4,7 +4,6 @@ API routes for client communication
 All Routes in this file will be in relation to communication with scanning clients
 """
 
-import logging
 from flask import Blueprint, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime, timedelta
@@ -15,13 +14,17 @@ from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
+from app.services.sse_service import sse_manager
 
 import uuid
 import json
 
 bp = Blueprint("api", __name__)
 
-logger = logging.getLogger(__name__)
+# Import logger from centralized logging config
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # ============== CLIENT CRUD OPERATIONS ==============
 
@@ -64,7 +67,7 @@ def register_client():
             client.last_seen = datetime.utcnow()
 
             # Only mark online if approved
-            if client.approved:
+            if client.is_approved:
                 client.mark_online()
                 message = "Client updated successfully"
             else:
@@ -79,7 +82,7 @@ def register_client():
                 scan_range=scan_range,
                 status="offline",
                 last_seen=datetime.utcnow(),
-                approved=False,  # New clients require approval
+                is_approved=False,  # New clients require approval
             )
             db.session.add(client)
             message = "Client registered successfully - awaiting approval"
@@ -92,7 +95,7 @@ def register_client():
                     "status": "success",
                     "message": message,
                     "client": client.to_dict(),
-                    "approved": client.approved,
+                    "approved": client.is_approved,
                 }
             ),
             200,
@@ -100,7 +103,7 @@ def register_client():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Client registration failed: {str(e)}")
+        logger.error(f"Client registration failed: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -133,7 +136,7 @@ def get_client(client_id):
         )
 
     except Exception as e:
-        current_app.logger.error(f"Failed to get client: {str(e)}")
+        logger.error(f"Failed to get client: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -155,7 +158,7 @@ def update_client(client_id):
             client.ip_address = data["ip_address"]
         if "status" in data and data["status"] in ["online", "offline", "scanning"]:
             # Only allow status changes if approved
-            if client.approved or data["status"] == "offline":
+            if client.is_approved or data["status"] == "offline":
                 client.status = data["status"]
 
         client.last_seen = datetime.utcnow()
@@ -174,13 +177,13 @@ def update_client(client_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to update client: {str(e)}")
+        logger.error(f"Failed to update client: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@bp.route("/clients/<client_id>", methods=["DELETE"])
-def delete_client(client_id):
-    """Delete a client (soft delete by marking as inactive)"""
+@bp.route("/clients/<client_id>/toggle", methods=["POST"])
+def toggle_client(client_id):
+    """Delete a client"""
     try:
         client = Client.query.filter_by(client_id=client_id).first()
 
@@ -189,8 +192,9 @@ def delete_client(client_id):
 
         # Mark as offline instead of deleting (preserve history)
         client.mark_offline()
+        client.is_hidden = not client.is_hidden
         db.session.commit()
-
+        logger.info(f"Client marked as offline: {client_id}")
         return (
             jsonify({"status": "success", "message": "Client marked as offline"}),
             200,
@@ -198,7 +202,7 @@ def delete_client(client_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to delete client: {str(e)}")
+        logger.error(f"Failed to delete client: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -240,7 +244,7 @@ def client_heartbeat(client_id):
             client.last_seen = datetime.utcnow()
 
             # Check approval status and respond accordingly
-            if not client.approved:
+            if not client.is_approved:
                 message = "Client updated but awaiting approval"
                 status_code = 403
             else:
@@ -257,24 +261,23 @@ def client_heartbeat(client_id):
                 scan_range=scan_range,
                 status="offline",
                 last_seen=datetime.utcnow(),
-                approved=False,  # New clients require approval
+                is_approved=False,  # New clients require approval
             )
             db.session.add(client)
             message = "Client registered successfully - awaiting approval"
             status_code = 403  # Return 403 for unapproved clients
 
-            current_app.logger.info(
-                f"New client registered: {client_id} ({ip_address})"
-            )
+            logger.info(f"New client registered: {client_id} ({ip_address})")
 
         db.session.commit()
 
+        sse_manager.broadcast_alert(message, "success")
         return (
             jsonify(
                 {
                     "status": "success",
                     "message": message,
-                    "approved": client.approved,
+                    "approved": client.is_approved,
                 }
             ),
             status_code,
@@ -282,7 +285,7 @@ def client_heartbeat(client_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Heartbeat failed: {str(e)}")
+        logger.error(f"Heartbeat failed: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -299,7 +302,7 @@ def approve_client(client_id):
         if not client:
             return jsonify({"status": "error", "message": "Client not found"}), 404
 
-        if client.approved:
+        if client.is_approved:
             return (
                 jsonify({"status": "success", "message": "Client is already approved"}),
                 200,
@@ -323,7 +326,7 @@ def approve_client(client_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to approve client: {str(e)}")
+        logger.error(f"Failed to approve client: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -337,7 +340,7 @@ def revoke_client_approval(client_id):
         if not client:
             return jsonify({"status": "error", "message": "Client not found"}), 404
 
-        if not client.approved:
+        if not client.is_approved:
             return (
                 jsonify({"status": "success", "message": "Client is not approved"}),
                 200,
@@ -363,7 +366,7 @@ def revoke_client_approval(client_id):
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to revoke client approval: {str(e)}")
+        logger.error(f"Failed to revoke client approval: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -444,10 +447,8 @@ def receive_scan_results(client_id):
                 existing_results[ip] = dict(new_data)
                 logger.debug(f"Added new IP {ip}")
 
-        # CRITICAL FIX: Reassign to trigger SQLAlchemy change detection
         scan_result.parsed_results = existing_results
 
-        # Force SQLAlchemy to recognize the change (if using PostgreSQL JSON/JSONB)
         from sqlalchemy.orm.attributes import flag_modified
 
         flag_modified(scan_result, "parsed_results")
@@ -495,7 +496,7 @@ def receive_scan_results(client_id):
         if data["status"] == "completed":
             if task:
                 task.complete()
-                
+
         elif data["status"] == "failed":
             if task:
                 task.mark_failed()
@@ -509,6 +510,16 @@ def receive_scan_results(client_id):
         elif any(task.status == "failed" for task in all_tasks):
             scan_result.status = "partial"
 
+        from app.services.alert_service import check_for_critical_ports
+
+        # Detect and update alerts for critical services
+        created_alerts, resolved_alerts = check_for_critical_ports(
+            result_id, existing_results
+        )
+        if created_alerts or resolved_alerts:
+            logger.info(
+                f"{len(created_alerts)} new alerts, {len(resolved_alerts)} resolved alerts processed."
+            )
         db.session.commit()
 
         logger.info(
@@ -641,5 +652,5 @@ def get_statistics():
         )
 
     except Exception as e:
-        current_app.logger.error(f"Failed to get statistics: {str(e)}")
+        logger.error(f"Failed to get statistics: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500

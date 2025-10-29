@@ -117,7 +117,7 @@ FLASK_ENV=production
 # Add other required environment variables
 ```
 
-### 5. Initialize Database (if applicable)
+### 5. initialise Database (if applicable)
 
 ```bash
 # Run database migrations

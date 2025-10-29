@@ -6,7 +6,6 @@ Port Scanner Delta Reporter server.
 """
 
 import os
-import logging
 import click
 from pathlib import Path
 from flask import Flask
@@ -27,15 +26,13 @@ migrate = Migrate()
 socketio = SocketIO()
 sess = Session()
 
-# Import scheduler & websocket service
+# Import scheduler
+from app.logging_config import setup_logging, get_logger
 from app.scheduler import scheduler_service
 from .config import Config
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
+
 
 def create_app():
     """
@@ -62,7 +59,7 @@ def create_app():
     db.init_app(app)
     login_manager.init_app(app)
 
-    # Initialize migrations directory if it doesn't exist
+    # initialise migrations directory if it doesn't exist
     migrations_dir = BASE_DIR / "migrations"
     migrate.init_app(app, db, directory=str(migrations_dir))
 
@@ -93,6 +90,21 @@ def create_app():
     # initialise scheduler and websocket
     scheduler_service.init_app(app)
 
+    # Create database tables
+    with app.app_context():
+        if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+
+            try:
+                setup_logging(
+                    app=app,
+                    log_level=os.getenv("LOG_LEVEL", "INFO"),
+                    log_dir=os.getenv("LOG_DIR", BASE_DIR / "logs"),
+                )
+                scheduler_service.start()
+                logger.info("Scheduler service started successfully")
+            except Exception as e:
+                logger.error(f"Failed to start scheduler: {str(e)}")
+
     # Register blueprints
     from app.routes.main import bp as main_bp
     from app.routes.auth import bp as auth_bp
@@ -101,6 +113,7 @@ def create_app():
     from app.routes.scan import bp as scan_bp
     from app.routes.dashboard import bp as dashboard_bp
     from app.routes.configs import bp as configs_bp
+    from app.routes.sse import sse_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(auth_bp, url_prefix="/auth")
@@ -109,6 +122,7 @@ def create_app():
     app.register_blueprint(dashboard_bp, url_prefix="/dashboard")
     app.register_blueprint(delta_bp, url_prefix="/api")
     app.register_blueprint(configs_bp, url_prefix="/admin")
+    app.register_blueprint(sse_bp, url_prefix="/api")
 
     # Register error handlers
     @app.errorhandler(404)
@@ -157,37 +171,11 @@ def create_app():
         db.create_all()
         click.echo("Database tables created.")
 
-        # Initialize configs after creating tables
-        try:
-            from app.services.configs_service import configs_service
-
-            configs_service.initialise_defaults()
-            click.echo("Default configs initialised.")
-        except Exception as e:
-            click.echo(f"Warning: Could not initialize configs: {e}", err=True)
-
-    @app.cli.command()
-    def init_configs():
-        """initialise default configs in database"""
-        from app.services.configs_service import configs_service
-
-        configs_service.initialise_defaults()
-        print("Default configs initialised")
-
     @app.cli.command()
     def reset_db():
         """Reset database and clear all APScheduler jobs."""
         if click.confirm("This will delete all data and all scheduled jobs. Continue?"):
             # Clear all scheduled jobs
-            try:
-                cleared = scheduler_service.clear_all_jobs()
-                if cleared:
-                    click.echo("All scheduled jobs cleared successfully.")
-                else:
-                    click.echo("No jobs cleared (scheduler not active).")
-            except Exception as e:
-                click.echo(f"Warning: Could not clear scheduled jobs: {e}")
-
             # Reset the database
             db.drop_all()
             db.create_all()
@@ -204,7 +192,7 @@ def create_app():
 
         if not migrations_dir.exists():
             click.echo(
-                "Error: Migrations not initialized. Run 'flask setup' first.", err=True
+                "Error: Migrations not initialised. Run 'flask setup' first.", err=True
             )
             return
 
@@ -214,7 +202,7 @@ def create_app():
         click.echo(f"Creating migration: {message}")
         try:
             create_migration(message=message, directory=str(migrations_dir))
-            click.echo("✓ Migration created successfully.")
+            click.echo("Migration created successfully.")
             click.echo("\nTo apply the migration, run: flask db upgrade")
         except Exception as e:
             click.echo(f"✗ Error creating migration: {e}", err=True)
@@ -246,7 +234,7 @@ def create_app():
 
     @app.cli.command()
     def setup():
-        """Complete setup: initialize migrations, create tables, and setup defaults"""
+        """Complete setup: initialise migrations, create tables, and setup defaults"""
         from flask_migrate import (
             init as migrate_init,
             migrate as create_migration,
@@ -255,13 +243,13 @@ def create_app():
 
         migrations_dir = BASE_DIR / "migrations"
 
-        # Step 1: Initialize Flask-Migrate if needed
+        # Step 1: initialise Flask-Migrate if needed
         if not migrations_dir.exists():
             click.echo("Step 1/4: Initializing Flask-Migrate...")
             migrate_init(directory=str(migrations_dir))
-            click.echo("✓ Migrations directory created.")
+            click.echo("Migrations directory created.")
         else:
-            click.echo("✓ Migrations directory already exists.")
+            click.echo("Migrations directory already exists.")
 
         # Step 2: Check if we need to create initial migration
         versions_dir = migrations_dir / "versions"
@@ -273,20 +261,20 @@ def create_app():
                 create_migration(
                     message="Initial migration", directory=str(migrations_dir)
                 )
-                click.echo("✓ Initial migration created.")
+                click.echo("Initial migration created.")
             except Exception as e:
                 click.echo(f"✗ Error creating migration: {e}", err=True)
                 click.echo("\nTrying to create tables directly...")
                 db.create_all()
-                click.echo("✓ Database tables created directly.")
+                click.echo("Database tables created directly.")
         else:
-            click.echo("\n✓ Migrations already exist.")
+            click.echo("\nMigrations already exist.")
 
         # Step 3: Run migrations
         click.echo("\nStep 3/4: Applying migrations...")
         try:
             upgrade(directory=str(migrations_dir))
-            click.echo("✓ Database migrations applied.")
+            click.echo("Database migrations applied.")
         except Exception as e:
             click.echo(f"Warning: Migration upgrade failed: {e}", err=True)
             click.echo("Checking if tables need to be created...")
@@ -295,7 +283,7 @@ def create_app():
             if not tables:
                 click.echo("Creating tables directly...")
                 db.create_all()
-                click.echo("✓ Database tables created.")
+                click.echo("Database tables created.")
 
         click.echo("\n" + "=" * 60)
         click.echo("Setup complete!")
@@ -306,14 +294,4 @@ def create_app():
         click.echo("\nOr run both: flask create-admin && portscanner-server")
         click.echo("=" * 60)
 
-    # Create database tables
-    with app.app_context():
-        if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-            try:
-                scheduler_service.start()
-                logger.info("Scheduler service started successfully")
-            except Exception as e:
-                logger.error(f"Failed to start scheduler: {str(e)}")
-
     return app
-``

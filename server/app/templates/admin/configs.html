@@ -1,13 +1,17 @@
 {% extends "base.html" %} {% block title %}Admin Configs{% endblock %} {% block content %}
 <div class="container-fluid py-4">
-  <div class="row mb-4">
-    <div class="col">
-      <h1><i class="bi bi-gear-fill me-2"></i>Application Configs</h1>
-      <p class="text-muted">
-        Manage and persist application configuration (requires restart to apply)
-      </p>
-    </div>
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Settings</li>
+    </ol>
+  </nav>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Application Configs</h2>
   </div>
+  <p class="text-muted">Manage and persist application configuration (requires restart to apply)</p>
 
   <!-- Alert for restart required -->
   <div
@@ -24,7 +28,7 @@
   <div id="messageContainer"></div>
 
   <!-- Navigation Tabs -->
-  <ul class="nav nav-tabs mb-4" id="configsTabs" role="tablist">
+  <ul class="nav nav-tabs mt-4" id="configsTabs" role="tablist">
     <li class="nav-item" role="presentation">
       <button
         class="nav-link active"
@@ -68,7 +72,9 @@
   </ul>
 
   <!-- Tab Content -->
-  <div class="tab-content" id="configsTabContent">
+  <div
+    class="tab-content border-end border-bottom border-start rounded-bottom p-4 bg-body"
+    id="configsTabContent">
     <!-- ENVIRONMENT -->
     <div class="tab-pane fade show active" id="env-config" role="tabpanel">
       {% include 'admin/configs/_env.html' %}

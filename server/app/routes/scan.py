@@ -157,33 +157,33 @@ def get_scan(scan_id):
 @bp.route("/scans", methods=["POST"])
 @login_required
 def create_scan():
-    """Create a new scan configuration"""
     try:
-        data = request.get_json()
+        # Extract data from form (or request.json if needed)
+        name = request.form.get("name")
+        description = request.form.get("description")
+        target = request.form.get("target")
+        ports = request.form.get("ports", "1-65535")
+        scan_arguments = request.form.get("scan_arguments", "")
+        interval_minutes = int(request.form.get("interval_minutes", 10080))
+        initial_interval = int(request.form.get("initial_interval", 1))
+        is_active = "is_active" in request.form
+        is_scheduled = "is_scheduled" in request.form
 
-        # Validate required fields
-        if not data.get("name"):
-            return jsonify({"status": "error", "message": "Scan name is required"}), 400
-        if not data.get("target"):
-            return jsonify({"status": "error", "message": "Target is required"}), 400
-
-        # Create new scan
+        # Save to DB
         scan = Scan(
             user_id=current_user.id,
-            name=data["name"],
-            description=data.get("description", ""),
-            target=data["target"],
-            ports=data.get("ports", "1-1000"),
-            scan_arguments=data.get("scan_arguments", ""),
-            interval_minutes=data.get("interval_minutes", 60),
-            is_active=data.get("is_active", True),
-            is_scheduled=data.get("is_scheduled", False),
-        )
+            name=name,
+            description=description,
+            target=target,
+            ports=ports,
+            scan_arguments=scan_arguments,
+            interval_minutes=interval_minutes,
+            is_active=is_active,
+            is_scheduled=is_scheduled,
+        )  # Calculate next run if scheduled
 
-        # Calculate next run if scheduled
         if scan.is_scheduled and scan.is_active:
             # Use initial_interval if provided for immediate first execution
-            initial_interval = data.get("initial_interval", 1)
             scan.next_run = datetime.utcnow() + timedelta(minutes=initial_interval)
 
         db.session.add(scan)
@@ -193,21 +193,13 @@ def create_scan():
         if scan.is_scheduled and scan.is_active:
             scheduler_service.schedule_scan(scan)
 
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Scan created successfully",
-                    "scan": scan.to_dict(),
-                }
-            ),
-            201,
-        )
+        flash(f"Scan '{name}' created successfully!", "success")
+        return redirect(url_for("dashboard.scans"))
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Failed to create scan: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        flash(f"Error creating scan: {e}", "danger")
+        return redirect(url_for("dashboard.scans"))
 
 
 @bp.route("/scans/<int:scan_id>", methods=["POST", "PUT"])

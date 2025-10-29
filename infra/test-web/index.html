@@ -495,7 +495,7 @@
         const existingWindows = container.querySelectorAll(".window-btn");
         existingWindows.forEach((w) => w.remove());
 
-        // Initialize window states for this service
+        // initialise window states for this service
         if (!windowStates[house.service]) {
           windowStates[house.service] = {};
         }
@@ -789,7 +789,7 @@
 
       dragElement(document.getElementById("floatingControls"));
 
-      // Initialize
+      // initialise
       initStreetView();
       refreshStatus();
 

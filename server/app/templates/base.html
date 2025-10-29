@@ -4,7 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}Port Scanner Delta Reporter{% endblock %}</title>
+    <script>
+      (function () {
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+        const stored = localStorage.getItem("theme"); // "dark" | "light" | null
+        const initial = stored || (prefersDark.matches ? "dark" : "light");
 
+        // Bootstrap uses data-bs-theme
+        document.documentElement.setAttribute("data-bs-theme", initial);
+        localStorage.setItem("theme", initial);
+      })();
+    </script>
     <!-- Bootstrap & Icons -->
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
@@ -17,41 +27,76 @@
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-    <!-- Favicon for browser tab -->
+
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/delta.png') }}" />
+
     {% block extra_css %}{% endblock %}
   </head>
-
   <body>
-    <div class="d-flex">
+    <!-- Live Alert Container for SSE -->
+    <div
+      id="alert-container"
+      class="position-fixed top-0 end-0 p-3"
+      style="z-index: 1055; width: auto; max-width: 400px"></div>
+    <!-- Theme Toggle Button (Fixed Position) -->
+    <button
+      id="theme-toggle"
+      class="btn btn-outline-primary btn-sm position-fixed top-0 end-0 m-3 shadow-sm"
+      style="z-index: 1050"
+      aria-label="Toggle theme">
+      <i class="bi bi-moon"></i>
+    </button>
+
+    <!-- Main Layout Container -->
+    <div class="d-flex min-vh-100">
+      <!-- Sidebar (conditionally rendered) -->
       {% if show_sidebar %} {% include 'partials/sidebar.html' %} {% endif %}
 
-      <!-- MAIN CONTENT AREA -->
-      <main class="flex-grow-1 p-4">
-        {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %} {% for
-        category, message in messages %}
-        <div
-          class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
-          role="alert">
-          {{ message }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <!-- Main Content Area -->
+      <main
+        class="flex-grow-1 overflow-auto"
+        {%
+        if
+        show_sidebar
+        %}style="margin-left: 260px;"
+        {%
+        endif
+        %}>
+        <div class="container-fluid p-3 p-md-4">
+          <!-- Flash Messages -->
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+          <div class="row mb-3">
+            <div class="col-12">
+              {% for category, message in messages %}
+              <div
+                class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show"
+                role="alert">
+                {{ message }}
+                <button
+                  type="button"
+                  class="btn-close"
+                  data-bs-dismiss="alert"
+                  aria-label="Close"></button>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %} {% endwith %}
+
+          <!-- Page Content -->
+          {% block content %}{% endblock %}
         </div>
-        {% endfor %} {% endif %} {% endwith %} {% block content %}{% endblock %}
-        <div
-          id="websocket-alerts"
-          class="toast-container position-fixed bottom-0 start-0 p-3"></div>
       </main>
-      <div class="position-absolute top-0 end-0 m-4">
-        <button id="theme-toggle" class="btn btn-outline-primary btn-sm ms-3">
-          <i class="bi bi-moon"></i>
-        </button>
-      </div>
     </div>
 
+    <!-- Bootstrap JS -->
     <script
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
       integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
       crossorigin="anonymous"></script>
+
+    <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
     {% block extra_js %}{% endblock %}

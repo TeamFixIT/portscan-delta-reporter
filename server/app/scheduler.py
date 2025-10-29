@@ -1,8 +1,12 @@
 """
 Scheduler service for managing scheduled scans
+
+Key updates for logging:
+- Use get_logger() from logging_config instead of direct logging.getLogger()
+- Add detailed logging for all scheduler events
+- Log job lifecycle events (added, removed, executed, failed)
 """
 
-import logging
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
@@ -19,7 +23,10 @@ from sqlalchemy import and_
 import uuid
 import json
 
-logger = logging.getLogger(__name__)
+# Import logger from centralized logging config
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Store app reference at module level (not pickled, set at runtime)
 _app_instance = None
@@ -48,14 +55,15 @@ def _check_client_heartbeats_job():
             offline_count = 0
             for client in stale_clients:
                 logger.info(
-                    f"Marking client {client.client_id} ({client.hostname}) offline - last seen: {client.last_seen}"
+                    f"Marking client {client.client_id} ({client.hostname}) offline - "
+                    f"last seen: {client.last_seen}"
                 )
                 client.mark_offline()
                 offline_count += 1
 
             if offline_count > 0:
                 db.session.commit()
-                logger.info(
+                logger.warning(
                     f"Marked {offline_count} clients offline due to missed heartbeats"
                 )
 
@@ -63,12 +71,13 @@ def _check_client_heartbeats_job():
             online_clients = Client.query.filter_by(status="online").count()
             offline_clients = Client.query.filter_by(status="offline").count()
 
-            logger.info(
-                f"Client Status Summary - Total: {total_clients}, Online: {online_clients}, Offline: {offline_clients}"
+            logger.debug(
+                f"Client Status - Total: {total_clients}, "
+                f"Online: {online_clients}, Offline: {offline_clients}"
             )
 
         except Exception as e:
-            logger.error(f"Error checking client heartbeats: {str(e)}")
+            logger.error(f"Error checking client heartbeats: {str(e)}", exc_info=True)
             db.session.rollback()
 
 
@@ -85,6 +94,8 @@ def _execute_scan(scan_id):
     import uuid
     import json
 
+    logger.info(f"Starting scan execution for scan_id={scan_id}")
+
     with _app_instance.app_context():
         try:
             from app.models.scan import Scan
@@ -95,21 +106,37 @@ def _execute_scan(scan_id):
 
             scan = Scan.query.get(scan_id)
             if not scan:
+                logger.error(f"Scan {scan_id} not found")
                 raise ValueError(f"Scan {scan_id} not found")
+
             if not scan.is_active:
-                logger.info(f"Scan {scan_id} is inactive, skipping execution")
+                logger.info(
+                    f"Scan {scan_id} ({scan.name}) is inactive, skipping execution"
+                )
                 return {
                     "status": "success",
                     "message": f"Scan {scan_id} is inactive, skipped",
                 }
 
+            logger.info(
+                f"Executing scan: {scan.name} (ID: {scan_id}, Target: {scan.target})"
+            )
+
             # Parse scan targets
             try:
                 scan_network = ipaddress.ip_network(scan.target, strict=False)
                 scan_targets = [str(ip) for ip in scan_network.hosts()]
+                logger.debug(
+                    f"Parsed {len(scan_targets)} targets from network {scan.target}"
+                )
             except Exception:
                 scan_targets = [t.strip() for t in scan.target.split(",") if t.strip()]
+                logger.debug(
+                    f"Parsed {len(scan_targets)} targets from comma-separated list"
+                )
+
             if not scan_targets:
+                logger.error(f"No valid targets parsed for scan {scan_id}")
                 raise ValueError(f"No valid targets parsed for scan {scan_id}")
 
             # Find all online clients
@@ -119,7 +146,11 @@ def _execute_scan(scan_id):
                 Client.last_seen >= now - timedelta(minutes=5),
                 Client.scan_range.isnot(None),
             ).all()
+
+            logger.info(f"Found {len(clients)} online clients for scan delegation")
+
             if not clients:
+                logger.error(f"No active clients available for scan {scan_id}")
                 raise RuntimeError(f"No active clients available for scan {scan_id}")
 
             # Match clients to scan targets
@@ -131,6 +162,10 @@ def _execute_scan(scan_id):
                     overlap = set(scan_targets) & client_ips
                     if overlap:
                         client_ip_map[client] = overlap
+                        logger.debug(
+                            f"Client {client.client_id} ({client.hostname}) "
+                            f"can scan {len(overlap)} targets"
+                        )
                 except Exception as e:
                     logger.warning(
                         f"Invalid scan_range for client {client.client_id}: {e}"
@@ -138,7 +173,7 @@ def _execute_scan(scan_id):
 
             if not client_ip_map:
                 msg = f"No clients with matching scan_range for scan {scan_id}"
-                logger.warning(msg)
+                logger.error(msg)
                 return {"status": "error", "message": msg}
 
             # Create result record
@@ -151,6 +186,11 @@ def _execute_scan(scan_id):
             db.session.flush()
             result_id = scan_result.id
             task_group_id = str(uuid.uuid4())
+
+            logger.info(
+                f"Created scan result (ID: {result_id}, Group: {task_group_id})"
+            )
+
             assigned_targets = set()
             triggered_clients = 0
 
@@ -158,8 +198,10 @@ def _execute_scan(scan_id):
                 targets_for_client = list(ips - assigned_targets)
                 if not targets_for_client:
                     continue
+
                 assigned_targets.update(targets_for_client)
                 task_id = str(uuid.uuid4())
+
                 task = ScanTask(
                     task_id=task_id,
                     task_group_id=task_group_id,
@@ -172,10 +214,13 @@ def _execute_scan(scan_id):
                     scan_result_id=scan_result.id,
                 )
                 db.session.add(task)
+
                 try:
                     logger.info(
-                        f"Triggering scan on client {client.ip_address} for {len(targets_for_client)} targets."
+                        f"Triggering scan on client {client.client_id} ({client.ip_address}) "
+                        f"for {len(targets_for_client)} targets"
                     )
+
                     url = f"http://{client.ip_address}:{client.port}/scan"
                     payload = {
                         "scan_id": scan_id,
@@ -185,20 +230,23 @@ def _execute_scan(scan_id):
                         "ports": scan.ports,
                         "scan_arguments": scan.scan_arguments,
                     }
+
                     req = requests.post(url, json=payload, timeout=5)
                     req.raise_for_status()
+
                     logger.info(
-                        f"Successfully triggered scan on client {client.client_id} for {len(targets_for_client)} targets."
+                        f"Successfully triggered scan on client {client.client_id}"
                     )
                     triggered_clients += 1
+
                 except requests.exceptions.RequestException as e:
                     logger.warning(
-                        f"Failed to contact client at {client.ip_address}: {e}"
+                        f"✗ Failed to contact client at {client.ip_address}: {e}"
                     )
-                    continue  # Continue to next client instead of failing the scan
+                    continue
                 except Exception as e:
                     logger.warning(
-                        f"Error triggering scan on client {client.client_id}: {e}"
+                        f"✗ Error triggering scan on client {client.client_id}: {e}"
                     )
                     continue
 
@@ -212,24 +260,27 @@ def _execute_scan(scan_id):
             unassigned_targets = set(scan_targets) - assigned_targets
             if unassigned_targets:
                 logger.warning(
-                    f"Scan {scan_id} is partial: {len(unassigned_targets)} targets not assigned: {unassigned_targets}"
+                    f"Scan {scan_id} is partial: {len(unassigned_targets)} targets "
+                    f"not assigned (out of {len(scan_targets)} total)"
                 )
                 scan_result.type = "partial"
             else:
+                logger.info(f"All {len(scan_targets)} targets assigned successfully")
                 scan_result.type = "full"
 
             # Finalize and commit
             scan.update_last_run()
             scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
             db.session.commit()
-            msg = (
-                f"Successfully delegated scan {scan_id} to {triggered_clients} clients. "
-                f"{'Partial scan due to unassigned targets' if unassigned_targets else 'All targets assigned'}."
+
+            logger.info(
+                f"Scan {scan_id} delegated to {triggered_clients} clients. "
+                f"Next run: {scan.next_run}"
             )
-            logger.info(msg)
+
             return {
                 "status": "success",
-                "message": msg,
+                "message": f"Scan delegated to {triggered_clients} clients",
                 "result_id": result_id,
                 "clients_triggered": triggered_clients,
                 "unassigned_targets": (
@@ -239,7 +290,7 @@ def _execute_scan(scan_id):
 
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error executing scan {scan_id}: {e}")
+            logger.error(f"Error executing scan {scan_id}: {e}", exc_info=True)
             return {
                 "status": "error",
                 "message": f"Error executing scan {scan_id}: {str(e)}",
@@ -261,6 +312,8 @@ class SchedulerService:
         self.app = app
         _app_instance = app  # Store at module level for scheduled jobs
 
+        logger.info("Initializing SchedulerService")
+
         # Configure job stores and executors
         jobstores = {
             "default": SQLAlchemyJobStore(
@@ -275,9 +328,9 @@ class SchedulerService:
         }
 
         job_defaults = {
-            "coalesce": True,  # Combine multiple pending executions of same job
-            "max_instances": 1,  # Only one instance of each job at a time
-            "misfire_grace_time": 60,  # Job can be up to 60 seconds late
+            "coalesce": True,
+            "max_instances": 1,
+            "misfire_grace_time": 60,
         }
 
         # Create scheduler
@@ -298,22 +351,29 @@ class SchedulerService:
         # Register cleanup on app teardown
         app.teardown_appcontext(self._teardown)
 
+        logger.info("SchedulerService initialised successfully")
+
     def start(self):
         """Start the scheduler"""
         if not self.scheduler.running:
             self.scheduler.start()
+            logger.info("=" * 60)
             logger.info("Scheduler started")
 
             # Load existing scheduled scans
             self._load_scheduled_scans()
 
+            # Schedule heartbeat check
             self.schedule_client_heartbeats_check()
+
+            logger.info("=" * 60)
 
     def shutdown(self, wait=True):
         """Shutdown the scheduler"""
         if self.scheduler and self.scheduler.running:
+            logger.info("Shutting down scheduler...")
             self.scheduler.shutdown(wait=wait)
-            logger.info("Scheduler shutdown")
+            logger.info("Scheduler shutdown complete")
 
     def _teardown(self, exception=None):
         """Cleanup on app teardown"""
@@ -326,23 +386,23 @@ class SchedulerService:
                 from app.models.scan import Scan
                 from app import db
 
-                # Get all active scheduled scans
                 scans = Scan.query.filter(
                     and_(Scan.is_scheduled == True, Scan.is_active == True)
                 ).all()
 
+                logger.info(f"Loading {len(scans)} scheduled scans from database")
+
                 for scan in scans:
                     self.schedule_scan(scan)
 
-                logger.info(f"Loaded {len(scans)} scheduled scans")
+                logger.info(f"Successfully loaded {len(scans)} scheduled scans")
 
         except Exception as e:
-            logger.error(f"Failed to load scheduled scans: {str(e)}")
+            logger.error(f"Failed to load scheduled scans: {str(e)}", exc_info=True)
 
     def schedule_client_heartbeats_check(self):
         """Schedule the client heartbeat check job"""
         try:
-            # Don't pass app - the function will use current_app
             self.scheduler.add_job(
                 func=_check_client_heartbeats_job,
                 trigger="interval",
@@ -350,9 +410,9 @@ class SchedulerService:
                 id="check_heartbeats",
                 replace_existing=True,
             )
-            logger.info("Scheduled client heartbeat check job")
+            logger.info("Scheduled client heartbeat check (every 3 minutes)")
         except Exception as e:
-            logger.error(f"Failed to schedule heartbeat check: {str(e)}")
+            logger.error(f"Failed to schedule heartbeat check: {str(e)}", exc_info=True)
             return None
 
     def schedule_scan(self, scan):
@@ -363,6 +423,7 @@ class SchedulerService:
             # Remove existing job if present
             if self.scheduler.get_job(job_id):
                 self.scheduler.remove_job(job_id)
+                logger.debug(f"Removed existing job for scan {scan.id}")
 
             # Calculate first run time
             if scan.next_run and scan.next_run > datetime.utcnow():
@@ -384,13 +445,14 @@ class SchedulerService:
             )
 
             logger.info(
-                f"Scheduled scan {scan.id} ({scan.name}) to run every {scan.interval_minutes} minutes"
+                f"Scheduled scan '{scan.name}' (ID: {scan.id}) - "
+                f"Interval: {scan.interval_minutes}min, First run: {first_run_time}"
             )
 
             return job
 
         except Exception as e:
-            logger.error(f"Failed to schedule scan {scan.id}: {str(e)}")
+            logger.error(f"Failed to schedule scan {scan.id}: {str(e)}", exc_info=True)
             return None
 
     def unschedule_scan(self, scan_id):
@@ -403,56 +465,58 @@ class SchedulerService:
                 logger.info(f"Unscheduled scan {scan_id}")
                 return True
 
+            logger.debug(f"Scan {scan_id} was not scheduled")
             return False
 
         except Exception as e:
-            logger.error(f"Failed to unschedule scan {scan_id}: {str(e)}")
+            logger.error(
+                f"Failed to unschedule scan {scan_id}: {str(e)}", exc_info=True
+            )
             return False
 
-    def reschedule_scan(self, scan_id, interval_minutes):
-        """Update the schedule for an existing scan"""
-        try:
-            job_id = f"scan_{scan_id}"
-            job = self.scheduler.get_job(job_id)
+    # Event Listeners
 
-            if job:
-                # Reschedule with new interval
-                self.scheduler.reschedule_job(
-                    job_id, trigger="interval", minutes=interval_minutes
+    def _job_executed_listener(self, event):
+        """Handle successful job execution"""
+        logger.info(f"Job '{event.job_id}' executed successfully")
+
+    def _job_error_listener(self, event):
+        """Handle job execution errors"""
+        logger.error(
+            f"✗ Job '{event.job_id}' crashed with exception: {event.exception}",
+            exc_info=event.exception,
+        )
+
+        if event.job_id.startswith("scan_"):
+            scan_id = event.job_id.replace("scan_", "")
+            try:
+                with self.app.app_context():
+                    from app.models.scan import Scan
+
+                    scan = Scan.query.get(scan_id)
+                    if not scan or not scan.is_scheduled:
+                        logger.warning(
+                            f"Scan {scan_id} no longer exists or is not scheduled, "
+                            f"removing from scheduler"
+                        )
+                        self.unschedule_scan(scan_id)
+            except Exception as db_error:
+                logger.error(
+                    f"Failed to check scan {scan_id} in database: {db_error}",
+                    exc_info=True,
                 )
-                logger.info(
-                    f"Rescheduled scan {scan_id} with interval {interval_minutes} minutes"
-                )
-                return True
 
-            return False
+    def _job_missed_listener(self, event):
+        """Handle missed job executions"""
+        logger.warning(f"Job '{event.job_id}' missed scheduled run time")
 
-        except Exception as e:
-            logger.error(f"Failed to reschedule scan {scan_id}: {str(e)}")
-            return False
+    def _job_added_listener(self, event):
+        """Handle job addition"""
+        logger.debug(f"Job '{event.job_id}' added to scheduler")
 
-    def get_job_info(self, scan_id):
-        """Get information about a scheduled job"""
-        try:
-            job_id = f"scan_{scan_id}"
-            job = self.scheduler.get_job(job_id)
-
-            if job:
-                return {
-                    "id": job.id,
-                    "name": job.name,
-                    "next_run_time": (
-                        job.next_run_time.isoformat() if job.next_run_time else None
-                    ),
-                    "trigger": str(job.trigger),
-                    "pending": job.pending,
-                }
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Failed to get job info for scan {scan_id}: {str(e)}")
-            return None
+    def _job_removed_listener(self, event):
+        """Handle job removal"""
+        logger.debug(f"Job '{event.job_id}' removed from scheduler")
 
     def get_all_jobs(self):
         """Get information about all scheduled jobs"""
@@ -472,112 +536,9 @@ class SchedulerService:
             return jobs
 
         except Exception as e:
-            logger.error(f"Failed to get all jobs: {str(e)}")
+            logger.error(f"Failed to get all jobs: {str(e)}", exc_info=True)
             return []
-
-    def clear_all_jobs(self):
-        """Remove all scheduled jobs from the scheduler"""
-        try:
-            if not self.scheduler:
-                logger.warning("Scheduler not initialised")
-                return False
-
-            jobs = self.scheduler.get_jobs()
-            for job in jobs:
-                self.scheduler.remove_job(job.id)
-
-            logger.info(f"Cleared {len(jobs)} scheduled jobs")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to clear all jobs: {str(e)}")
-            return False
-
-    def pause_scan(self, scan_id):
-        """Pause a scheduled scan"""
-        try:
-            job_id = f"scan_{scan_id}"
-            job = self.scheduler.get_job(job_id)
-
-            if job:
-                job.pause()
-                logger.info(f"Paused scan {scan_id}")
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"Failed to pause scan {scan_id}: {str(e)}")
-            return False
-
-    def resume_scan(self, scan_id):
-        """Resume a paused scan"""
-        try:
-            job_id = f"scan_{scan_id}"
-            job = self.scheduler.get_job(job_id)
-
-            if job:
-                job.resume()
-                logger.info(f"Resumed scan {scan_id}")
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"Failed to resume scan {scan_id}: {str(e)}")
-            return False
-
-    # Event Listeners
-
-    def _job_executed_listener(self, event):
-        """Handle successful job execution"""
-        logger.debug(f"Job {event.job_id} executed successfully")
-
-    def _job_error_listener(self, event):
-        """Handle job execution errors"""
-        logger.error(f"Job {event.job_id} crashed: {event.exception}")
-
-        # Could implement retry logic or notifications here
-        if event.job_id.startswith("scan_"):
-            scan_id = event.job_id.replace("scan_", "")
-            # Check if scan still exists and is scheduled in database
-            try:
-                with self.app.app_context():
-                    from app.models.scan import Scan
-
-                    scan = Scan.query.get(scan_id)
-                    if not scan or not scan.is_scheduled:
-                        logger.info(
-                            f"Scan {scan_id} no longer exists or is not scheduled, removing from scheduler"
-                        )
-                        self.unschedule_scan(scan_id)
-                    else:
-                        logger.error(
-                            f"Scan {scan_id} failed during scheduled execution."
-                        )
-            except Exception as db_error:
-                logger.error(f"Failed to check scan {scan_id} in database: {db_error}")
-
-    def _job_missed_listener(self, event):
-        """Handle missed job executions"""
-        logger.warning(f"Job {event.job_id} missed scheduled run time")
-
-        # Could implement catch-up logic here
-
-    def _job_added_listener(self, event):
-        """Handle job addition"""
-        logger.debug(f"Job {event.job_id} added to scheduler")
-
-    def _job_removed_listener(self, event):
-        """Handle job removal"""
-        logger.debug(f"Job {event.job_id} removed from scheduler")
 
 
 # Create a global instance
 scheduler_service = SchedulerService()
-
-
-def init_scheduler(app):
-    """initialise the scheduler with the Flask app"""
-    scheduler_service.init_app(app)
-    return scheduler_service

@@ -576,6 +576,8 @@ class PortScannerClient:
         thread = threading.Thread(target=heartbeat_loop, daemon=True)
         thread.start()
 
+
+
     def perform_scan(self, scan_request: ScanRequest):
         """Perform a complete scan and send results to server"""
         start_time = time.time()
@@ -894,22 +896,10 @@ def main():
         logger.error(f"Failed to create client: {e}")
         sys.exit(1)
 
-    # Create client
-    try:
-        client = PortScannerClient(args.config)
-    except Exception as e:
-        logger.error(f"Failed to create client: {e}")
-        sys.exit(1)
-
     # Override server URL if provided
     if args.server:
         client.config["server_url"] = args.server
         logger.info(f"Using server URL: {args.server}")
-
-    # Override port if provided
-    if args.port:
-        client.config["client_port"] = args.port
-        logger.info(f"Using client port: {args.port}")
 
     # Run client
     try:

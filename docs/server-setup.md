@@ -43,7 +43,7 @@ cp .env.example .env
 # - SQLALCHEMY_DATABASE_URI (optional, defaults to SQLite)
 ```
 
-### 4. Initialize Database
+### 4. initialise Database
 
 ```bash
 # Run complete setup (this does everything in one command)
@@ -51,10 +51,10 @@ flask setup
 ```
 
 This command will:
-1. Initialize Flask-Migrate
+1. initialise Flask-Migrate
 2. Create initial migration
 3. Apply migrations to database
-4. Initialize default settings
+4. initialise default settings
 
 ### 5. Create Admin User
 
@@ -90,7 +90,7 @@ flask db upgrade
 # Rollback last migration
 flask db downgrade
 
-# Initialize database tables (alternative to migrations)
+# initialise database tables (alternative to migrations)
 flask init-db
 
 # Reset database (WARNING: deletes all data)

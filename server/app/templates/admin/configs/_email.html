@@ -1,81 +1,76 @@
 <div class="card">
-  <div class="card-header bg-primary text-white">
-    <h5 class="mb-0"><i class="bi bi-envelope me-2"></i>Email Configuration</h5>
-  </div>
-  <div class="card-body">
-    <form id="emailConfigsForm">
-      <div class="row">
-        <div class="col-md-8 mb-3">
-          <label for="mail_server" class="form-label">SMTP Server</label>
-          <input
-            type="text"
-            class="form-control"
-            id="mail_server"
-            name="MAIL_SERVER"
-            value="{{ env_config.MAIL_SERVER }}"
-            readonly />
-        </div>
-        <div class="col-md-4 mb-3">
-          <label for="mail_port" class="form-label">Port</label>
-          <input
-            type="number"
-            class="form-control"
-            id="mail_port"
-            name="MAIL_PORT"
-            value="{{ env_config.MAIL_PORT }}"
-            readonly />
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <div class="form-check">
-          <input class="form-check-input" type="checkbox" id="mail_use_tls" name="MAIL_USE_TLS" {%
-          if env_config.MAIL_USE_TLS == "true" %}checked{% endif %}>
-          <label class="form-check-label" for="mail_use_tls">Use TLS</label>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label for="mail_username" class="form-label">Username</label>
+  <form id="emailConfigsForm">
+    <div class="row">
+      <div class="col-md-8 mb-3">
+        <label for="mail_server" class="form-label">SMTP Server</label>
         <input
           type="text"
           class="form-control"
-          id="mail_username"
-          name="MAIL_USERNAME"
-          value="{{ env_config.MAIL_USERNAME }}"
+          id="mail_server"
+          name="MAIL_SERVER"
+          value="{{ env_config.MAIL_SERVER }}"
           readonly />
       </div>
-
-      <div class="mb-3">
-        <label for="mail_password" class="form-label">Password</label>
+      <div class="col-md-4 mb-3">
+        <label for="mail_port" class="form-label">Port</label>
         <input
-          type="password"
+          type="number"
           class="form-control"
-          id="mail_password"
-          name="MAIL_PASSWORD"
-          placeholder="********" />
-        <div class="form-text">Leave empty to keep current password</div>
-      </div>
-
-      <div class="mb-3">
-        <label for="mail_sender" class="form-label">Sender Address</label>
-        <input
-          type="text"
-          class="form-control"
-          id="mail_sender"
-          name="MAIL_SENDER"
-          value="{{ env_config.MAIL_SENDER }}"
+          id="mail_port"
+          name="MAIL_PORT"
+          value="{{ env_config.MAIL_PORT }}"
           readonly />
       </div>
+    </div>
 
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <i class="bi bi-save me-1"></i>Save Configs
-        </button>
-        <button type="button" class="btn btn-info" id="testEmailBtn">
-          <i class="bi bi-send me-1"></i>Send Test Email
-        </button>
+    <div class="mb-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" id="mail_use_tls" name="MAIL_USE_TLS" {% if
+        env_config.MAIL_USE_TLS == "true" %}checked{% endif %}>
+        <label class="form-check-label" for="mail_use_tls">Use TLS</label>
       </div>
-    </form>
-  </div>
+    </div>
+
+    <div class="mb-3">
+      <label for="mail_username" class="form-label">Username</label>
+      <input
+        type="text"
+        class="form-control"
+        id="mail_username"
+        name="MAIL_USERNAME"
+        value="{{ env_config.MAIL_USERNAME }}"
+        readonly />
+    </div>
+
+    <div class="mb-3">
+      <label for="mail_password" class="form-label">Password</label>
+      <input
+        type="password"
+        class="form-control"
+        id="mail_password"
+        name="MAIL_PASSWORD"
+        placeholder="********" />
+      <div class="form-text">Leave empty to keep current password</div>
+    </div>
+
+    <div class="mb-3">
+      <label for="mail_sender" class="form-label">Sender Address</label>
+      <input
+        type="text"
+        class="form-control"
+        id="mail_sender"
+        name="MAIL_SENDER"
+        value="{{ env_config.MAIL_SENDER }}"
+        readonly />
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-save me-1"></i>Save Configs
+      </button>
+      <button type="button" class="btn btn-info" id="testEmailBtn">
+        <i class="bi bi-send me-1"></i>Send Test Email
+      </button>
+    </div>
+  </form>
 </div>

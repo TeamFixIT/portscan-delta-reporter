@@ -1,5 +1,6 @@
 {% extends "base.html" %} {% block content %}
-<div class="container py-4">
+<div class="container-fluid py-4">
+  <!-- Breadcrumb -->
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
@@ -9,6 +10,7 @@
     </ol>
   </nav>
 
+  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h2 class="mb-0">Scan Dashboard</h2>
     <a href="{{ url_for('dashboard.create_scan') }}" class="btn btn-success">
@@ -16,23 +18,53 @@
     </a>
   </div>
 
+  <!-- Filter Toolbar -->
+  <div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="toggle-active" />
+      <label class="form-check-label" for="toggle-active">Show Active Only</label>
+    </div>
+
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="toggle-scheduled" />
+      <label class="form-check-label" for="toggle-scheduled">Show Scheduled Only</label>
+    </div>
+
+    <div>
+      <select id="sort-dropdown" class="form-select form-select-sm">
+        <option value="recent" selected>Most Recent</option>
+        <option value="oldest">Oldest</option>
+        <option value="lastrun">Last Run</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
+    <table id="scans-table" class="table table-hover align-middle">
       <thead class="table">
         <tr>
-          <th scope="col">Name</th>
-          <th scope="col">Target</th>
-          <th scope="col">Ports</th>
-          <th scope="col">Interval</th>
-          <th scope="col">Active</th>
-          <th scope="col">Scheduled</th>
-          <th scope="col">Last Run</th>
-          <th scope="col" class="text-center">Actions</th>
+          <th>Name</th>
+          <th>Target</th>
+          <th>Ports</th>
+          <th>Interval</th>
+          <th>Active</th>
+          <th>Scheduled</th>
+          <th>Last Run</th>
+          <th>Created</th>
+          <th class="text-center">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for scan in scans %}
-        <tr id="scan-row-{{ scan.id }}">
+        <tr
+          id="scan-row-{{ scan.id }}"
+          data-created="{{ scan.created_at }}"
+          data-lasrun="{{ scan.last_run or '' }}"
+          data-name="{{ scan.name|lower }}"
+          data-is-active="{{ scan.is_active|lower }}"
+          data-is-scheduled="{{ scan.is_scheduled|lower }}">
           <td>
             <a
               href="{{ url_for('dashboard.view_scan', scan_id=scan.id) }}"
@@ -55,6 +87,7 @@
             </span>
           </td>
           <td>{{ scan.last_run or 'Never' }}</td>
+          <td>{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
           <td class="text-center">
             <div class="btn-group btn-group-sm" role="group">
               <button
@@ -86,7 +119,7 @@
         </tr>
         {% else %}
         <tr>
-          <td colspan="8" class="text-center text-muted py-4">
+          <td colspan="9" class="text-center text-muted py-4">
             <i class="bi bi-search me-2"></i> No scans found. Click “New Scan” to create one.
           </td>
         </tr>
@@ -97,6 +130,67 @@
 </div>
 
 <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const rows = Array.from(document.querySelectorAll("#scans-table tbody tr"));
+    const toggleActive = document.getElementById("toggle-active");
+    const toggleScheduled = document.getElementById("toggle-scheduled");
+    const sortDropdown = document.getElementById("sort-dropdown");
+
+    function applyFilters() {
+      const activeOnly = toggleActive.checked;
+      const scheduledOnly = toggleScheduled.checked;
+
+      rows.forEach((row) => {
+        const isActive = row.dataset.isActive === "true";
+        const isScheduled = row.dataset.isScheduled === "true";
+        let visible = true;
+
+        if (activeOnly && !isActive) visible = false;
+        if (scheduledOnly && !isScheduled) visible = false;
+
+        row.style.display = visible ? "" : "none";
+      });
+    }
+
+    function applySorting() {
+      const sortValue = sortDropdown.value;
+      const tbody = document.querySelector("#scans-table tbody");
+
+      const sorted = [...rows].sort((a, b) => {
+        const dateA = new Date(a.dataset.created);
+        const dateB = new Date(b.dataset.created);
+        const runA = new Date(a.dataset.lasrun || 0);
+        const runB = new Date(b.dataset.lasrun || 0);
+
+        switch (sortValue) {
+          case "recent":
+            return dateB - dateA;
+          case "oldest":
+            return dateA - dateB;
+          case "lastrun":
+            return runB - runA;
+          case "name":
+            return a.dataset.name.localeCompare(b.dataset.name);
+          default:
+            return 0;
+        }
+      });
+
+      sorted.forEach((r) => tbody.appendChild(r));
+    }
+
+    // Event listeners
+    toggleActive.addEventListener("change", applyFilters);
+    toggleScheduled.addEventListener("change", applyFilters);
+    sortDropdown.addEventListener("change", () => {
+      applySorting();
+      applyFilters();
+    });
+
+    applySorting();
+    applyFilters();
+  });
+
   // DELETE
   document.querySelectorAll(".delete-scan-btn").forEach((btn) => {
     btn.addEventListener("click", function () {
@@ -120,9 +214,7 @@
       btn.disabled = true;
       fetch(`/api/scans/${scanId}/execute`, { method: "POST" })
         .then((resp) => resp.json())
-        .then((data) => {
-          alert(data.message || "Scan execution started.");
-        })
+        .then((data) => alert(data.message || "Scan execution started."))
         .catch((err) => alert("Error: " + err))
         .finally(() => (btn.disabled = false));
     });
@@ -135,11 +227,8 @@
       fetch(`/api/scans/${scanId}/toggle`, { method: "POST" })
         .then((resp) => resp.json())
         .then((data) => {
-          if (data.status === "success") {
-            location.reload();
-          } else {
-            alert(data.message || "Failed to toggle scan.");
-          }
+          if (data.status === "success") location.reload();
+          else alert(data.message || "Failed to toggle scan.");
         })
         .catch((err) => alert("Error: " + err));
     });

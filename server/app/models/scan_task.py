@@ -4,6 +4,10 @@ import json
 import uuid
 from app.models.scan_result import ScanResult
 
+# Import logger from centralized logging config
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class ScanTask(db.Model):
     """Scan tasks to be distributed to clients"""
@@ -66,19 +70,19 @@ class ScanTask(db.Model):
         self.completed_at = datetime.utcnow()
         db.session.commit()
 
+        from app.services.sse_service import sse_manager
+
         # Check if all tasks in the group are completed
         if self.is_task_group_completed():
-            print(f"✓ All tasks in group {self.task_group_id} completed!")
-            print(self.scan_result_id)
+            logger.info(f"All tasks in group {self.task_group_id} completed!")
             result = ScanResult.query.get(self.scan_result_id)
             if result:
                 result.mark_complete()
+                sse_manager.broadcast_alert(f"Scan {self.scan_id} completed", "success")
             else:
-                print(f"⚠️ ScanResult with id {self.scan_result_id} not found")
+                logger.warning(f"ScanResult with id {self.scan_result_id} not found")
         else:
-            print(
-                f"⏳ Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}"
-            )
+            logger.info(f"Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}")
 
     def mark_failed(self):
         """Mark task as failed"""

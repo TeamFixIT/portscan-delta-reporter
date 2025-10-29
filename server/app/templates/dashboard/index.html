@@ -59,7 +59,9 @@ block content %}
           <div class="card-body text-center">
             <h5 class="card-title">Alerts</h5>
             <h2 class="text-danger">0</h2>
-            <a href="#" class="btn btn-outline-danger btn-sm"> View Alerts </a>
+            <a href="{{ url_for('dashboard.alerts') }}" class="btn btn-outline-danger btn-sm">
+              View Alerts
+            </a>
           </div>
         </div>
       </div>
@@ -71,7 +73,7 @@ block content %}
       <div class="col-md-8">
         <div class="card">
           <div class="card-header">
-            <h5>Recent Activity</h5>
+            <h5 class="m-0">Recent Activity</h5>
           </div>
           <div class="card-body">
             <p class="text-muted">No recent activity to display.</p>
@@ -84,7 +86,7 @@ block content %}
       <div class="col-md-4">
         <div class="card">
           <div class="card-header">
-            <h5>System Status</h5>
+            <h5 class="m-0">System Status</h5>
           </div>
           <div class="card-body">
             <div class="d-flex justify-content-between">
@@ -95,11 +97,6 @@ block content %}
             <div class="d-flex justify-content-between">
               <span>Database:</span>
               <span class="badge bg-success">Connected</span>
-            </div>
-            <hr />
-            <div class="d-flex justify-content-between">
-              <span>WebSocket:</span>
-              <span id="websocket-health" class="badge bg-success">Connecting...</span>
             </div>
           </div>
         </div>

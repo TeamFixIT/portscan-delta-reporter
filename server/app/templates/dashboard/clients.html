@@ -1,7 +1,44 @@
 {% extends "base.html" %} {% block content %}
-<div class="container mt-4">
-  <h2>Connected Clients</h2>
-  <table class="table table-striped">
+<div class="container-fluid mt-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Clients</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Connected Clients</h2>
+  </div>
+
+  <div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+    <!-- SHOW HIDDEN TOGGLE -->
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="toggle-hidden" checked />
+      <label class="form-check-label" for="toggle-hidden">Show Hidden</label>
+    </div>
+
+    <!-- SHOW APPROVED ONLY -->
+    <div class="form-check mb-0">
+      <input type="checkbox" class="form-check-input" id="toggle-approved" />
+      <label class="form-check-label" for="toggle-approved">Only Approved</label>
+    </div>
+
+    <!-- SORT DROPDOWN -->
+    <div>
+      <select id="sort-dropdown" class="form-select form-select-sm">
+        <option value="recent" selected>Most Recent</option>
+        <option value="oldest">Oldest</option>
+        <option value="hostname">Hostname (A–Z)</option>
+        <option value="ip">IP Address</option>
+      </select>
+    </div>
+  </div>
+  <!-- CLIENTS TABLE -->
+  <table id="clients-table" class="table table-striped align-middle">
     <thead>
       <tr>
         <th>MAC Address</th>
@@ -11,11 +48,20 @@
         <th>Status</th>
         <th>Last Seen</th>
         <th>Created At</th>
+        <th>Approved</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for client in clients %}
-      <tr>
+      <tr
+        id="client-row-{{ client.client_id }}"
+        class="{% if client.is_hidden %}hidden-client table-secondary{% endif %} {% if not client.is_approved %}unapproved-client{% endif %}"
+        data-created="{{ client.created_at }}"
+        data-hostname="{{ client.hostname|lower }}"
+        data-ip="{{ client.ip_address }}"
+        data-is-hidden="{{ client.is_hidden|lower }}"
+        data-is-approved="{{ client.is_approved|lower }}">
         <td>{{ client.client_id }}</td>
         <td>{{ client.hostname }}</td>
         <td>{{ client.ip_address }}</td>
@@ -28,6 +74,13 @@
         </td>
         <td>{{ client.last_seen }}</td>
         <td>{{ client.created_at }}</td>
+        <td>
+          {% if client.is_approved %}
+          <span class="text-success fw-semibold">Yes</span>
+          {% else %}
+          <span class="text-muted">No</span>
+          {% endif %}
+        </td>
         <td>
           <div class="btn-group btn-group-sm" role="group">
             <button
@@ -43,67 +96,129 @@
               <i class="bi bi-power"></i>
             </button>
             <button
-              class="btn btn-outline-danger delete-client-btn"
+              class="btn btn-outline-danger toggle-client-btn"
               data-client-id="{{ client.client_id }}"
-              title="Delete Client">
-              <i class="bi bi-trash"></i>
+              data-hidden="{{ client.is_hidden|lower }}"
+              title="{% if client.is_hidden %}Unhide Client{% else %}Hide Client{% endif %}">
+              {% if client.is_hidden %}
+              <i class="bi bi-eye"></i>
+              {% else %}
+              <i class="bi bi-eye-slash"></i>
+              {% endif %}
             </button>
           </div>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="7" class="text-center">No clients found.</td>
+        <td colspan="9" class="text-center">No clients found.</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<style>
+  .hidden-client {
+    opacity: 0.6;
+  }
+</style>
+
 <script>
-  // DELETE
-  document.querySelectorAll(".delete-client-btn").forEach((btn) => {
+  document.addEventListener("DOMContentLoaded", () => {
+    const rows = Array.from(document.querySelectorAll("#clients-table tbody tr"));
+    const toggleHidden = document.getElementById("toggle-hidden");
+    const toggleApproved = document.getElementById("toggle-approved");
+    const sortDropdown = document.getElementById("sort-dropdown");
+
+    // Filtering function
+    function applyFilters() {
+      const showHidden = toggleHidden.checked;
+      const onlyApproved = toggleApproved.checked;
+
+      rows.forEach((row) => {
+        const isHidden = row.dataset.isHidden === "true";
+        const isApproved = row.dataset.isApproved === "true";
+
+        let visible = true;
+
+        if (!showHidden && isHidden) visible = false;
+        if (onlyApproved && !isApproved) visible = false;
+
+        row.style.display = visible ? "" : "none";
+      });
+    }
+
+    // Sorting function
+    function applySorting() {
+      const sortValue = sortDropdown.value;
+      const tbody = document.querySelector("#clients-table tbody");
+
+      const sorted = [...rows].sort((a, b) => {
+        if (sortValue === "recent") {
+          return new Date(b.dataset.created) - new Date(a.dataset.created);
+        } else if (sortValue === "oldest") {
+          return new Date(a.dataset.created) - new Date(b.dataset.created);
+        } else if (sortValue === "hostname") {
+          return a.dataset.hostname.localeCompare(b.dataset.hostname);
+        } else if (sortValue === "ip") {
+          return a.dataset.ip.localeCompare(b.dataset.ip, undefined, { numeric: true });
+        }
+      });
+
+      sorted.forEach((r) => tbody.appendChild(r));
+    }
+
+    // Event Listeners
+    toggleHidden.addEventListener("change", applyFilters);
+    toggleApproved.addEventListener("change", applyFilters);
+    sortDropdown.addEventListener("change", () => {
+      applySorting();
+      applyFilters();
+    });
+
+    // Initialize
+    applySorting();
+    applyFilters();
+  });
+
+  // EXISTING BUTTON FUNCTIONALITY (approve, revoke, toggle)
+  document.querySelectorAll(".toggle-client-btn").forEach((btn) => {
     btn.addEventListener("click", function () {
-      if (!confirm("Are you sure you want to delete this client?")) return;
       const clientId = this.dataset.clientId;
-      fetch(`/api/clients/${clientId}`, { method: "DELETE" })
+      fetch(`/api/clients/${clientId}/toggle`, { method: "POST" })
         .then((resp) => resp.json())
-        .then((data) => {
-          if (data.status === "success") {
-            document.getElementById(`client-row-${clientId}`).remove();
-          } else alert(data.message || "Failed to delete client.");
-        })
+        .then((data) =>
+          data.status === "success"
+            ? location.reload()
+            : alert(data.message || "Failed to toggle client.")
+        )
         .catch((err) => alert("Error: " + err));
     });
   });
 
-  // REVOKE
   document.querySelectorAll(".revoke-client-btn").forEach((btn) => {
     btn.addEventListener("click", function () {
       const clientId = this.dataset.clientId;
       btn.disabled = true;
       fetch(`/api/clients/${clientId}/revoke`, { method: "POST" })
         .then((resp) => resp.json())
-        .then((data) => {
-          alert(data.message || "Client revoked.");
-        })
+        .then((data) => alert(data.message || "Client revoked."))
         .catch((err) => alert("Error: " + err))
         .finally(() => (btn.disabled = false));
     });
   });
 
-  // APPROVE
   document.querySelectorAll(".approve-client-btn").forEach((btn) => {
     btn.addEventListener("click", function () {
       const clientId = this.dataset.clientId;
       fetch(`/api/clients/${clientId}/approve`, { method: "POST" })
         .then((resp) => resp.json())
-        .then((data) => {
-          if (data.status === "success") {
-            location.reload();
-          } else {
-            alert(data.message || "Failed to approve client.");
-          }
-        })
+        .then((data) =>
+          data.status === "success"
+            ? location.reload()
+            : alert(data.message || "Failed to approve client.")
+        )
         .catch((err) => alert("Error: " + err));
     });
   });

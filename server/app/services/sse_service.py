@@ -1,7 +1,8 @@
 import queue
-import logging
+# Import logger from centralized logging config
+from app.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SSEManager:
@@ -11,17 +12,17 @@ class SSEManager:
     def add_client(self, client_queue):
         """Add a new client queue"""
         self.clients.append(client_queue)
-        logger.info(f"Client connected. Total clients: {len(self.clients)}")
+        logger.debug(f"Client connected. Total clients: {len(self.clients)}")
 
     def remove_client(self, client_queue):
         """Remove a client queue"""
         if client_queue in self.clients:
             self.clients.remove(client_queue)
-            logger.info(f"Client disconnected. Total clients: {len(self.clients)}")
+            logger.debug(f"Client disconnected. Total clients: {len(self.clients)}")
 
     def broadcast_alert(self, message, alert_type="info"):
         """Broadcast alert to all connected clients"""
-        logger.info(f"Broadcasting alert to {len(self.clients)} clients: {message}")
+        logger.debug(f"Broadcasting alert to {len(self.clients)} clients: {message}")
 
         alert_data = {
             "message": message,
@@ -34,7 +35,7 @@ class SSEManager:
             try:
                 client_queue.put(alert_data, block=False)
             except queue.Full:
-                logger.warning("Client queue full, marking for removal")
+                logger.debug("Client queue full, marking for removal")
                 disconnected.append(client_queue)
 
         # Clean up disconnected clients

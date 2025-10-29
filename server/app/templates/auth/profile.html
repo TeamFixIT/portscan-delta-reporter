@@ -1,470 +1,217 @@
 {% extends "base.html" %} {% block title %}Profile - Port Detector{% endblock %} {% block content %}
-<div class="container mt-4">
-  <div class="profile-container">
-    <div class="profile-card">
-      <div class="profile-header">
-        <div class="row align-items-center">
-          <div class="col-auto">
-            <div class="avatar-circle">
-              <i class="fas fa-user fa-3x"></i>
-            </div>
-          </div>
-          <div class="col">
-            <h2>
-              {{ user.first_name }} {{ user.last_name }} {% if not user.first_name and not
-              user.last_name %}{{ user.username }}{% endif %}
-            </h2>
-            <p class="mb-0">@{{ user.username }}</p>
-            <small class="opacity-75">
-              <i class="fas fa-calendar me-1"></i>
-              Member since {{ user.created_at.strftime('%B %Y') }}
-            </small>
+<div class="container-fluid py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{{ url_for('dashboard.index') }}">Dashboard</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">Profile</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Profile</h2>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <ul class="nav nav-tabs mt-4" id="configsTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link active"
+        id="info-tab"
+        data-bs-toggle="pill"
+        data-bs-target="#info"
+        type="button">
+        <i class="bi bi-info-circle me-1"></i> Info
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="edit-tab"
+        data-bs-toggle="pill"
+        data-bs-target="#edit"
+        type="button">
+        <i class="bi bi-pencil-square me-1"></i> Edit
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button
+        class="nav-link"
+        id="info-tab"
+        data-bs-toggle="pill"
+        data-bs-target="#password"
+        type="button">
+        <i class="bi bi-key me-1"></i> Password
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link bg-danger text-white" href="{{ url_for('auth.logout') }}">
+        <i class="bi bi-box-arrow-right me-1"></i> Logout
+      </a>
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div
+    class="tab-content border-end border-bottom border-start rounded-bottom p-4 bg-body"
+    id="profileTabContent">
+    <div class="col-md-6">
+      <div>
+        <h4 class="mb-1">
+          {{ user.first_name }} {{ user.last_name }} {% if not user.first_name and not
+          user.last_name %} {{ user.username }} {% endif %}
+        </h4>
+        <p class="text-muted mb-1">@{{ user.username }}</p>
+        <small class="text-muted">
+          <i class="bi bi-calendar3 me-1"></i>
+          Member since {{ user.created_at.strftime('%B %Y') }}
+        </small>
+      </div>
+    </div>
+    <hr />
+    <!-- Profile Info -->
+    <div class="tab-pane fade show active" id="info">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">Username</label>
+          <div>{{ user.username }}</div>
+        </div>
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">Email</label>
+          <div>{{ user.email }}</div>
+        </div>
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">First Name</label>
+          <div>{{ user.first_name or 'Not provided' }}</div>
+        </div>
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">Last Name</label>
+          <div>{{ user.last_name or 'Not provided' }}</div>
+        </div>
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">Account Status</label>
+          {% if user.is_active %}
+          <span class="badge bg-success">Active</span>
+          {% else %}
+          <span class="badge bg-danger">Inactive</span>
+          {% endif %}
+        </div>
+        <div class="col-md-6">
+          <label class="fw-semibold text-muted small">Last Login</label>
+          <div>
+            {% if user.last_login %} {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }} {% else
+            %}Never{% endif %}
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="p-4">
-        <!-- Navigation tabs -->
-        <ul class="nav nav-pills mb-4" id="profileTabs" role="tablist">
-          <li class="nav-item" role="presentation">
-            <button
-              class="nav-link active"
-              id="info-tab"
-              data-bs-toggle="pill"
-              data-bs-target="#info"
-              type="button"
-              role="tab">
-              <i class="fas fa-info-circle me-2"></i>Profile Information
+    <!-- Edit Profile -->
+    <div class="tab-pane fade" id="edit">
+      <form id="profileForm" class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">First Name</label>
+          <input
+            type="text"
+            class="form-control"
+            name="first_name"
+            value="{{ user.first_name or '' }}"
+            placeholder="Enter first name" />
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Last Name</label>
+          <input
+            type="text"
+            class="form-control"
+            name="last_name"
+            value="{{ user.last_name or '' }}"
+            placeholder="Enter last name" />
+        </div>
+        <div class="col-12">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-control" name="email" value="{{ user.email }}" required />
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary" id="updateProfileBtn">
+            <i class="bi bi-save me-1"></i> Update Profile
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="tab-pane fade" id="password">
+      <form id="passwordForm" class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Current Password</label>
+          <div class="input-group">
+            <input
+              type="password"
+              class="form-control"
+              id="current_password"
+              name="current_password"
+              required />
+            <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
+              <i class="bi bi-eye"></i>
             </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button
-              class="nav-link"
-              id="edit-tab"
-              data-bs-toggle="pill"
-              data-bs-target="#edit"
-              type="button"
-              role="tab">
-              <i class="fas fa-edit me-2"></i>Edit Profile
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <button
-              class="nav-link"
-              id="password-tab"
-              data-bs-toggle="pill"
-              data-bs-target="#password"
-              type="button"
-              role="tab">
-              <i class="fas fa-key me-2"></i>Change Password
-            </button>
-          </li>
-          <li class="nav-item" role="presentation">
-            <a href="{{ url_for('auth.logout') }}">
-              <button class="nav-link"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
-            </a>
-          </li>
-        </ul>
-
-        <!-- Tab content -->
-        <div class="tab-content" id="profileTabContent">
-          <!-- Profile Information Tab -->
-          <div class="tab-pane fade show active" id="info" role="tabpanel">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">Username</label>
-                  <div class="fw-bold">{{ user.username }}</div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">Email</label>
-                  <div class="fw-bold">{{ user.email }}</div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">First Name</label>
-                  <div class="fw-bold">{{ user.first_name or 'Not provided' }}</div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">Last Name</label>
-                  <div class="fw-bold">{{ user.last_name or 'Not provided' }}</div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">Account Status</label>
-                  <div class="fw-bold">
-                    {% if user.is_active %}
-                    <span class="badge bg-success">Active</span>
-                    {% else %}
-                    <span class="badge bg-danger">Inactive</span>
-                    {% endif %}
-                  </div>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="info-item">
-                  <label class="text-muted small">Last Login</label>
-                  <div class="fw-bold">
-                    {% if user.last_login %} {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }}
-                    {% else %} Never {% endif %}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Edit Profile Tab -->
-          <div class="tab-pane fade" id="edit" role="tabpanel">
-            <form id="profileForm">
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label for="edit_first_name" class="form-label">First Name</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="edit_first_name"
-                    name="first_name"
-                    value="{{ user.first_name or '' }}"
-                    placeholder="Enter first name" />
-                </div>
-                <div class="col-md-6">
-                  <label for="edit_last_name" class="form-label">Last Name</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    id="edit_last_name"
-                    name="last_name"
-                    value="{{ user.last_name or '' }}"
-                    placeholder="Enter last name" />
-                </div>
-                <div class="col-12">
-                  <label for="edit_email" class="form-label">Email Address</label>
-                  <input
-                    type="email"
-                    class="form-control"
-                    id="edit_email"
-                    name="email"
-                    value="{{ user.email }}"
-                    required
-                    placeholder="Enter email address" />
-                </div>
-                <div class="col-12">
-                  <button type="submit" class="btn btn-primary" id="updateProfileBtn">
-                    <i class="fas fa-save me-2"></i>Update Profile
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-
-          <!-- Change Password Tab -->
-          <div class="tab-pane fade" id="password" role="tabpanel">
-            <form id="passwordForm">
-              <div class="row g-3">
-                <div class="col-12">
-                  <label for="current_password" class="form-label">Current Password</label>
-                  <div class="input-group">
-                    <input
-                      type="password"
-                      class="form-control"
-                      id="current_password"
-                      name="current_password"
-                      required
-                      placeholder="Enter current password" />
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      id="toggleCurrentPassword">
-                      <i class="fas fa-eye"></i>
-                    </button>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <label for="new_password" class="form-label">New Password</label>
-                  <div class="input-group">
-                    <input
-                      type="password"
-                      class="form-control"
-                      id="new_password"
-                      name="new_password"
-                      required
-                      placeholder="Enter new password" />
-                    <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
-                      <i class="fas fa-eye"></i>
-                    </button>
-                  </div>
-                  <div class="password-requirements mt-2" id="newPasswordRequirements">
-                    <small class="text-muted">Password must contain:</small>
-                    <ul class="small text-muted mt-1">
-                      <li id="new_length" class="invalid">At least 8 characters</li>
-                      <li id="new_uppercase" class="invalid">One uppercase letter</li>
-                      <li id="new_lowercase" class="invalid">One lowercase letter</li>
-                      <li id="new_digit" class="invalid">One number</li>
-                    </ul>
-                  </div>
-                </div>
-                <div class="col-12">
-                  <label for="confirm_new_password" class="form-label">Confirm New Password</label>
-                  <div class="input-group">
-                    <input
-                      type="password"
-                      class="form-control"
-                      id="confirm_new_password"
-                      name="confirm_password"
-                      required
-                      placeholder="Confirm new password" />
-                    <button
-                      class="btn btn-outline-secondary"
-                      type="button"
-                      id="toggleConfirmPassword">
-                      <i class="fas fa-eye"></i>
-                    </button>
-                  </div>
-                  <div class="invalid-feedback" id="newPasswordMatch"></div>
-                </div>
-                <div class="col-12">
-                  <button type="submit" class="btn btn-primary" id="changePasswordBtn">
-                    <i class="fas fa-key me-2"></i>Change Password
-                  </button>
-                </div>
-              </div>
-            </form>
           </div>
         </div>
-      </div>
+        <div class="col-12">
+          <label class="form-label">New Password</label>
+          <div class="input-group">
+            <input
+              type="password"
+              class="form-control"
+              id="new_password"
+              name="new_password"
+              required />
+            <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Confirm New Password</label>
+          <div class="input-group">
+            <input
+              type="password"
+              class="form-control"
+              id="confirm_new_password"
+              name="confirm_password"
+              required />
+            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-primary" id="changePasswordBtn">
+            <i class="bi bi-key-fill me-1"></i> Change Password
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 {% endblock %} {% block extra_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const profileForm = document.getElementById("profileForm");
-    const passwordForm = document.getElementById("passwordForm");
-    const updateProfileBtn = document.getElementById("updateProfileBtn");
-    const changePasswordBtn = document.getElementById("changePasswordBtn");
-
-    // Password visibility toggles
-    const passwordToggles = [
-      { button: "toggleCurrentPassword", field: "current_password" },
-      { button: "toggleNewPassword", field: "new_password" },
-      { button: "toggleConfirmPassword", field: "confirm_new_password" },
-    ];
-
-    passwordToggles.forEach((toggle) => {
-      const button = document.getElementById(toggle.button);
-      const field = document.getElementById(toggle.field);
-      const icon = button.querySelector("i");
-
-      button.addEventListener("click", function () {
-        const type = field.getAttribute("type") === "password" ? "text" : "password";
-        field.setAttribute("type", type);
-
-        icon.classList.toggle("fa-eye");
-        icon.classList.toggle("fa-eye-slash");
+  document.addEventListener("DOMContentLoaded", () => {
+    const togglePassword = (btnId, fieldId) => {
+      const btn = document.getElementById(btnId);
+      const field = document.getElementById(fieldId);
+      btn.addEventListener("click", () => {
+        const type = field.type === "password" ? "text" : "password";
+        field.type = type;
+        btn.querySelector("i").classList.toggle("bi-eye");
+        btn.querySelector("i").classList.toggle("bi-eye-slash");
       });
-    });
-
-    // Real-time new password validation
-    const newPasswordField = document.getElementById("new_password");
-    const confirmNewPasswordField = document.getElementById("confirm_new_password");
-
-    newPasswordField.addEventListener("input", function () {
-      const password = newPasswordField.value;
-
-      // Length check
-      const lengthCheck = document.getElementById("new_length");
-      if (password.length >= 8) {
-        lengthCheck.classList.remove("invalid");
-        lengthCheck.classList.add("valid");
-      } else {
-        lengthCheck.classList.remove("valid");
-        lengthCheck.classList.add("invalid");
-      }
-
-      // Uppercase check
-      const uppercaseCheck = document.getElementById("new_uppercase");
-      if (/[A-Z]/.test(password)) {
-        uppercaseCheck.classList.remove("invalid");
-        uppercaseCheck.classList.add("valid");
-      } else {
-        uppercaseCheck.classList.remove("valid");
-        uppercaseCheck.classList.add("invalid");
-      }
-
-      // Lowercase check
-      const lowercaseCheck = document.getElementById("new_lowercase");
-      if (/[a-z]/.test(password)) {
-        lowercaseCheck.classList.remove("invalid");
-        lowercaseCheck.classList.add("valid");
-      } else {
-        lowercaseCheck.classList.remove("valid");
-        lowercaseCheck.classList.add("invalid");
-      }
-
-      // Digit check
-      const digitCheck = document.getElementById("new_digit");
-      if (/\d/.test(password)) {
-        digitCheck.classList.remove("invalid");
-        digitCheck.classList.add("valid");
-      } else {
-        digitCheck.classList.remove("valid");
-        digitCheck.classList.add("invalid");
-      }
-
-      checkNewPasswordMatch();
-    });
-
-    // Real-time password match validation
-    confirmNewPasswordField.addEventListener("input", checkNewPasswordMatch);
-
-    function checkNewPasswordMatch() {
-      const password = newPasswordField.value;
-      const confirmPassword = confirmNewPasswordField.value;
-      const matchDiv = document.getElementById("newPasswordMatch");
-
-      if (confirmPassword === "") {
-        confirmNewPasswordField.classList.remove("is-valid", "is-invalid");
-        return;
-      }
-
-      if (password === confirmPassword) {
-        confirmNewPasswordField.classList.remove("is-invalid");
-        confirmNewPasswordField.classList.add("is-valid");
-        matchDiv.textContent = "";
-      } else {
-        confirmNewPasswordField.classList.remove("is-valid");
-        confirmNewPasswordField.classList.add("is-invalid");
-        matchDiv.textContent = "Passwords do not match";
-      }
-    }
-
-    // Handle profile update
-    profileForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      const formData = new FormData(profileForm);
-      const data = Object.fromEntries(formData);
-
-      const originalText = updateProfileBtn.innerHTML;
-      updateProfileBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
-      updateProfileBtn.disabled = true;
-
-      fetch('{{ url_for("auth.update_profile") }}', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            showAlert("success", data.message);
-            updateProfileBtn.innerHTML = '<i class="fas fa-check me-2"></i>Updated!';
-            updateProfileBtn.classList.add("btn-success");
-            updateProfileBtn.classList.remove("btn-primary");
-
-            setTimeout(() => {
-              location.reload();
-            }, 1500);
-          } else {
-            const errors = data.errors || [data.error];
-            errors.forEach((error) => showAlert("danger", error));
-
-            updateProfileBtn.innerHTML = originalText;
-            updateProfileBtn.disabled = false;
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          showAlert("danger", "An error occurred while updating your profile.");
-          updateProfileBtn.innerHTML = originalText;
-          updateProfileBtn.disabled = false;
-        });
-    });
-
-    // Handle password change
-    passwordForm.addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      const formData = new FormData(passwordForm);
-      const data = Object.fromEntries(formData);
-
-      const originalText = changePasswordBtn.innerHTML;
-      changePasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Changing...';
-      changePasswordBtn.disabled = true;
-
-      fetch('{{ url_for("auth.change_password") }}', {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          if (data.success) {
-            showAlert("success", data.message);
-            changePasswordBtn.innerHTML = '<i class="fas fa-check me-2"></i>Changed!';
-            changePasswordBtn.classList.add("btn-success");
-            changePasswordBtn.classList.remove("btn-primary");
-
-            // Reset form
-            passwordForm.reset();
-            document.querySelectorAll("#password .form-control").forEach((field) => {
-              field.classList.remove("is-valid", "is-invalid");
-            });
-
-            setTimeout(() => {
-              changePasswordBtn.innerHTML = originalText;
-              changePasswordBtn.classList.remove("btn-success");
-              changePasswordBtn.classList.add("btn-primary");
-              changePasswordBtn.disabled = false;
-            }, 5000);
-          } else {
-            const errors = data.errors || [data.error];
-            errors.forEach((error) => showAlert("danger", error));
-
-            changePasswordBtn.innerHTML = originalText;
-            changePasswordBtn.disabled = false;
-          }
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          showAlert("danger", "An error occurred while changing your password.");
-          changePasswordBtn.innerHTML = originalText;
-          changePasswordBtn.disabled = false;
-        });
-    });
-
-    function showAlert(type, message) {
-      const alertDiv = document.createElement("div");
-      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-      alertDiv.innerHTML = `
-            <i class="fas fa-${
-              type === "success" ? "check-circle" : "exclamation-circle"
-            } me-2"></i>
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-      // Insert at the top of the active tab pane
-      const activeTab = document.querySelector(".tab-pane.active");
-      activeTab.insertBefore(alertDiv, activeTab.firstChild);
-
-      // Auto-dismiss after 5 seconds
-      setTimeout(() => {
-        if (alertDiv.parentNode) {
-          alertDiv.remove();
-        }
-      }, 5000);
-    }
+    };
+    togglePassword("toggleCurrentPassword", "current_password");
+    togglePassword("toggleNewPassword", "new_password");
+    togglePassword("toggleConfirmPassword", "confirm_new_password");
   });
 </script>
 {% endblock %}

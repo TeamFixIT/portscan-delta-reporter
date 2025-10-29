@@ -1,125 +1,195 @@
+<!-- Sidebar Navigation -->
 <nav
-  class="d-flex flex-column flex-shrink-0 p-3 border-end"
-  style="width: 260px; min-height: 100vh">
+  id="sidebar-nav"
+  class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary border-end position-fixed top-0 start-0 vh-100 overflow-auto"
+  style="width: 260px; z-index: 1040">
+  <!-- Brand/Logo Section -->
   <div class="pb-3 mb-3 border-bottom">
-    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+    <a class="d-flex align-items-center text-decoration-none" href="{{ url_for('main.index') }}">
       <img
         src="{{ url_for('static', filename='images/delta.png') }}"
         alt="Logo"
-        style="height: 32px; width: auto; margin-right: 10px; flex-shrink: 0" />
-      <p class="text-break mb-0 text-wrap">Port Scanner Delta Reporter</p>
+        class="me-2 flex-shrink-0"
+        style="height: 32px; width: 32px; object-fit: contain" />
+      <span class="fs-6 fw-semibold text-body text-break">Port Scanner Delta Reporter</span>
     </a>
   </div>
 
-  <ul id="sidebar-nav" class="nav nav-pills flex-column d-flex h-100">
+  <!-- Main Navigation -->
+  <ul class="nav nav-pills flex-column mb-auto">
     <li class="nav-item mb-1">
-      <a href="{{ url_for('dashboard.index') }}" class="nav-link">
+      <a
+        href="{{ url_for('dashboard.index') }}"
+        class="nav-link text-body d-flex align-items-center">
         <i class="bi bi-house-door me-2"></i>
-        Overview
+        <span>Overview</span>
       </a>
     </li>
 
     <li class="nav-item mb-1">
-      <a href="{{ url_for('dashboard.scans') }}" class="nav-link text-body">
+      <a
+        href="{{ url_for('dashboard.scans') }}"
+        class="nav-link text-body d-flex align-items-center">
         <i class="bi bi-radar me-2"></i>
-        Scans
+        <span>Scans</span>
       </a>
     </li>
 
     <li class="nav-item mb-1">
-      <a href="{{ url_for('dashboard.reports') }}" class="nav-link text-body">
+      <a
+        href="{{ url_for('dashboard.reports') }}"
+        class="nav-link text-body d-flex align-items-center">
         <i class="bi bi-file-earmark-text me-2"></i>
-        Reports
+        <span>Reports</span>
       </a>
     </li>
 
     <li class="nav-item mb-1">
-      <div class="nav-link text-secondary text-decoration-line-through">
+      <a
+        href="{{ url_for('dashboard.alerts') }}"
+        class="nav-link text-body d-flex align-items-center">
         <i class="bi bi-exclamation-triangle me-2"></i>
-        Alerts
-      </div>
-    </li>
-    <li class="nav-item mb-1">
-      <a href="{{ url_for('dashboard.clients') }}" class="nav-link text-body">
-        <i class="bi bi-hdd-network me-2"></i>
-        Clients
+        <span>Alerts</span>
       </a>
     </li>
 
-    <li class="mt-auto">
-      <hr class="my-3" />
-      <ul class="nav nav-pills flex-column">
-        {% if not current_user.is_authenticated %}
-        <li class="nav-item mb-1">
-          <a href="{{ url_for('auth.login') }}" class="nav-link text-body">
-            <i class="bi bi-person me-2"></i>
-            Login
-          </a>
-        </li>
-        {% else %}
-        <li class="nav-item mb-1">
-          <a href="{{ url_for('auth.profile') }}" class="nav-link text-body">
-            <i class="bi bi-person me-2"></i>
-            Profile
-          </a>
-        </li>
-        {% endif %}
-        <li class="nav-item mb-1">
-          <a href="{{ url_for('admin.index') }}" class="nav-link text-body">
-            <i class="bi bi-gear me-2"></i>
-            Settings
-          </a>
-        </li>
-        <li class="nav-item mb-1">
-          <div class="nav-link text-secondary text-decoration-line-through">
-            <i class="bi bi-graph-up me-2"></i>
-            Logs
-          </div>
-        </li>
-      </ul>
+    <li class="nav-item mb-1">
+      <a
+        href="{{ url_for('dashboard.clients') }}"
+        class="nav-link text-body d-flex align-items-center">
+        <i class="bi bi-hdd-network me-2"></i>
+        <span>Clients</span>
+      </a>
     </li>
   </ul>
+
+  <!-- Bottom Section (Settings, Profile, etc.) -->
+  <div class="mt-auto">
+    <hr class="my-3" />
+    <ul class="nav nav-pills flex-column">
+      {% if not current_user.is_authenticated %}
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('auth.login') }}" class="nav-link text-body d-flex align-items-center">
+          <i class="bi bi-person me-2"></i>
+          <span>Login</span>
+        </a>
+      </li>
+      {% else %}
+      <li class="nav-item mb-1">
+        <a
+          href="{{ url_for('auth.profile') }}"
+          class="nav-link text-body d-flex align-items-center">
+          <i class="bi bi-person me-2"></i>
+          <span>Profile</span>
+        </a>
+      </li>
+      {% endif %}
+
+      <li class="nav-item mb-1">
+        <a href="{{ url_for('admin.index') }}" class="nav-link text-body d-flex align-items-center">
+          <i class="bi bi-gear me-2"></i>
+          <span>Settings</span>
+        </a>
+      </li>
+
+      <li class="nav-item mb-1">
+        <a
+          href="{{ url_for('dashboard.logs') }}"
+          class="nav-link text-body d-flex align-items-center">
+          <i class="bi bi-journal-text me-2"></i>
+          <span>Logs</span>
+        </a>
+      </li>
+    </ul>
+  </div>
 </nav>
+
+<!-- Sidebar Active Link Script -->
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("sidebar-nav");
     if (!sidebar) return;
-    const links = Array.from(sidebar.querySelectorAll("a.nav-link"));
-    const storageKey = "sidebar:activeHref";
 
-    // Try to restore active link from localStorage
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-      const savedLink = links.find((a) => a.getAttribute("href") === saved);
-      if (savedLink) {
-        links.forEach((a) => a.classList.remove("active"));
-        savedLink.classList.add("active");
+    const links = Array.from(sidebar.querySelectorAll("a.nav-link"));
+    const currentPath = window.location.pathname; // e.g., /dashboard/scans
+
+    // Helper: normalize path (remove trailing slash unless root)
+    const normalizePath = (path) => {
+      return path === "/" ? "/" : path.replace(/\/$/, "");
+    };
+
+    const normalizedCurrent = normalizePath(currentPath);
+
+    // Remove active class from all links
+    const removeAllActive = () => {
+      links.forEach((link) => link.classList.remove("active"));
+    };
+
+    // Activate a specific link
+    const activateLink = (link) => {
+      removeAllActive();
+      link.classList.add("active");
+    };
+
+    // Try to find exact match first
+    let matched = false;
+
+    for (const link of links) {
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || href.includes("://")) continue; // skip anchors, external
+
+      let linkPath;
+      try {
+        linkPath = new URL(href, window.location.origin).pathname;
+      } catch {
+        linkPath = href; // fallback
       }
-    } else {
-      // Fallback: mark link active by matching current pathname
-      const currentPath = window.location.pathname;
-      const match = links.find((a) => {
-        try {
-          return new URL(a.href, window.location.origin).pathname === currentPath;
-        } catch (e) {
-          return a.getAttribute("href") === currentPath;
-        }
-      });
-      if (match) {
-        links.forEach((a) => a.classList.remove("active"));
-        match.classList.add("active");
+
+      const normalizedLink = normalizePath(linkPath);
+
+      if (normalizedLink === normalizedCurrent) {
+        activateLink(link);
+        matched = true;
+        break; // exact match found, stop
       }
     }
 
-    // Update active state on click and persist
-    links.forEach((a) => {
-      a.addEventListener("click", function () {
-        links.forEach((l) => l.classList.remove("active"));
-        this.classList.add("active");
-        try {
-          localStorage.setItem(storageKey, this.getAttribute("href"));
-        } catch (e) {
-          /* ignore storage errors */
+    // If no exact match, try parent path matching (longest first)
+    if (!matched) {
+      const parentCandidates = links
+        .map((link) => {
+          const href = link.getAttribute("href");
+          if (!href || href.startsWith("#") || href.includes("://")) return null;
+
+          let linkPath;
+          try {
+            linkPath = new URL(href, window.location.origin).pathname;
+          } catch {
+            linkPath = href;
+          }
+
+          const normalized = normalizePath(linkPath);
+          if (normalized === "/" || !normalizedCurrent.startsWith(normalized + "/")) {
+            return null;
+          }
+          return { link, path: normalized, length: normalized.split("/").length };
+        })
+        .filter(Boolean);
+
+      if (parentCandidates.length > 0) {
+        // Pick the longest (most specific) parent
+        parentCandidates.sort((a, b) => b.length - a.length);
+        activateLink(parentCandidates[0].link);
+      }
+    }
+
+    // Optional: Update active on click (persists after navigation if using Turbolinks/HTMX)
+    links.forEach((link) => {
+      link.addEventListener("click", function () {
+        // Don't interfere with middle-click, ctrl+click, etc.
+        if (this.getAttribute("href") && !this.getAttribute("href").startsWith("#")) {
+          removeAllActive();
+          this.classList.add("active");
         }
       });
     });
