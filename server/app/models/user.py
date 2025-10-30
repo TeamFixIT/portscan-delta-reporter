@@ -1,5 +1,4 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
@@ -22,18 +21,8 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login = db.Column(db.DateTime, nullable=True)
-
-    # Entra ID / SSO fields
-    auth_provider = db.Column(
-        db.String(32), default="local", nullable=False
-    )  # 'local' or 'entra_id'
-    entra_id = db.Column(
-        db.String(255), unique=True, nullable=True, index=True
-    )  # Microsoft Object ID
-    entra_tenant_id = db.Column(
-        db.String(255), nullable=True
-    )  # Tenant ID for verification
-
+    current_session_token = db.Column(db.String(64), nullable=True)
+    auth_provider = db.Column(db.String(50))
     # Relationships
     scans = db.relationship(
         "Scan", backref="user", lazy="dynamic", cascade="all, delete-orphan"
@@ -100,8 +89,6 @@ class User(UserMixin, db.Model):
         first_name=None,
         last_name=None,
         auth_provider="local",
-        entra_id=None,
-        entra_tenant_id=None,
     ):
         """Create new user with validation"""
         # Check if user already exists
@@ -119,8 +106,6 @@ class User(UserMixin, db.Model):
             first_name=first_name,
             last_name=last_name,
             auth_provider=auth_provider,
-            entra_id=entra_id,
-            entra_tenant_id=entra_tenant_id,
         )
 
         if password:
@@ -128,56 +113,4 @@ class User(UserMixin, db.Model):
 
         db.session.add(user)
         db.session.commit()
-        return user
-
-    @staticmethod
-    def get_or_create_from_entra(entra_user_info):
-        """Get or create user from Entra ID information"""
-        entra_id = entra_user_info.get("oid")  # Object ID
-        email = entra_user_info.get("email") or entra_user_info.get(
-            "preferred_username"
-        )
-
-        # Try to find existing user by Entra ID
-        user = User.query.filter_by(entra_id=entra_id).first()
-
-        if user:
-            # Update user info from Entra ID
-            user.email = email
-            user.first_name = entra_user_info.get("given_name")
-            user.last_name = entra_user_info.get("family_name")
-            user.entra_tenant_id = entra_user_info.get("tid")
-            db.session.commit()
-            return user
-
-        # Check if user exists with this email (local account)
-        user = User.query.filter_by(email=email).first()
-        if user and user.auth_provider == "local":
-            # Link existing local account to Entra ID
-            user.entra_id = entra_id
-            user.entra_tenant_id = entra_user_info.get("tid")
-            user.auth_provider = "entra_id"
-            db.session.commit()
-            return user
-
-        # Create new user from Entra ID
-        username = email.split("@")[0]
-        base_username = username
-        counter = 1
-
-        # Ensure unique username
-        while User.query.filter_by(username=username).first():
-            username = f"{base_username}{counter}"
-            counter += 1
-
-        user = User.create_user(
-            username=username,
-            email=email,
-            first_name=entra_user_info.get("given_name"),
-            last_name=entra_user_info.get("family_name"),
-            auth_provider="entra_id",
-            entra_id=entra_id,
-            entra_tenant_id=entra_user_info.get("tid"),
-        )
-
         return user

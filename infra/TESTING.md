@@ -86,7 +86,7 @@ docker-compose restart server
 ```
 infra/
 ├── docker-compose.yml      # Main orchestration
-├── client.dockerfile       # Raspberry Pi client image
+├── client.dockerfile       # Client image
 ├── server.dockerfile       # Flask server image
 ├── test-config.yml         # Docker test configuration
 ├── dev-config.yml          # Local development configuration

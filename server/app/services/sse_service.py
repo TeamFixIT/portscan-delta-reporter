@@ -1,4 +1,7 @@
 import queue
+from collections import defaultdict
+from flask import url_for
+
 # Import logger from centralized logging config
 from app.logging_config import get_logger
 
@@ -7,45 +10,61 @@ logger = get_logger(__name__)
 
 class SSEManager:
     def __init__(self):
-        self.clients = []
+        self.clients = []  # All clients
+        self.user_clients = defaultdict(list)  # user_id -> [queues]
 
-    def add_client(self, client_queue):
-        """Add a new client queue"""
+    def add_client(self, client_queue, user_id=None):
+        """Add a client queue, optionally associated with a user."""
         self.clients.append(client_queue)
-        logger.debug(f"Client connected. Total clients: {len(self.clients)}")
+        if user_id:
+            self.user_clients[user_id].append(client_queue)
 
-    def remove_client(self, client_queue):
-        """Remove a client queue"""
+    def remove_client(self, client_queue, user_id=None):
+        """Remove a client queue."""
         if client_queue in self.clients:
             self.clients.remove(client_queue)
-            logger.debug(f"Client disconnected. Total clients: {len(self.clients)}")
+        if user_id and client_queue in self.user_clients[user_id]:
+            self.user_clients[user_id].remove(client_queue)
+            if not self.user_clients[user_id]:
+                del self.user_clients[user_id]
+
+    def broadcast(self, data):
+        """Send to all clients."""
+        for client_queue in self.clients[:]:
+            try:
+                client_queue.put_nowait(data)
+            except queue.Full:
+                pass
+
+    def send_to_user(self, user_id, data):
+        """Send event to all sessions of a specific user."""
+        for client_queue in self.user_clients.get(user_id, []):
+            try:
+                client_queue.put_nowait(data)
+            except queue.Full:
+                pass
+
+    def redirect_user(self, user_id, endpoint, **url_kwargs):
+        """Redirect a specific user to a page."""
+
+        redirect_url = url_for(endpoint, **url_kwargs)
+        event_data = {"type": "redirect", "url": redirect_url, "endpoint": endpoint}
+        self.send_to_user(user_id, event_data)
+
+    def broadcast_redirect(self, endpoint, **url_kwargs):
+        """Redirect all clients."""
+
+        redirect_url = url_for(endpoint, **url_kwargs)
+        event_data = {"type": "redirect", "url": redirect_url, "endpoint": endpoint}
+        self.broadcast(event_data)
 
     def broadcast_alert(self, message, alert_type="info"):
-        """Broadcast alert to all connected clients"""
-        logger.debug(f"Broadcasting alert to {len(self.clients)} clients: {message}")
-
+        """Broadcast an alert message to all clients."""
         alert_data = {
             "message": message,
             "type": alert_type,  # 'info', 'warning', 'error', 'success'
         }
-
-        # Send to all clients
-        disconnected = []
-        for client_queue in self.clients:
-            try:
-                client_queue.put(alert_data, block=False)
-            except queue.Full:
-                logger.debug("Client queue full, marking for removal")
-                disconnected.append(client_queue)
-
-        # Clean up disconnected clients
-        for client_queue in disconnected:
-            self.remove_client(client_queue)
-
-    def get_client_count(self):
-        """Get number of connected clients"""
-        return len(self.clients)
+        self.broadcast(alert_data)
 
 
-# Global SSE manager instance
 sse_manager = SSEManager()

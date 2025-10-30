@@ -1,7 +1,39 @@
-{% extends 'base.html' %} {% block title %}Error{% endblock %} {% block content %}
-<div class="error-container">
-  <h2>Error</h2>
-  <p>{{ error_message or 'An unexpected error occurred.' }}</p>
-  <a href="{{ url_for('main.index') }}" class="btn btn-primary">Back to Dashboard</a>
+{% extends "base.html" %} {% block title %}404 - No Pages Found{% endblock %} {% block content %}
+<div
+  class="d-flex flex-column justify-content-center align-items-center text-center"
+  style="min-height: 80vh">
+  <h1 class="display-3 fw-bold text-primary mb-3">404 - No Pages Found</h1>
+  <pre
+    id="scan-text"
+    class="text-muted fs-5 mb-4"
+    style="font-family: monospace; font-size: 1.2rem">
+    Scanning for page<span id="dots"></span>
+  </pre>
+
+  <p class="text-secondary mb-4" id="final-message" style="display: none">
+    <strong>Why are you still here.</strong>
+  </p>
+
+  <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary mt-3">
+    <i class="bi bi-arrow-left-circle me-2"></i>Return to Dashboard
+  </a>
 </div>
+
+<script>
+  // Animated "scanning..." text
+  const dots = document.getElementById("dots");
+  let dotCount = 0;
+
+  const interval = setInterval(() => {
+    dots.textContent = ".".repeat(dotCount);
+    dotCount++;
+
+    if (dotCount > 30) {
+      // After a few cycles
+      clearInterval(interval);
+      const text = document.getElementById("scan-text");
+      text.innerHTML = "What are you waiting for? <strong>This page doesn't exist.</strong>";
+    }
+  }, 800);
+</script>
 {% endblock %}

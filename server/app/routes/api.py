@@ -21,7 +21,6 @@ import json
 
 bp = Blueprint("api", __name__)
 
-# Import logger from centralized logging config
 from app.logging_config import get_logger
 
 logger = get_logger(__name__)

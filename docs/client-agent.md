@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **Client Agent** (`client_agent.py`) is a distributed network scanning component designed to run on Raspberry Pi 4 devices. It acts as a remote scanning node that communicates with the central PortScan Delta Reporter server to perform network port scans and report results back for centralized analysis and reporting.
+The **Client Agent** (`client_agent.py`) is a distributed network scanning component designed to run on devices. It acts as a remote scanning node that communicates with the central PortScan Delta Reporter server to perform network port scans and report results back for centralized analysis and reporting.
 
 ### Purpose
 
@@ -20,7 +20,7 @@ The **Client Agent** (`client_agent.py`) is a distributed network scanning compo
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
 │  Central Server │◄──────┤  Client Agent   │──────►│  Target Network │
-│    (Flask)      │       │ (Raspberry Pi)  │       │    Hosts        │
+│    (Flask)      │       │                 │       │    Hosts        │
 └─────────────────┘       └─────────────────┘       └─────────────────┘
         │                           │
         │                           │
@@ -200,11 +200,11 @@ scanning:
 
 ### Prerequisites
 
-**Hardware Requirements**:
+**Minimum Hardware Requirements**:
 
-- Raspberry Pi 4 (minimum 2GB RAM recommended)
-- MicroSD card (16GB+)
-- Network connectivity (Ethernet or WiFi)
+- 512MB RAM
+- 1GB disk space
+- Network connectivity
 
 **Software Requirements**:
 
@@ -599,7 +599,6 @@ Key Python packages used:
 
 - [nmap Official Documentation](https://nmap.org/book/)
 - [python-nmap Library](https://pypi.org/project/python-nmap/)
-- [Raspberry Pi Documentation](https://www.raspberrypi.org/documentation/)
 - [Flask Framework](https://flask.palletsprojects.com/)
 
 ### Changelog

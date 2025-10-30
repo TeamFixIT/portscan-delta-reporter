@@ -84,7 +84,18 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           const data = JSON.parse(event.data);
           console.log("📡 SSE:", data);
-          showAlert(data.message, data.type);
+
+          // Handle redirect events
+          if (data.type === "redirect") {
+            console.log("🔄 Redirecting to:", data.url);
+            window.location.href = data.url;
+            return;
+          }
+
+          // Handle regular alerts
+          if (data.message) {
+            showAlert(data.message, data.type);
+          }
         } catch (err) {
           console.error("Error parsing SSE event:", err);
         }

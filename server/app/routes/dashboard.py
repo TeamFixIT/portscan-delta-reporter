@@ -28,6 +28,7 @@ import json
 import io
 import click
 from datetime import datetime, timedelta
+from app import admin_required
 
 bp = Blueprint("dashboard", __name__)
 
@@ -35,19 +36,21 @@ bp = Blueprint("dashboard", __name__)
 @bp.route("/")
 @login_required
 def index():
-    count = 0
     """Dashboard home"""
     active_clients = Client.query.filter_by(status="online").count()
     recent_scans = Scan.query.filter(
         Scan.last_run >= datetime.utcnow() - timedelta(hours=24)
     ).count()
     reports_count = DeltaReport.query.count()
+    alerts_count = Alert.query.count()
+
     return render_template(
         "dashboard/index.html",
         stats={
             "clients": active_clients,
             "scans": recent_scans,
             "reports": reports_count,
+            "alerts": alerts_count,
         },
         show_sidebar=True,
     )
@@ -70,6 +73,20 @@ def scans():
             .all()
         )
     return render_template("dashboard/scans.html", scans=scan_list, show_sidebar=True)
+
+
+@bp.route("/scan/<int:scan_id>/reports")
+@login_required
+def scan_reports(scan_id):
+    scan = Scan.query.get_or_404(scan_id)
+    reports = (
+        DeltaReport.query.filter_by(scan_id=scan.id)
+        .order_by(DeltaReport.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "dashboard/scan_reports.html", scan=scan, reports=reports, show_sidebar=True
+    )
 
 
 @bp.route("/scans/create", methods=["GET"])
@@ -398,7 +415,7 @@ def compare_reports():
 
 
 @bp.route("/logs")
-@login_required
+@admin_required
 def logs():
     """Display log files"""
     logs_dir = Path(__file__).parent.parent.parent / "logs"

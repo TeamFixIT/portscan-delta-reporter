@@ -104,6 +104,34 @@
     padding-left: 1rem;
     margin: 2rem 0 1rem 0;
   }
+
+  /* Filter Controls */
+  .filter-controls {
+    background: var(--bs-light);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Filter Tags */
+  .filter-tag {
+    background: var(--bs-primary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Section filtering */
+  .filterable-section {
+    transition: all 0.3s ease;
+  }
+  .section-hidden {
+    display: none;
+  }
 </style>
 {% endblock %} {% block content %}
 <div class="container-fluid py-4">
@@ -134,16 +162,20 @@
       </div>
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
         <div class="btn-group" role="group">
-          <a href="{{ url_for('dashboard.export_delta_report', report_id=report.id) }}" class="btn">
+          <a
+            href="{{ url_for('dashboard.export_delta_report', report_id=report.id) }}"
+            class="btn btn-light">
             <i class="fas fa-download me-1"></i>CSV
           </a>
           <a
             href="{{ url_for('dashboard.export_delta_report_json', report_id=report.id) }}"
-            class="btn">
+            class="btn btn-light">
             <i class="fas fa-download me-1"></i>JSON
           </a>
         </div>
-        <a href="{{ url_for('dashboard.scan_history', scan_id=report.scan_id) }}" class="btn ms-2">
+        <a
+          href="{{ url_for('dashboard.scan_history', scan_id=report.scan_id) }}"
+          class="btn btn-light ms-2">
           <i class="fas fa-history me-1"></i>History
         </a>
       </div>
@@ -186,6 +218,65 @@
     </div>
   </div>
 
+  <!-- Filter Controls -->
+  <div class="filter-controls">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <!-- SECTION FILTER -->
+      <div>
+        <select id="section-filter" class="form-select form-select-sm">
+          <option value="all" selected>All Sections</option>
+          <option value="new_hosts">New Hosts Only</option>
+          <option value="removed_hosts">Removed Hosts Only</option>
+          <option value="new_ports">New Ports Only</option>
+          <option value="closed_ports">Closed Ports Only</option>
+          <option value="changed_services">Service Changes Only</option>
+        </select>
+      </div>
+
+      <!-- HOST FILTER -->
+      <div>
+        <input
+          type="text"
+          id="host-filter"
+          class="form-control form-control-sm"
+          placeholder="Filter by host..." />
+      </div>
+
+      <!-- PORT FILTER -->
+      <div>
+        <input
+          type="text"
+          id="port-filter"
+          class="form-control form-control-sm"
+          placeholder="Filter by port..." />
+      </div>
+
+      <!-- SERVICE FILTER -->
+      <div>
+        <select id="service-filter" class="form-select form-select-sm">
+          <option value="all" selected>All Services</option>
+          <option value="http">HTTP</option>
+          <option value="https">HTTPS</option>
+          <option value="ssh">SSH</option>
+          <option value="ftp">FTP</option>
+          <option value="smtp">SMTP</option>
+          <option value="unknown">Unknown</option>
+        </select>
+      </div>
+
+      <!-- RESET FILTERS -->
+      <div>
+        <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
+      </div>
+    </div>
+
+    <!-- Active Filters Display -->
+    <div id="active-filters" class="mt-2" style="display: none">
+      <small class="text-muted me-2">Active filters:</small>
+      <div id="filter-tags" class="d-inline"></div>
+    </div>
+  </div>
+
   <!-- Comparison Info -->
   {% if report.delta_data and report.delta_data.baseline and report.delta_data.current %}
   <div class="row mb-4">
@@ -220,176 +311,206 @@
   report.delta_data else {} %}
 
   <!-- New Hosts -->
-  {% if delta.new_up_hosts and delta.new_up_hosts|length > 0 %}
-  <div class="section-header">
-    <h4><i class="fas fa-plus-circle text-success me-2"></i>New Hosts Detected</h4>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row">
-        {% for host in delta.new_up_hosts %}
-        <div class="col-md-3 col-sm-4 col-6 mb-2">
-          <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+  <div id="new-hosts-section" class="filterable-section" data-section-type="new_hosts">
+    {% if delta.new_up_hosts and delta.new_up_hosts|length > 0 %}
+    <div class="section-header">
+      <h4><i class="fas fa-plus-circle text-success me-2"></i>New Hosts Detected</h4>
+      <small class="text-muted">{{ delta.new_up_hosts|length }} hosts found</small>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row" id="new-hosts-container">
+          {% for host in delta.new_up_hosts %}
+          <div class="col-md-3 col-sm-4 col-6 mb-2 host-item" data-host="{{ host }}">
+            <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Removed Hosts -->
-  {% if delta.new_down_hosts and delta.new_down_hosts|length > 0 %}
-  <div class="section-header">
-    <h4><i class="fas fa-minus-circle text-danger me-2"></i>Hosts No Longer Responding</h4>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="row">
-        {% for host in delta.new_down_hosts %}
-        <div class="col-md-3 col-sm-4 col-6 mb-2">
-          <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+  <div id="removed-hosts-section" class="filterable-section" data-section-type="removed_hosts">
+    {% if delta.new_down_hosts and delta.new_down_hosts|length > 0 %}
+    <div class="section-header">
+      <h4><i class="fas fa-minus-circle text-danger me-2"></i>Hosts No Longer Responding</h4>
+      <small class="text-muted">{{ delta.new_down_hosts|length }} hosts removed</small>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="row" id="removed-hosts-container">
+          {% for host in delta.new_down_hosts %}
+          <div class="col-md-3 col-sm-4 col-6 mb-2 host-item" data-host="{{ host }}">
+            <span class="host-badge"> <i class="fas fa-server me-1"></i>{{ host }} </span>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- New Open Ports -->
-  {% if delta.added_ports and delta.added_ports|length > 0 %}
-  <div class="section-header">
-    <h4><i class="fas fa-door-open text-danger me-2"></i>New Open Ports</h4>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover change-table">
-          <thead>
-            <tr>
-              <th>Host</th>
-              <th>Port</th>
-              <th>Protocol</th>
-              <th>Service</th>
-              <th>State</th>
-              <th>Product</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for port in delta.added_ports %}
-            <tr>
-              <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
-              <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
-              <td>{{ port.protocol|default('N/A')|upper }}</td>
-              <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
-              <td>
-                <span class="badge bg-success">{{ port.state|default('open') }}</span>
-              </td>
-              <td>{{ port.product|default('-') }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <div id="new-ports-section" class="filterable-section" data-section-type="new_ports">
+    {% if delta.added_ports and delta.added_ports|length > 0 %}
+    <div class="section-header">
+      <h4><i class="fas fa-door-open text-danger me-2"></i>New Open Ports</h4>
+      <small class="text-muted">{{ delta.added_ports|length }} ports opened</small>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover change-table">
+            <thead>
+              <tr>
+                <th>Host</th>
+                <th>Port</th>
+                <th>Protocol</th>
+                <th>Service</th>
+                <th>State</th>
+                <th>Product</th>
+              </tr>
+            </thead>
+            <tbody id="new-ports-container">
+              {% for port in delta.added_ports %}
+              <tr
+                class="port-row"
+                data-host="{{ port.host|default('') }}"
+                data-port="{{ port.port|default('') }}"
+                data-service="{{ port.service|default('')|lower }}">
+                <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
+                <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
+                <td>{{ port.protocol|default('N/A')|upper }}</td>
+                <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
+                <td>
+                  <span class="badge bg-success">{{ port.state|default('open') }}</span>
+                </td>
+                <td>{{ port.product|default('-') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Closed Ports -->
-  {% if delta.removed_ports and delta.removed_ports|length > 0 %}
-  <div class="section-header">
-    <h4><i class="fas fa-door-closed text-success me-2"></i>Closed Ports</h4>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover change-table">
-          <thead>
-            <tr>
-              <th>Host</th>
-              <th>Port</th>
-              <th>Protocol</th>
-              <th>Service</th>
-              <th>Previous State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for port in delta.removed_ports %}
-            <tr>
-              <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
-              <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
-              <td>{{ port.protocol|default('N/A')|upper }}</td>
-              <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
-              <td>
-                <span class="badge bg-secondary">Previously Open</span>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <div id="closed-ports-section" class="filterable-section" data-section-type="closed_ports">
+    {% if delta.removed_ports and delta.removed_ports|length > 0 %}
+    <div class="section-header">
+      <h4><i class="fas fa-door-closed text-success me-2"></i>Closed Ports</h4>
+      <small class="text-muted">{{ delta.removed_ports|length }} ports closed</small>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover change-table">
+            <thead>
+              <tr>
+                <th>Host</th>
+                <th>Port</th>
+                <th>Protocol</th>
+                <th>Service</th>
+                <th>Previous State</th>
+              </tr>
+            </thead>
+            <tbody id="closed-ports-container">
+              {% for port in delta.removed_ports %}
+              <tr
+                class="port-row"
+                data-host="{{ port.host|default('') }}"
+                data-port="{{ port.port|default('') }}"
+                data-service="{{ port.service|default('')|lower }}">
+                <td><span class="host-badge">{{ port.host|default('N/A') }}</span></td>
+                <td><span class="port-badge">{{ port.port|default('N/A') }}</span></td>
+                <td>{{ port.protocol|default('N/A')|upper }}</td>
+                <td><span class="service-badge">{{ port.service|default('unknown') }}</span></td>
+                <td>
+                  <span class="badge bg-secondary">Previously Open</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- Changed Services -->
-  {% if delta.changed_ports and delta.changed_ports|length > 0 %}
-  <div class="section-header">
-    <h4><i class="fas fa-exchange-alt text-warning me-2"></i>Service Changes</h4>
-  </div>
-  <div class="card mb-4">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-hover change-table">
-          <thead>
-            <tr>
-              <th>Host</th>
-              <th>Port</th>
-              <th>Protocol</th>
-              <th>Previous Service</th>
-              <th>Current Service</th>
-              <th>Banner Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for change in delta.changed_ports %} {% set before = change.before|default({}) %} {%
-            set after = change.after|default({}) %}
-            <tr>
-              <td><span class="host-badge">{{ change.host|default('N/A') }}</span></td>
-              <td><span class="port-badge">{{ change.port|default('N/A') }}</span></td>
-              <td>{{ change.protocol|default('N/A')|upper }}</td>
-              <td>
-                {% if before.service != after.service %}
-                <span class="diff-before">{{ before.service|default('unknown') }}</span>
-                {% else %}
-                <span class="service-badge">{{ before.service|default('unknown') }}</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if before.service != after.service %}
-                <span class="diff-after">{{ after.service|default('unknown') }}</span>
-                {% else %}
-                <span class="service-badge">{{ after.service|default('unknown') }}</span>
-                {% endif %}
-              </td>
-              <td>
-                {% if before.banner != after.banner %}
-                <small>
-                  <span class="diff-before">{{ before.banner|default('-')|truncate(30) }}</span>
-                  <i class="fas fa-arrow-right mx-1"></i>
-                  <span class="diff-after">{{ after.banner|default('-')|truncate(30) }}</span>
-                </small>
-                {% else %}
-                <small class="text-muted">No change</small>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <div
+    id="changed-services-section"
+    class="filterable-section"
+    data-section-type="changed_services">
+    {% if delta.changed_ports and delta.changed_ports|length > 0 %}
+    <div class="section-header">
+      <h4><i class="fas fa-exchange-alt text-warning me-2"></i>Service Changes</h4>
+      <small class="text-muted">{{ delta.changed_ports|length }} services changed</small>
+    </div>
+    <div class="card mb-4">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover change-table">
+            <thead>
+              <tr>
+                <th>Host</th>
+                <th>Port</th>
+                <th>Protocol</th>
+                <th>Previous Service</th>
+                <th>Current Service</th>
+                <th>Banner Change</th>
+              </tr>
+            </thead>
+            <tbody id="changed-services-container">
+              {% for change in delta.changed_ports %} {% set before = change.before|default({}) %}
+              {% set after = change.after|default({}) %}
+              <tr
+                class="port-row"
+                data-host="{{ change.host|default('') }}"
+                data-port="{{ change.port|default('') }}"
+                data-service="{{ after.service|default('')|lower }}">
+                <td><span class="host-badge">{{ change.host|default('N/A') }}</span></td>
+                <td><span class="port-badge">{{ change.port|default('N/A') }}</span></td>
+                <td>{{ change.protocol|default('N/A')|upper }}</td>
+                <td>
+                  {% if before.service != after.service %}
+                  <span class="diff-before">{{ before.service|default('unknown') }}</span>
+                  {% else %}
+                  <span class="service-badge">{{ before.service|default('unknown') }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if before.service != after.service %}
+                  <span class="diff-after">{{ after.service|default('unknown') }}</span>
+                  {% else %}
+                  <span class="service-badge">{{ after.service|default('unknown') }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if before.banner != after.banner %}
+                  <small>
+                    <span class="diff-before">{{ before.banner|default('-')|truncate(30) }}</span>
+                    <i class="fas fa-arrow-right mx-1"></i>
+                    <span class="diff-after">{{ after.banner|default('-')|truncate(30) }}</span>
+                  </small>
+                  {% else %}
+                  <small class="text-muted">No change</small>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
+    {% endif %}
   </div>
-  {% endif %}
 
   <!-- No Changes Message -->
   {% if not delta or ( (not delta.new_up_hosts or delta.new_up_hosts|length == 0) and (not
@@ -417,4 +538,195 @@
     </div>
   </div>
 </div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const sectionFilter = document.getElementById("section-filter");
+    const hostFilter = document.getElementById("host-filter");
+    const portFilter = document.getElementById("port-filter");
+    const serviceFilter = document.getElementById("service-filter");
+    const resetFilters = document.getElementById("reset-filters");
+    const activeFilters = document.getElementById("active-filters");
+    const filterTags = document.getElementById("filter-tags");
+
+    let activeFilterState = {
+      section: "all",
+      host: "",
+      port: "",
+      service: "all",
+    };
+
+    function applyFilters() {
+      const sectionValue = sectionFilter.value;
+      const hostValue = hostFilter.value.toLowerCase().trim();
+      const portValue = portFilter.value.trim();
+      const serviceValue = serviceFilter.value;
+
+      // Update active filter state
+      activeFilterState = {
+        section: sectionValue,
+        host: hostValue,
+        port: portValue,
+        service: serviceValue,
+      };
+
+      // Show/hide sections based on section filter
+      document.querySelectorAll(".filterable-section").forEach((section) => {
+        const sectionType = section.dataset.sectionType;
+
+        if (sectionValue === "all" || sectionValue === sectionType) {
+          section.style.display = "block";
+
+          // Apply row-level filtering within visible sections
+          applyRowFilters(section, hostValue, portValue, serviceValue);
+        } else {
+          section.style.display = "none";
+        }
+      });
+
+      updateActiveFiltersDisplay();
+    }
+
+    function applyRowFilters(section, hostValue, portValue, serviceValue) {
+      // Filter host items (for new/removed hosts sections)
+      section.querySelectorAll(".host-item").forEach((item) => {
+        const host = item.dataset.host.toLowerCase();
+        const visible = !hostValue || host.includes(hostValue);
+        item.style.display = visible ? "" : "none";
+      });
+
+      // Filter port rows (for port tables)
+      section.querySelectorAll(".port-row").forEach((row) => {
+        const host = row.dataset.host.toLowerCase();
+        const port = row.dataset.port;
+        const service = row.dataset.service;
+
+        const hostMatch = !hostValue || host.includes(hostValue);
+        const portMatch = !portValue || port.includes(portValue);
+        const serviceMatch = serviceValue === "all" || service.includes(serviceValue);
+
+        row.style.display = hostMatch && portMatch && serviceMatch ? "" : "none";
+      });
+
+      // Update section counts
+      updateSectionCounts(section);
+    }
+
+    function updateSectionCounts(section) {
+      const header = section.querySelector(".section-header small");
+      if (!header) return;
+
+      const sectionType = section.dataset.sectionType;
+      let visibleCount = 0;
+      let totalCount = 0;
+
+      switch (sectionType) {
+        case "new_hosts":
+        case "removed_hosts":
+          visibleCount = section.querySelectorAll('.host-item[style=""]').length;
+          totalCount = section.querySelectorAll(".host-item").length;
+          break;
+        case "new_ports":
+        case "closed_ports":
+        case "changed_services":
+          visibleCount = section.querySelectorAll('.port-row[style=""]').length;
+          totalCount = section.querySelectorAll(".port-row").length;
+          break;
+      }
+
+      if (header) {
+        const baseText = header.textContent.split(" ")[0];
+        header.textContent = `${baseText} ${visibleCount} of ${totalCount} shown`;
+      }
+    }
+
+    function updateActiveFiltersDisplay() {
+      const hasActiveFilters =
+        activeFilterState.section !== "all" ||
+        activeFilterState.host !== "" ||
+        activeFilterState.port !== "" ||
+        activeFilterState.service !== "all";
+
+      if (hasActiveFilters) {
+        activeFilters.style.display = "block";
+        filterTags.innerHTML = "";
+
+        if (activeFilterState.section !== "all") {
+          addFilterTag(`Section: ${getSectionDisplayName(activeFilterState.section)}`, "section");
+        }
+        if (activeFilterState.host !== "") {
+          addFilterTag(`Host: ${activeFilterState.host}`, "host");
+        }
+        if (activeFilterState.port !== "") {
+          addFilterTag(`Port: ${activeFilterState.port}`, "port");
+        }
+        if (activeFilterState.service !== "all") {
+          addFilterTag(`Service: ${activeFilterState.service}`, "service");
+        }
+      } else {
+        activeFilters.style.display = "none";
+      }
+    }
+
+    function addFilterTag(text, type) {
+      const tag = document.createElement("span");
+      tag.className = "filter-tag";
+      tag.innerHTML = `${text} <i class="fas fa-times ms-1" data-filter-type="${type}"></i>`;
+      filterTags.appendChild(tag);
+    }
+
+    function getSectionDisplayName(sectionValue) {
+      const names = {
+        new_hosts: "New Hosts",
+        removed_hosts: "Removed Hosts",
+        new_ports: "New Ports",
+        closed_ports: "Closed Ports",
+        changed_services: "Service Changes",
+      };
+      return names[sectionValue] || sectionValue;
+    }
+
+    function resetAllFilters() {
+      sectionFilter.value = "all";
+      hostFilter.value = "";
+      portFilter.value = "";
+      serviceFilter.value = "all";
+      applyFilters();
+    }
+
+    // Event Listeners
+    sectionFilter.addEventListener("change", applyFilters);
+    hostFilter.addEventListener("input", applyFilters);
+    portFilter.addEventListener("input", applyFilters);
+    serviceFilter.addEventListener("change", applyFilters);
+    resetFilters.addEventListener("click", resetAllFilters);
+
+    // Remove individual filters when X is clicked
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("fa-times")) {
+        const filterType = e.target.dataset.filterType;
+
+        switch (filterType) {
+          case "section":
+            sectionFilter.value = "all";
+            break;
+          case "host":
+            hostFilter.value = "";
+            break;
+          case "port":
+            portFilter.value = "";
+            break;
+          case "service":
+            serviceFilter.value = "all";
+            break;
+        }
+
+        applyFilters();
+      }
+    });
+
+    // Initialize filters
+    applyFilters();
+  });
+</script>
 {% endblock %}

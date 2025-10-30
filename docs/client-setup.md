@@ -44,8 +44,6 @@ portscanner-client
   # macOS
   brew install nmap
   
-  # Raspberry Pi
-  sudo apt-get install nmap
   ```
 
 ### Install from source
@@ -139,7 +137,7 @@ After installation, these commands are available:
 
 ## Running as a Service
 
-### systemd (Linux/Raspberry Pi)
+### systemd (Linux)
 
 Create `/etc/systemd/system/portscanner-client.service`:
 
@@ -306,12 +304,6 @@ The client agent:
 - Client credentials should be kept secure
 
 ## Hardware Requirements
-
-Tested on:
-- Raspberry Pi 4 (4GB RAM)
-- Raspberry Pi 3B+
-- Linux x86_64
-- macOS (Intel and Apple Silicon)
 
 Minimum:
 - 512MB RAM

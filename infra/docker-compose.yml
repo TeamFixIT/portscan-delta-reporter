@@ -26,7 +26,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Raspberry Pi 4 client simulator
+  # Client simulator
   rpi-client:
     build:
       context: ../client
@@ -46,7 +46,7 @@ services:
       - PYTHONUNBUFFERED=1
       - SERVER_URL=http://localhost:5000
 
-  # Second Raspberry Pi client simulator
+  # Client simulator
   rpi-client-2:
     build:
       context: ../client

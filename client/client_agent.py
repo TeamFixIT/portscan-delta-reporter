@@ -2,9 +2,8 @@
 """
 Push-Based Port Scanner Client Agent
 
-This client runs on Raspberry Pi 4 devices and performs network scanning
-tasks as requested by the central server. It runs a web server to listen
-for push-based scan requests from the server and returns complete results.
+This client performs network scanning tasks as requested by the central server.
+It runs a web server to listen for push-based scan requests from the server and returns complete results.
 """
 
 import json
@@ -575,8 +574,6 @@ class PortScannerClient:
 
         thread = threading.Thread(target=heartbeat_loop, daemon=True)
         thread.start()
-
-
 
     def perform_scan(self, scan_request: ScanRequest):
         """Perform a complete scan and send results to server"""

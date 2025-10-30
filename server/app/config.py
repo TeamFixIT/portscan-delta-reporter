@@ -41,14 +41,36 @@ class Config:
     MAIL_USERNAME = os.getenv("MAIL_USERNAME")
     MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
     MAIL_SENDER = os.getenv("MAIL_SENDER", "Port Detector <noreply@portdetector.com>")
-
-    ENTRA_CLIENT_ID = os.getenv("ENTRA_CLIENT_ID")
-    ENTRA_CLIENT_SECRET = os.getenv("ENTRA_CLIENT_SECRET")
-    ENTRA_TENANT_ID = os.getenv("ENTRA_TENANT_ID")
-    ENTRA_REDIRECT_PATH = "/auth/entra/callback"
-    ENTRA_AUTHORITY = f"https://login.microsoftonline.com/{ENTRA_TENANT_ID}"
-    ENTRA_SCOPE = ["User.Read"]
-    # ... other configs
+    enabled_providers_str = os.environ.get("OAUTH2_PROVIDERS", "")
+    ENABLED_PROVIDERS = [
+        p.strip().lower() for p in enabled_providers_str.split(",") if p.strip()
+    ]
+    OAUTH2_PROVIDERS = {
+        "microsoft": {
+            "client_id": os.environ.get("MICROSOFT_CLIENT_ID"),
+            "client_secret": os.environ.get("MICROSOFT_CLIENT_SECRET"),
+            "server_metadata_url": f"https://login.microsoftonline.com/{os.environ.get('MICROSOFT_TENANT_ID')}/v2.0/.well-known/openid-configuration",
+            "userinfo": "https://graph.microsoft.com/v1.0/me",
+            "scope": ["openid", "email", "profile", "User.Read"],
+        },
+        "github": {
+            "client_id": os.environ.get("GITHUB_CLIENT_ID"),
+            "client_secret": os.environ.get("GITHUB_CLIENT_SECRET"),
+            "authorize_url": "https://github.com/login/oauth/authorize",
+            "token_url": "https://github.com/login/oauth/access_token",
+            "userinfo": "https://api.github.com/user",
+            "scope": ["user:email", "user"],
+        },
+        "google": {
+            "client_id": os.environ.get("GOOGLE_CLIENT_ID"),
+            "client_secret": os.environ.get("GOOGLE_CLIENT_SECRET"),
+            "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "userinfo": "https://www.googleapis.com/oauth2/v3/userinfo",
+            "scope": ["openid", "email", "profile"],
+        },
+        # Add more providers here (e.g., 'facebook', 'twitter') as dict entries
+    }
 
 
 def get_config_value(key):

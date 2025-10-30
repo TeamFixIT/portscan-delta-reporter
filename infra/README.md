@@ -1,6 +1,6 @@
 # Port Scanner Test Environment
 
-This directory contains Docker infrastructure for testing the port scanner client-server system in a controlled environment that simulates a Raspberry Pi 4 client scanning various network targets.
+This directory contains Docker infrastructure for testing the port scanner client-server system in a controlled environment that simulates a client scanning various network targets.
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ The test environment consists of:
 ### Core Services
 
 - **portscan-server**: Flask backend server (accessible at http://localhost:5000)
-- **rpi-client**: Raspberry Pi 4 client simulator with nmap scanning capabilities
+- **rpi-client**: Client simulator with nmap scanning capabilities
 
 ### Test Targets (Simulated Network Devices)
 
@@ -80,7 +80,7 @@ docker-compose ps
 
 Verify all containers are running and healthy.
 
-### 3. Access Raspberry Pi Client
+### 3. Access Client
 
 ```bash
 docker exec -it rpi-client bash

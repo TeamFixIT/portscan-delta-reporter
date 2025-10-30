@@ -1,152 +1,226 @@
-{% extends "base.html" %} {% block title %}Delta Reports {% endblock %} {% block extra_css %}
+{% extends "base.html" %} {% block title %}Delta Reports{% endblock %} {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/delta_reports.css') }}" />
+<style>
+  /* Filter Controls */
+  .filter-controls {
+    background: var(--bs-light);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Report Cards */
+  .report-card {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: 0.25s ease;
+    background: var(--bs-card-bg);
+    border: 1px solid var(--bs-border-color);
+  }
+  .report-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.08);
+  }
+
+  /* Status Badges */
+  .status-critical {
+    background: #f8d7da;
+    color: #842029;
+  }
+  .status-changes {
+    background: #fff3cd;
+    color: #664d03;
+  }
+  .status-stable {
+    background: #d1e7dd;
+    color: #0f5132;
+  }
+
+  /* Metric Items */
+  .metric-item {
+    text-align: center;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--bs-light);
+  }
+  .metric-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  /* Summary Cards */
+  .summary-card {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid var(--bs-border-color);
+  }
+  .summary-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.08);
+  }
+
+  /* Empty State */
+  .empty-state {
+    padding: 5rem 2rem;
+    color: var(--bs-secondary);
+  }
+</style>
 {% endblock %} {% block content %}
 <div class="container-fluid py-4">
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Delta Reports</li>
+    </ol>
+  </nav>
+
   <!-- Header -->
-  <div class="row mb-4">
-    <div class="col">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-          <li class="breadcrumb-item"><a href="/">Home</a></li>
-          <li class="breadcrumb-item active">Delta Reports</li>
-        </ol>
-      </nav>
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-          <h1 class="display-6 mb-1">
-            <i class="fas fa-chart-line text-primary"></i> Change History
-          </h1>
-          <p class="text-muted mb-0">Track network changes over time</p>
-        </div>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-primary" id="refreshBtn">
-            <i class="fas fa-sync-alt"></i> Refresh
-          </button>
-          <button class="btn btn-outline-success" id="exportAllBtn">
-            <i class="fas fa-download"></i> Export All
-          </button>
-        </div>
-      </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-1">Change History</h2>
+      <p class="text-muted mb-0">Track network changes over time</p>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-primary" onclick="location.reload()">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
     </div>
   </div>
 
   <!-- Summary Cards -->
-  <div class="row mb-4" id="summaryCards">
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card summary-card border-primary h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
-              <i class="fas fa-file-alt"></i>
-            </div>
-            <div>
-              <span class="stat-badge text-primary" id="totalReports">0</span>
-              <span class="stat-label text-muted">Total Reports</span>
-            </div>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card summary-card">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-primary">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div>
+            <div class="h5 mb-0" id="totalReports">0</div>
+            <small class="text-muted">Total Reports</small>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card summary-card border-warning h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
-              <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div>
-              <span class="stat-badge text-warning" id="reportsWithChanges">0</span>
-              <span class="stat-label text-muted">With Changes</span>
-            </div>
+    <div class="col-md-3 col-6">
+      <div class="card summary-card border-warning">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-warning">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div>
+            <div class="h5 mb-0" id="reportsWithChanges">0</div>
+            <small class="text-muted">With Changes</small>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card summary-card border-success h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
-              <i class="fas fa-server"></i>
-            </div>
-            <div>
-              <span class="stat-badge text-success" id="totalNewHosts">0</span>
-              <span class="stat-label text-muted">New Hosts</span>
-            </div>
+    <div class="col-md-3 col-6">
+      <div class="card summary-card border-success">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-success">
+            <i class="fas fa-server"></i>
+          </div>
+          <div>
+            <div class="h5 mb-0" id="totalNewHosts">0</div>
+            <small class="text-muted">New Hosts</small>
           </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card summary-card border-info h-100">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
-              <i class="fas fa-network-wired"></i>
-            </div>
-            <div>
-              <span class="stat-badge text-info" id="totalNewPorts">0</span>
-              <span class="stat-label text-muted">New Ports</span>
-            </div>
+    <div class="col-md-3 col-6">
+      <div class="card summary-card border-info">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-info">
+            <i class="fas fa-network-wired"></i>
+          </div>
+          <div>
+            <div class="h5 mb-0" id="totalNewPorts">0</div>
+            <small class="text-muted">New Ports</small>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Filters -->
-  <div class="row mb-4">
-    <div class="col">
-      <div class="card filter-card">
-        <div class="card-body">
-          <div class="row align-items-center g-3">
-            <div class="col-lg-4 col-md-6">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="onlyChangesFilter" />
-                <label class="form-check-label" for="onlyChangesFilter">
-                  <i class="fas fa-filter me-1"></i> Show only reports with changes
-                </label>
-              </div>
-            </div>
-            <div class="col-lg-3 col-md-6">
-              <select class="form-select" id="perPageSelect">
-                <option value="10">10 per page</option>
-                <option value="25">25 per page</option>
-                <option value="50">50 per page</option>
-                <option value="100">100 per page</option>
-              </select>
-            </div>
-            <div class="col-lg-5 text-lg-end">
-              <span class="text-muted" id="reportCount">Loading...</span>
-            </div>
-          </div>
-        </div>
+  <!-- Filter Controls -->
+  <div class="filter-controls">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <!-- STATUS FILTER -->
+      <div>
+        <select id="status-filter" class="form-select form-select-sm">
+          <option value="all" selected>All Statuses</option>
+          <option value="critical">Critical Only</option>
+          <option value="changes">Changes Only</option>
+          <option value="stable">Stable Only</option>
+        </select>
+      </div>
+
+      <!-- CHANGE TYPE FILTER -->
+      <div>
+        <select id="change-type-filter" class="form-select form-select-sm">
+          <option value="all" selected>All Change Types</option>
+          <option value="new_ports">New Ports Only</option>
+          <option value="new_hosts">New Hosts Only</option>
+          <option value="service_changes">Service Changes Only</option>
+          <option value="closed_ports">Closed Ports Only</option>
+        </select>
+      </div>
+
+      <!-- SORT DROPDOWN -->
+      <div>
+        <select id="sort-filter" class="form-select form-select-sm">
+          <option value="recent" selected>Most Recent</option>
+          <option value="oldest">Oldest</option>
+          <option value="most_changes">Most Changes</option>
+          <option value="least_changes">Least Changes</option>
+          <option value="network_name">Network Name</option>
+        </select>
+      </div>
+
+      <!-- SEARCH INPUT -->
+      <div>
+        <input
+          type="text"
+          id="search-filter"
+          class="form-control form-control-sm"
+          placeholder="Search networks..." />
+      </div>
+
+      <!-- ITEMS PER PAGE -->
+      <div>
+        <select id="per-page-filter" class="form-select form-select-sm">
+          <option value="10">10 per page</option>
+          <option value="25" selected>25 per page</option>
+          <option value="50">50 per page</option>
+          <option value="100">100 per page</option>
+        </select>
+      </div>
+
+      <!-- RESET FILTERS -->
+      <div>
+        <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
       </div>
     </div>
   </div>
 
   <!-- Loading Spinner -->
-  <div id="loadingSpinner" class="text-center py-5" style="display: none">
+  <div id="loadingSpinner" class="text-center py-5">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Loading...</span>
     </div>
     <p class="mt-3 text-muted">Loading delta reports...</p>
   </div>
 
-  <!-- Reports List -->
-  <div id="reportsList" class="row g-4">
-    <!-- Dynamic content -->
+  <!-- Reports Grid -->
+  <div id="reportsGrid" class="row g-4" style="display: none">
+    <!-- Dynamic content will be loaded here -->
   </div>
 
   <!-- Empty State -->
-  <div id="emptyState" class="text-center empty-state" style="display: none">
-    <div class="mb-4">
-      <i class="fas fa-inbox fa-5x text-muted opacity-50"></i>
-    </div>
-    <h3 class="text-muted">No Delta Reports Found</h3>
-    <p class="text-muted" id="emptyStateMessage">
-      Delta reports will appear here after your second scan completes.
-    </p>
+  <div id="emptyState" class="empty-state text-center" style="display: none">
+    <h4>No Delta Reports Found</h4>
+    <p>Delta reports will appear here after your second scan completes.</p>
   </div>
 
   <!-- Pagination -->
@@ -207,7 +281,335 @@
 </div>
 {% endblock %} {% block extra_js %}
 <script>
-  const SCAN_ID = {{ scan.id }};
+  // Initialize with empty data - will be populated by your JS
+  const reportsData = [];
+  let currentPage = 1;
+  let itemsPerPage = 25;
+  let filteredReports = [];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    initializeFilters();
+    loadReports();
+  });
+
+  function initializeFilters() {
+    const statusFilter = document.getElementById("status-filter");
+    const changeTypeFilter = document.getElementById("change-type-filter");
+    const sortFilter = document.getElementById("sort-filter");
+    const searchFilter = document.getElementById("search-filter");
+    const perPageFilter = document.getElementById("per-page-filter");
+    const resetFilters = document.getElementById("reset-filters");
+
+    // Event Listeners
+    statusFilter.addEventListener("change", applyFiltersAndRender);
+    changeTypeFilter.addEventListener("change", applyFiltersAndRender);
+    sortFilter.addEventListener("change", applyFiltersAndRender);
+    searchFilter.addEventListener("input", applyFiltersAndRender);
+    perPageFilter.addEventListener("change", function () {
+      itemsPerPage = parseInt(this.value);
+      currentPage = 1;
+      applyFiltersAndRender();
+    });
+    resetFilters.addEventListener("click", resetAllFilters);
+  }
+
+  function loadReports() {
+    // This would be replaced with your actual data loading logic
+    // For now, we'll simulate loading
+    setTimeout(() => {
+      // Simulate data load - replace with your actual data
+      if (reportsData.length === 0) {
+        showEmptyState();
+      } else {
+        applyFiltersAndRender();
+      }
+      document.getElementById("loadingSpinner").style.display = "none";
+    }, 1000);
+  }
+
+  function applyFiltersAndRender() {
+    const statusValue = document.getElementById("status-filter").value;
+    const changeTypeValue = document.getElementById("change-type-filter").value;
+    const sortValue = document.getElementById("sort-filter").value;
+    const searchValue = document.getElementById("search-filter").value.toLowerCase().trim();
+
+    // Filter reports
+    filteredReports = reportsData.filter((report) => {
+      const status = getReportStatus(report);
+      const networkName = (report.scan?.name || report.scan?.target || "Unknown").toLowerCase();
+      const hasNewPorts = report.new_ports_count > 0;
+      const hasNewHosts = report.new_hosts_count > 0;
+      const hasServiceChanges = report.changed_services_count > 0;
+      const hasClosedPorts = report.closed_ports_count > 0;
+
+      // Status filter
+      if (statusValue !== "all" && status !== statusValue) {
+        return false;
+      }
+
+      // Change type filter
+      if (changeTypeValue !== "all") {
+        if (changeTypeValue === "new_ports" && !hasNewPorts) return false;
+        if (changeTypeValue === "new_hosts" && !hasNewHosts) return false;
+        if (changeTypeValue === "service_changes" && !hasServiceChanges) return false;
+        if (changeTypeValue === "closed_ports" && !hasClosedPorts) return false;
+      }
+
+      // Search filter
+      if (searchValue && !networkName.includes(searchValue)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    // Sort reports
+    filteredReports.sort((a, b) => {
+      const aChanges = a.new_ports_count + a.new_hosts_count + a.changed_services_count;
+      const bChanges = b.new_ports_count + b.new_hosts_count + b.changed_services_count;
+      const aName = (a.scan?.name || a.scan?.target || "").toLowerCase();
+      const bName = (b.scan?.name || b.scan?.target || "").toLowerCase();
+
+      switch (sortValue) {
+        case "recent":
+          return new Date(b.created_at) - new Date(a.created_at);
+        case "oldest":
+          return new Date(a.created_at) - new Date(b.created_at);
+        case "most_changes":
+          return bChanges - aChanges;
+        case "least_changes":
+          return aChanges - bChanges;
+        case "network_name":
+          return aName.localeCompare(bName);
+        default:
+          return new Date(b.created_at) - new Date(a.created_at);
+      }
+    });
+
+    updateSummaryCards();
+    renderReports();
+    renderPagination();
+  }
+
+  function getReportStatus(report) {
+    if (report.new_ports_count > 0) return "critical";
+    if (
+      report.new_ports_count > 0 ||
+      report.closed_ports_count > 0 ||
+      report.changed_services_count > 0 ||
+      report.new_hosts_count > 0 ||
+      report.removed_hosts_count > 0
+    )
+      return "changes";
+    return "stable";
+  }
+
+  function updateSummaryCards() {
+    const totalReports = filteredReports.length;
+    const reportsWithChanges = filteredReports.filter(
+      (r) =>
+        r.new_ports_count > 0 ||
+        r.closed_ports_count > 0 ||
+        r.changed_services_count > 0 ||
+        r.new_hosts_count > 0
+    ).length;
+    const totalNewHosts = filteredReports.reduce((sum, r) => sum + r.new_hosts_count, 0);
+    const totalNewPorts = filteredReports.reduce((sum, r) => sum + r.new_ports_count, 0);
+
+    document.getElementById("totalReports").textContent = totalReports;
+    document.getElementById("reportsWithChanges").textContent = reportsWithChanges;
+    document.getElementById("totalNewHosts").textContent = totalNewHosts;
+    document.getElementById("totalNewPorts").textContent = totalNewPorts;
+  }
+
+  function renderReports() {
+    const container = document.getElementById("reportsGrid");
+
+    if (filteredReports.length === 0) {
+      showEmptyState();
+      return;
+    }
+
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageReports = filteredReports.slice(startIndex, endIndex);
+
+    container.innerHTML = pageReports
+      .map(
+        (report) => `
+      <div class="col-lg-6 col-xl-4">
+        <div class="report-card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+              <h6 class="mb-1">${report.scan?.name || report.scan?.target || "Unknown Network"}</h6>
+              <small class="text-muted">${report.scan?.target || "N/A"}</small>
+            </div>
+            <span class="badge ${getStatusBadgeClass(report)}">${getStatusText(report)}</span>
+          </div>
+          <div class="card-body">
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="metric-item ${report.new_ports_count > 0 ? "border-danger" : ""}">
+                  <div class="metric-value ${
+                    report.new_ports_count > 0 ? "text-danger" : "text-muted"
+                  }">
+                    ${report.new_ports_count > 0 ? "+" : ""}${report.new_ports_count}
+                  </div>
+                  <small>New Ports</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="metric-item ${report.closed_ports_count > 0 ? "border-success" : ""}">
+                  <div class="metric-value ${
+                    report.closed_ports_count > 0 ? "text-success" : "text-muted"
+                  }">
+                    -${report.closed_ports_count}
+                  </div>
+                  <small>Closed Ports</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="metric-item ${report.new_hosts_count > 0 ? "border-info" : ""}">
+                  <div class="metric-value ${
+                    report.new_hosts_count > 0 ? "text-info" : "text-muted"
+                  }">
+                    +${report.new_hosts_count}
+                  </div>
+                  <small>New Hosts</small>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="metric-item ${
+                  report.changed_services_count > 0 ? "border-warning" : ""
+                }">
+                  <div class="metric-value ${
+                    report.changed_services_count > 0 ? "text-warning" : "text-muted"
+                  }">
+                    ${report.changed_services_count}
+                  </div>
+                  <small>Service Changes</small>
+                </div>
+              </div>
+            </div>
+            <div class="text-muted small mb-3">
+              <i class="fas fa-clock me-1"></i>
+              ${new Date(report.created_at).toLocaleString()}
+            </div>
+            <div class="d-grid gap-2">
+              <a href="${getReportUrl(report.id)}" class="btn btn-primary btn-sm">
+                <i class="fas fa-search me-1"></i> View Details
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    `
+      )
+      .join("");
+
+    container.style.display = "flex";
+    document.getElementById("emptyState").style.display = "none";
+  }
+
+  function getStatusBadgeClass(report) {
+    const status = getReportStatus(report);
+    return `bg-${status === "critical" ? "danger" : status === "changes" ? "warning" : "success"}`;
+  }
+
+  function getStatusText(report) {
+    const status = getReportStatus(report);
+    return status === "critical" ? "Critical" : status === "changes" ? "Changes" : "Stable";
+  }
+
+  function getReportUrl(reportId) {
+    return `/dashboard/delta-reports/${reportId}`;
+  }
+
+  function renderPagination() {
+    const totalPages = Math.ceil(filteredReports.length / itemsPerPage);
+    const paginationContainer = document.getElementById("paginationContainer");
+    const pagination = document.getElementById("pagination");
+
+    if (totalPages <= 1) {
+      paginationContainer.style.display = "none";
+      return;
+    }
+
+    pagination.innerHTML = "";
+
+    // Previous button
+    const prevLi = createPaginationItem("Previous", currentPage > 1, () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderReports();
+        renderPagination();
+      }
+    });
+    pagination.appendChild(prevLi);
+
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+      const pageLi = createPaginationItem(
+        i,
+        true,
+        () => {
+          currentPage = i;
+          renderReports();
+          renderPagination();
+        },
+        i === currentPage
+      );
+      pagination.appendChild(pageLi);
+    }
+
+    // Next button
+    const nextLi = createPaginationItem("Next", currentPage < totalPages, () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderReports();
+        renderPagination();
+      }
+    });
+    pagination.appendChild(nextLi);
+
+    paginationContainer.style.display = "flex";
+  }
+
+  function createPaginationItem(text, enabled, onClick, isActive = false) {
+    const li = document.createElement("li");
+    li.className = `page-item ${isActive ? "active" : ""} ${!enabled ? "disabled" : ""}`;
+
+    const a = document.createElement("a");
+    a.className = "page-link";
+    a.href = "#";
+    a.textContent = text;
+
+    if (enabled && !isActive) {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        onClick();
+      });
+    }
+
+    li.appendChild(a);
+    return li;
+  }
+
+  function showEmptyState() {
+    document.getElementById("reportsGrid").style.display = "none";
+    document.getElementById("paginationContainer").style.display = "none";
+    document.getElementById("emptyState").style.display = "block";
+  }
+
+  function resetAllFilters() {
+    document.getElementById("status-filter").value = "all";
+    document.getElementById("change-type-filter").value = "all";
+    document.getElementById("sort-filter").value = "recent";
+    document.getElementById("search-filter").value = "";
+    document.getElementById("per-page-filter").value = "25";
+    itemsPerPage = 25;
+    currentPage = 1;
+    applyFiltersAndRender();
+  }
 </script>
-<script src="{{ url_for('static', filename='js/delta_client.js') }}"></script>
 {% endblock %}

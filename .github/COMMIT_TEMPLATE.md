@@ -42,7 +42,7 @@ Choose the most appropriate type:
 Select the most relevant scope:
 
 - **server**: Flask backend, API, database models
-- **client**: Raspberry Pi scanning client code
+- **client**: Scanning client code
 - **infra**: Docker, systemd, deployment configuration
 - **docs**: Documentation files, README updates
 - **models**: Database schemas, SQLAlchemy models
@@ -98,7 +98,7 @@ Include when applicable:
 
 ### Key Features
 
-- Network port scanning via Raspberry Pi clients
+- Network port scanning via clients
 - MAC address-based host tracking for dynamic IPs
 - Delta reporting between scan results
 - Real-time client-server communication
@@ -123,7 +123,7 @@ feat(scan): add port range validation for client requests
 
 Implement validation logic to ensure port ranges are within
 acceptable limits (1-65535) and properly formatted before
-sending scan tasks to Raspberry Pi clients.
+sending scan tasks to clients.
 
 Closes #42
 ```

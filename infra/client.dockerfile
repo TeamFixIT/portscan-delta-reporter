@@ -1,4 +1,4 @@
-# Dockerfile for Raspberry Pi 4 Client Simulator
+# Dockerfile for Client Simulator
 FROM python:3.11-slim
 
 # Install system packages required for scanning
@@ -33,7 +33,7 @@ ENV PYTHONPATH=/app
 # Create entrypoint script
 RUN echo '#!/bin/bash\n\
 set -e\n\
-echo "Starting Raspberry Pi Client..."\n\
+echo "Starting Client..."\n\
 \n\
 # Check if setup.sh exists and run it\n\
 if [ -f ./setup.sh ]; then\n\

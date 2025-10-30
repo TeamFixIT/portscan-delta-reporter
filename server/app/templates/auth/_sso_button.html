@@ -1,0 +1,23 @@
+<!-- auth/_sso_button.html -->
+<div class="mb-4">
+  <a
+    href="{{ url_for('auth.oauth_login', provider=provider) }}"
+    class="btn btn-lg w-100 border shadow-sm">
+    {% if provider == 'microsoft' %}
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" class="me-2">
+      <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+      <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+    </svg>
+    Sign in with Microsoft {% elif provider == 'google' %}
+    <i class="bi bi-google"></i>
+    Sign in with Google {% elif provider == 'github' %}
+    <i class="bi bi-github"></i>
+    Sign in with GitHub {% else %}
+    <!-- Default/fallback for other providers -->
+    <i class="bi bi-box-arrow-in-right me-2"></i>
+    <!-- Assuming Bootstrap Icons; adjust as needed -->
+    Sign in with {{ provider|capitalize }} {% endif %}
+  </a>
+</div>

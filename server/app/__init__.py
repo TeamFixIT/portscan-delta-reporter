@@ -10,11 +10,14 @@ import click
 from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
+from functools import wraps
 from flask_migrate import Migrate
-from flask_socketio import SocketIO
 from flask_session import Session
 from dotenv import load_dotenv
+from flask import request, session, flash, redirect, url_for
+from flask_login import current_user, logout_user
+from authlib.integrations.flask_client import OAuth
 
 
 load_dotenv()
@@ -23,8 +26,8 @@ load_dotenv()
 db = SQLAlchemy()
 login_manager = LoginManager()
 migrate = Migrate()
-socketio = SocketIO()
 sess = Session()
+oauth = OAuth()
 
 # Import scheduler
 from app.logging_config import setup_logging, get_logger
@@ -63,8 +66,9 @@ def create_app():
     migrations_dir = BASE_DIR / "migrations"
     migrate.init_app(app, db, directory=str(migrations_dir))
 
-    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent")
     sess.init_app(app)
+    oauth.init_app(app)
+    scheduler_service.init_app(app)
 
     # Configure Flask-Login
     login_manager.login_view = "auth.login"
@@ -77,23 +81,11 @@ def create_app():
 
         return User.query.get(int(user_id))
 
-    # Import models to ensure they are registered with SQLAlchemy
-    from app.models import (
-        user,
-        client,
-        scan,
-        scan_result,
-        scan_task,
-        delta_report,
-    )
-
-    # initialise scheduler and websocket
-    scheduler_service.init_app(app)
-
     # Create database tables
+    from app import models
+
     with app.app_context():
         if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-
             try:
                 setup_logging(
                     app=app,
@@ -104,6 +96,67 @@ def create_app():
                 logger.info("Scheduler service started successfully")
             except Exception as e:
                 logger.error(f"Failed to start scheduler: {str(e)}")
+
+    # Registration logic for OAuth providers
+    for name in app.config["ENABLED_PROVIDERS"]:
+        if name in app.config["OAUTH2_PROVIDERS"]:
+            config = app.config["OAUTH2_PROVIDERS"][name]
+            register_kwargs = {
+                "client_id": config["client_id"],
+                "client_secret": config["client_secret"],
+            }
+
+            # If server_metadata_url is provided, use it (preferred for OIDC providers)
+            if "server_metadata_url" in config:
+                register_kwargs["server_metadata_url"] = config["server_metadata_url"]
+            else:
+                # Otherwise, use manual endpoints
+                if "authorize_url" in config:
+                    register_kwargs["authorize_url"] = config["authorize_url"]
+                if "token_url" in config:
+                    register_kwargs["access_token_url"] = config["token_url"]
+                if "userinfo" in config:
+                    register_kwargs["userinfo_endpoint"] = config["userinfo"]
+
+            # Always set client_kwargs with scope
+            register_kwargs["client_kwargs"] = {
+                "scope": " ".join(config.get("scope", []))
+            }
+
+            oauth.register(name, **register_kwargs)
+            logger.info(f"Registered OAuth provider: {name}")
+        else:
+            logger.info(f"Skipping unknown provider: {name}")
+
+    @app.before_request
+    def check_session_validity():
+        # Skip for static files and auth-related endpoints
+        if request.endpoint in [
+            "static",
+            "auth.login",
+            "auth.logout",
+            "auth.oauth_login",
+            "auth.oauth_callback",
+            "main.index",
+        ]:
+            return
+
+        # Skip for API endpoints if you have token-based auth
+        if request.endpoint and request.endpoint.startswith("api."):
+            return
+
+        if current_user.is_authenticated:
+            # Check if session token matches DB
+            stored_token = session.get("session_token")
+            if stored_token != current_user.current_session_token:
+                # Session is invalid → log out
+                logout_user()
+                session.clear()
+                flash(
+                    "You have been logged out because you signed in from another location.",
+                    "warning",
+                )
+                return redirect(url_for("auth.login"))
 
     # Register blueprints
     from app.routes.main import bp as main_bp
@@ -295,3 +348,15 @@ def create_app():
         click.echo("=" * 60)
 
     return app
+
+
+def admin_required(f):
+    @wraps(f)
+    @login_required
+    def decorated(*args, **kwargs):
+        if not getattr(current_user, "is_admin", False):
+            flash("Administrator privileges required.", "danger")
+            return redirect(url_for("main.index"))
+        return f(*args, **kwargs)
+
+    return decorated

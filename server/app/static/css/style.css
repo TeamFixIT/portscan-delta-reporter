@@ -21,6 +21,7 @@ body.dark-theme {
    ============================================ */
 :root,
 [data-bs-theme="light"] {
+  --primary-rgb: 77, 166, 255;
   --primary: #4da6ff;
   --primary-dark: #3f54cd;
   --secondary: #59c8ff;
@@ -30,6 +31,7 @@ body.dark-theme {
 /* DARK THEME ROOT VARIABLES */
 [data-bs-theme="dark"],
 body.dark-theme {
+  --primary-rgb: 77, 166, 255;
   --primary: #4da6ff;
   --primary-dark: #3f54cd;
   --secondary: #59c8ff;
@@ -37,12 +39,6 @@ body.dark-theme {
 }
 
 /* Use Bootstrap variables for backgrounds and text */
-
-.card {
-  background-color: var(--bs-card-bg);
-  color: var(--bs-card-color);
-  border: 1px solid var(--border);
-}
 
 .navbar-brand {
   font-weight: bold;
@@ -200,17 +196,25 @@ body.dark-theme {
   background: #0d6efd;
   color: #fff;
   border: none; /* remove white outline */
-  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.30);
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
 }
-.help-fab i { font-size: 1.45rem; transition: font-size 0.2s ease; }
-.help-fab.open i { font-size: 1.75rem; }
+.help-fab i {
+  font-size: 1.45rem;
+  transition: font-size 0.2s ease;
+}
+.help-fab.open i {
+  font-size: 1.75rem;
+}
 .help-fab:hover {
   background: #0b5ed7;
   color: #fff;
   box-shadow: 0 10px 24px rgba(13, 110, 253, 0.38), 0 0 0 3px rgba(13, 110, 253, 0.15);
 }
 .help-fab:focus,
-.help-fab:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(13,110,253,0.25); }
+.help-fab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25);
+}
 
 /* Mobile: move to bottom-right for better reachability */
 @media (max-width: 768px) {
@@ -233,7 +237,9 @@ body.dark-theme .help-fab {
   max-width: 440px; /* slightly wider */
 }
 @media (max-width: 480px) {
-  .help-modal-dialog { max-width: calc(100% - 2rem); }
+  .help-modal-dialog {
+    max-width: calc(100% - 2rem);
+  }
 }
 
 /* Help modal sizing and typography */
@@ -263,7 +269,9 @@ body.dark-theme .help-fab {
   font-size: 1rem;
   text-decoration: none;
 }
-.help-modal .help-list a:hover { text-decoration: underline; }
+.help-modal .help-list a:hover {
+  text-decoration: underline;
+}
 
 /* Alternate icon accent colors per item for visual interest */
 .help-modal .help-list li:nth-child(2) i {
@@ -281,11 +289,26 @@ body.dark-theme .help-fab {
 }
 
 /* Dark theme - inherit modal background/colors already defined, just ensure links readable */
-body.dark-theme .help-modal .help-list a { color: #66b2ff; }
-body.dark-theme .help-modal { border-left-color: #66b2ff; }
-body.dark-theme .help-modal .modal-title { color: #66b2ff; }
-body.dark-theme .help-modal .help-list i { background: rgba(102, 178, 255, 0.12); color: #66b2ff; }
-body.dark-theme .help-modal .help-list li:nth-child(2) i { background: rgba(199, 146, 255, 0.16); color: #c792ff; }
-body.dark-theme .help-modal .help-list li:nth-child(3) i { background: rgba(32, 201, 151, 0.16); color: #4ddab6; }
+body.dark-theme .help-modal .help-list a {
+  color: #66b2ff;
+}
+body.dark-theme .help-modal {
+  border-left-color: #66b2ff;
+}
+body.dark-theme .help-modal .modal-title {
+  color: #66b2ff;
+}
+body.dark-theme .help-modal .help-list i {
+  background: rgba(102, 178, 255, 0.12);
+  color: #66b2ff;
+}
+body.dark-theme .help-modal .help-list li:nth-child(2) i {
+  background: rgba(199, 146, 255, 0.16);
+  color: #c792ff;
+}
+body.dark-theme .help-modal .help-list li:nth-child(3) i {
+  background: rgba(32, 201, 151, 0.16);
+  color: #4ddab6;
+}
 
 /* (Removed) Simple Chat Widget styles */

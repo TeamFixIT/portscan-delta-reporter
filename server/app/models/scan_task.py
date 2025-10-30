@@ -9,6 +9,7 @@ from app.logging_config import get_logger
 
 logger = get_logger(__name__)
 
+
 class ScanTask(db.Model):
     """Scan tasks to be distributed to clients"""
 
@@ -82,7 +83,9 @@ class ScanTask(db.Model):
             else:
                 logger.warning(f"ScanResult with id {self.scan_result_id} not found")
         else:
-            logger.info(f"Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}")
+            logger.info(
+                f"Task {self.task_id} completed, waiting for other tasks in group {self.task_group_id}"
+            )
 
     def mark_failed(self):
         """Mark task as failed"""

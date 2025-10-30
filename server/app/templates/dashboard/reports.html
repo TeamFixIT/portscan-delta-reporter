@@ -26,12 +26,10 @@ extra_css %}
   }
   .score-excellent {
     border-color: #198754;
-    background-color: rgba(25, 135, 84, 0.05);
     color: #198754;
   }
   .score-good {
     border-color: #0dcaf0;
-    background-color: rgba(13, 202, 240, 0.05);
     color: #0dcaf0;
   }
   .score-warning {
@@ -58,17 +56,10 @@ extra_css %}
     box-shadow: 0 0.75rem 1.25rem rgba(0, 0, 0, 0.08);
   }
   .scan-card-header {
-    background: var(--bs-gray-100);
     padding: 1rem 1.25rem;
     border-bottom: 1px solid var(--bs-border-color);
   }
 
-  .status-badge {
-    font-size: 0.8rem;
-    padding: 0.35rem 0.8rem;
-    border-radius: 2rem;
-    font-weight: 600;
-  }
   .status-stable {
     background: #d1e7dd;
     color: #0f5132;
@@ -90,7 +81,6 @@ extra_css %}
   }
   .metric-item {
     text-align: center;
-    background: var(--bs-light);
     padding: 0.75rem;
     border-radius: 0.5rem;
   }
@@ -99,18 +89,17 @@ extra_css %}
     font-weight: 600;
   }
 
-  /* Alert Banner */
-  .alert-banner {
-    background: linear-gradient(135deg, #fff3cd, #ffe69c);
-    border-left: 5px solid #ffc107;
-    padding: 1rem 1.25rem;
-    border-radius: 0.5rem;
-  }
-
   /* Empty State */
   .empty-state {
     padding: 5rem 2rem;
     color: var(--bs-secondary);
+  }
+
+  /* Filter Controls */
+  .filter-controls {
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
   }
 </style>
 {% endblock %} {% block content %}
@@ -125,38 +114,71 @@ extra_css %}
 
   <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">
-      <i class="fas fa-shield-alt me-2 text-primary"></i>Network Security Overview
-    </h2>
-    <button class="btn btn-outline-primary" onclick="location.reload()">
-      <i class="fas fa-sync-alt me-1"></i> Refresh
-    </button>
+    <h2 class="mb-0">Network Security Overview</h2>
+    <button class="btn btn-outline-primary" onclick="location.reload()">Refresh</button>
   </div>
 
   <p class="text-muted mb-4">Current security posture across all monitored networks.</p>
 
-  {% set scans_with_alerts = reports|selectattr('new_ports_count', 'gt',
-  0)|map(attribute='scan_id')|unique|list|length %} {% if scans_with_alerts > 0 %}
-  <div class="alert-banner mb-4">
-    <div class="d-flex align-items-center">
-      <i class="fas fa-exclamation-triangle fa-lg text-warning me-2"></i>
-      <div>
-        <strong>Security Alert:</strong> {{ scans_with_alerts }} network(s) have new open ports
-        detected.
-        <a href="#" class="fw-semibold text-decoration-none ms-1">Review changes →</a>
-      </div>
+  <!-- Filter Controls -->
+  <div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+    <!-- STATUS FILTER -->
+    <div>
+      <select id="status-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Statuses</option>
+        <option value="critical">Critical Only</option>
+        <option value="changes">Changes Only</option>
+        <option value="stable">Stable Only</option>
+      </select>
+    </div>
+
+    <!-- SCORE FILTER -->
+    <div>
+      <select id="score-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Scores</option>
+        <option value="excellent">Excellent (90+)</option>
+        <option value="good">Good (70-89)</option>
+        <option value="monitor">Monitor (50-69)</option>
+        <option value="critical">Critical (0-49)</option>
+      </select>
+    </div>
+
+    <!-- SORT DROPDOWN -->
+    <div>
+      <select id="sort-filter" class="form-select form-select-sm">
+        <option value="recent" selected>Most Recent</option>
+        <option value="oldest">Oldest</option>
+        <option value="score-high">Score (High to Low)</option>
+        <option value="score-low">Score (Low to High)</option>
+        <option value="name">Network Name</option>
+      </select>
+    </div>
+
+    <!-- SEARCH INPUT -->
+    <div>
+      <input
+        type="text"
+        id="search-filter"
+        class="form-control form-control-sm"
+        placeholder="Search networks..." />
+    </div>
+
+    <!-- RESET FILTERS -->
+    <div>
+      <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
     </div>
   </div>
-  {% endif %}
 
   <!-- Summary Cards -->
   <div class="row g-3 mb-4">
     <div class="col-md-3 col-6">
       <div class="card summary-card">
         <div class="card-body d-flex align-items-center">
-          <div class="me-3 text-primary"><i class="fas fa-network-wired fa-2x"></i></div>
+          <div class="me-3 text-primary"></div>
           <div>
-            <div class="h5 mb-0">{{ reports|map(attribute='scan_id')|unique|list|length }}</div>
+            <div class="h5 mb-0" id="total-networks">
+              {{ reports|map(attribute='scan_id')|unique|list|length }}
+            </div>
             <small class="text-muted">Monitored Networks</small>
           </div>
         </div>
@@ -165,9 +187,11 @@ extra_css %}
     <div class="col-md-3 col-6">
       <div class="card summary-card border-danger">
         <div class="card-body d-flex align-items-center">
-          <div class="me-3 text-danger"><i class="fas fa-door-open fa-2x"></i></div>
+          <div class="me-3 text-danger"></div>
           <div>
-            <div class="h5 mb-0">{{ reports|sum(attribute='new_ports_count') }}</div>
+            <div class="h5 mb-0" id="total-new-ports">
+              {{ reports|sum(attribute='new_ports_count') }}
+            </div>
             <small class="text-muted">New Open Ports</small>
           </div>
         </div>
@@ -176,9 +200,11 @@ extra_css %}
     <div class="col-md-3 col-6">
       <div class="card summary-card border-success">
         <div class="card-body d-flex align-items-center">
-          <div class="me-3 text-success"><i class="fas fa-door-closed fa-2x"></i></div>
+          <div class="me-3 text-success"></div>
           <div>
-            <div class="h5 mb-0">{{ reports|sum(attribute='closed_ports_count') }}</div>
+            <div class="h5 mb-0" id="total-closed-ports">
+              {{ reports|sum(attribute='closed_ports_count') }}
+            </div>
             <small class="text-muted">Closed Ports</small>
           </div>
         </div>
@@ -187,9 +213,11 @@ extra_css %}
     <div class="col-md-3 col-6">
       <div class="card summary-card border-warning">
         <div class="card-body d-flex align-items-center">
-          <div class="me-3 text-warning"><i class="fas fa-exchange-alt fa-2x"></i></div>
+          <div class="me-3 text-warning"></div>
           <div>
-            <div class="h5 mb-0">{{ reports|sum(attribute='changed_services_count') }}</div>
+            <div class="h5 mb-0" id="total-service-changes">
+              {{ reports|sum(attribute='changed_services_count') }}
+            </div>
             <small class="text-muted">Service Changes</small>
           </div>
         </div>
@@ -202,7 +230,7 @@ extra_css %}
   report.scan_id not in reports_by_scan %} {% set _ = reports_by_scan.update({report.scan_id: []})
   %} {% endif %} {% set _ = reports_by_scan[report.scan_id].append(report) %} {% endfor %}
 
-  <div class="row g-4">
+  <div class="row g-4" id="scan-cards-container">
     {% for scan_id, scan_reports in reports_by_scan.items() %} {% set scan = scan_reports[0].scan %}
     {% set latest_report = scan_reports|sort(attribute='created_at', reverse=true)|first %} {% set
     new_ports_penalty = latest_report.new_ports_count * 10 %} {% set changed_services_penalty =
@@ -211,42 +239,42 @@ extra_css %}
     changed_services_penalty - new_hosts_penalty]|max %} {% set has_critical =
     latest_report.new_ports_count > 0 %} {% set has_changes = latest_report.new_ports_count > 0 or
     latest_report.closed_ports_count > 0 or latest_report.changed_services_count > 0 or
-    latest_report.new_hosts_count > 0 or latest_report.removed_hosts_count > 0 %}
+    latest_report.new_hosts_count > 0 or latest_report.removed_hosts_count > 0 %} {% set
+    network_name = scan.name if scan and scan.name else scan.target or 'Network #' ~ scan_id %} {%
+    set status = 'critical' if has_critical else 'changes' if has_changes else 'stable' %} {% set
+    score_category = 'excellent' if security_score >= 90 else 'good' if security_score >= 70 else
+    'monitor' if security_score >= 50 else 'critical' %}
 
-    <div class="col-lg-4 col-md-6">
+    <div
+      class="col-lg-4 col-md-6 scan-card-item"
+      data-status="{{ status }}"
+      data-score="{{ security_score }}"
+      data-score-category="{{ score_category }}"
+      data-name="{{ network_name|lower }}"
+      data-created="{{ latest_report.created_at.timestamp() }}">
       <div class="scan-card">
         <div class="scan-card-header d-flex justify-content-between">
           <div>
-            <h5 class="mb-1">
-              {{ scan.name if scan and scan.name else scan.target or 'Network #' ~ scan_id }}
-            </h5>
+            <h5 class="mb-1">{{ network_name }}</h5>
             <small class="text-muted">{{ scan.target if scan else 'N/A' }}</small>
           </div>
-          {% if has_critical %}
-          <span class="status-badge status-critical"
-            ><i class="fas fa-exclamation-circle me-1"></i> Alert</span
-          >
-          {% elif has_changes %}
-          <span class="status-badge status-changes"
-            ><i class="fas fa-info-circle me-1"></i> Changes</span
-          >
-          {% else %}
-          <span class="status-badge status-stable"
-            ><i class="fas fa-check-circle me-1"></i> Stable</span
-          >
-          {% endif %}
+          <h4 class="align-middle">
+            {% if has_critical %}
+            <span class="badge rounded-pill bg-danger center">Alert</span>
+            {% elif has_changes %}
+            <span class="badge rounded-pill bg-warning">Changes</span>
+            {% else %}
+            <span class="badge rounded-pill bg-success">Stable</span>
+            {% endif %}
+          </h4>
         </div>
 
         <div class="card-body">
           <div
-            class="security-score-circle {% if security_score >= 90 %}score-excellent {% elif security_score >= 70 %}score-good {% elif security_score >= 50 %}score-warning {% else %}score-critical{% endif %}">
+            class="security-score-circle {% if security_score >= 90 %}score-excellent{% elif security_score >= 70 %}score-good{% elif security_score >= 50 %}score-warning{% else %}score-critical{% endif %}">
             <div class="fs-3">{{ security_score }}</div>
-            <small
-              >{% if security_score >= 90 %}Excellent{% elif security_score >= 70 %}Good{% elif
-              security_score >= 50 %}Monitor{% else %}Critical{% endif %}</small
-            >
+            <small>{{ score_category|title }}</small>
           </div>
-
           <div class="metric-grid mb-3">
             <div class="metric-item">
               <span
@@ -280,26 +308,26 @@ extra_css %}
           </div>
 
           <div class="text-muted small mb-3">
-            <i class="fas fa-clock me-1"></i>{{ latest_report.created_at.strftime('%Y-%m-%d %H:%M')
-            }} • <i class="fas fa-file-alt ms-2 me-1"></i>{{ scan_reports|length }} report(s)
+            {{ latest_report.created_at.strftime('%Y-%m-%d %H:%M') }} • {{ scan_reports|length }}
+            report(s)
           </div>
 
           <div class="d-grid gap-2">
             <a
               href="{{ url_for('dashboard.view_delta_report', report_id=latest_report.id) }}"
               class="btn btn-primary">
-              <i class="fas fa-eye me-2"></i>View Latest Report
+              View Latest Report
             </a>
             <div class="btn-group">
               <a
                 href="{{ url_for('dashboard.scan_history', scan_id=scan_id) }}"
                 class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-history me-1"></i>History
+                History
               </a>
               <a
                 href="{{ url_for('dashboard.export_delta_report', report_id=latest_report.id) }}"
                 class="btn btn-sm btn-outline-success">
-                <i class="fas fa-download me-1"></i>Export
+                Export
               </a>
             </div>
           </div>
@@ -310,10 +338,109 @@ extra_css %}
   </div>
   {% else %}
   <div class="empty-state text-center">
-    <i class="fas fa-shield-alt fa-5x opacity-25 mb-3"></i>
     <h4>No Delta Reports Available</h4>
     <p>Run at least two scans of the same target to generate a comparison report.</p>
   </div>
   {% endif %}
 </div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const cards = Array.from(document.querySelectorAll(".scan-card-item"));
+    const statusFilter = document.getElementById("status-filter");
+    const scoreFilter = document.getElementById("score-filter");
+    const sortFilter = document.getElementById("sort-filter");
+    const searchFilter = document.getElementById("search-filter");
+    const resetFilters = document.getElementById("reset-filters");
+    const container = document.getElementById("scan-cards-container");
+
+    // Filtering function
+    function applyFilters() {
+      const statusValue = statusFilter.value;
+      const scoreValue = scoreFilter.value;
+      const searchValue = searchFilter.value.toLowerCase().trim();
+
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const status = card.dataset.status;
+        const score = parseInt(card.dataset.score);
+        const scoreCategory = card.dataset.scoreCategory;
+        const name = card.dataset.name;
+
+        let visible = true;
+
+        // Status filter
+        if (statusValue !== "all" && status !== statusValue) {
+          visible = false;
+        }
+
+        // Score filter
+        if (scoreValue !== "all") {
+          if (scoreValue === "excellent" && score < 90) visible = false;
+          else if (scoreValue === "good" && (score < 70 || score >= 90)) visible = false;
+          else if (scoreValue === "monitor" && (score < 50 || score >= 70)) visible = false;
+          else if (scoreValue === "critical" && score >= 50) visible = false;
+        }
+
+        // Search filter
+        if (searchValue && !name.includes(searchValue)) {
+          visible = false;
+        }
+
+        card.style.display = visible ? "" : "none";
+        if (visible) visibleCount++;
+      });
+
+      // Update summary counts if needed
+      document.getElementById("total-networks").textContent = visibleCount;
+    }
+
+    // Sorting function
+    function applySorting() {
+      const sortValue = sortFilter.value;
+
+      const sorted = [...cards].sort((a, b) => {
+        if (sortValue === "recent") {
+          return parseFloat(b.dataset.created) - parseFloat(a.dataset.created);
+        } else if (sortValue === "oldest") {
+          return parseFloat(a.dataset.created) - parseFloat(b.dataset.created);
+        } else if (sortValue === "score-high") {
+          return parseFloat(b.dataset.score) - parseFloat(a.dataset.score);
+        } else if (sortValue === "score-low") {
+          return parseFloat(a.dataset.score) - parseFloat(b.dataset.score);
+        } else if (sortValue === "name") {
+          return a.dataset.name.localeCompare(b.dataset.name);
+        }
+        return 0;
+      });
+
+      sorted.forEach((card) => container.appendChild(card));
+    }
+
+    // Reset filters
+    function resetAllFilters() {
+      statusFilter.value = "all";
+      scoreFilter.value = "all";
+      sortFilter.value = "recent";
+      searchFilter.value = "";
+      applySorting();
+      applyFilters();
+    }
+
+    // Event Listeners
+    statusFilter.addEventListener("change", applyFilters);
+    scoreFilter.addEventListener("change", applyFilters);
+    sortFilter.addEventListener("change", () => {
+      applySorting();
+      applyFilters();
+    });
+    searchFilter.addEventListener("input", applyFilters);
+    resetFilters.addEventListener("click", resetAllFilters);
+
+    // Initialize
+    applySorting();
+    applyFilters();
+  });
+</script>
 {% endblock %}

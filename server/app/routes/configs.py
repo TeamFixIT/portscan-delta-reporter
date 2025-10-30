@@ -20,22 +20,11 @@ from app import db
 
 # Import logger from centralized logging config
 from app.logging_config import get_logger
+from app import admin_required
 
 logger = get_logger(__name__)
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
-
-
-def admin_required(f):
-    @wraps(f)
-    @login_required
-    def decorated(*args, **kwargs):
-        if not getattr(current_user, "is_admin", False):
-            flash("Administrator privileges required.", "danger")
-            return redirect(url_for("main.index"))
-        return f(*args, **kwargs)
-
-    return decorated
 
 
 @bp.route("/config")
