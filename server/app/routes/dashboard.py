@@ -39,10 +39,20 @@ def index():
     """Dashboard home"""
     active_clients = Client.query.filter_by(status="online").count()
     recent_scans = Scan.query.filter(
-        Scan.last_run >= datetime.utcnow() - timedelta(hours=24)
+        Scan.last_run >= datetime.utcnow() - timedelta(hours=24),
+        Scan.user_id == current_user.id,
     ).count()
-    reports_count = DeltaReport.query.count()
-    alerts_count = Alert.query.count()
+    reports_count = (
+        DeltaReport.query.join(Scan, DeltaReport.scan_id == Scan.id)
+        .filter(Scan.user_id == current_user.id)
+        .count()
+    )
+    alerts_count = (
+        Alert.query.join(ScanResult, Alert.scan_result_id == ScanResult.id)
+        .join(Scan, ScanResult.scan_id == Scan.id)
+        .filter(Scan.user_id == current_user.id)
+        .count()
+    )
 
     return render_template(
         "dashboard/index.html",
@@ -59,7 +69,7 @@ def index():
 @bp.route("/scans")
 @login_required
 def scans():
-    scan_list = Scan.query.all()
+    scan_list = Scan.query.filter_by(user_id=current_user.id).all()
     for scan in scan_list:
         scan.tasks = (
             ScanTask.query.filter_by(scan_id=scan.id)
@@ -79,8 +89,10 @@ def scans():
 @login_required
 def scan_reports(scan_id):
     scan = Scan.query.get_or_404(scan_id)
+
     reports = (
-        DeltaReport.query.filter_by(scan_id=scan.id)
+        DeltaReport.query.join(Scan, DeltaReport.scan_id == Scan.id)
+        .filter(Scan.user_id == current_user.id)
         .order_by(DeltaReport.created_at.desc())
         .all()
     )
@@ -148,10 +160,13 @@ def reports():
     """
     Render the delta reports page.
     """
-    reports_list = DeltaReport.query.all()
-    return render_template(
-        "dashboard/reports.html", reports=reports_list, show_sidebar=True
+    reports = (
+        DeltaReport.query.join(Scan, DeltaReport.scan_id == Scan.id)
+        .filter(Scan.user_id == current_user.id)
+        .order_by(DeltaReport.created_at.desc())
+        .all()
     )
+    return render_template("dashboard/reports.html", reports=reports, show_sidebar=True)
 
 
 @bp.route("/reports/<int:report_id>")
@@ -485,8 +500,16 @@ def download_log(filename):
 
 @bp.route("/alerts")
 def alerts():
-    alerts = Alert.query.order_by(Alert.created_at.desc()).all()
-    return render_template("dashboard/alerts.html", alerts=alerts, show_sidebar=True)
+    alert_list = (
+        Alert.query.join(ScanResult, Alert.scan_result_id == ScanResult.id)
+        .join(Scan, ScanResult.scan_id == Scan.id)
+        .filter(Scan.user_id == current_user.id)
+        .order_by(Alert.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "dashboard/alerts.html", alerts=alert_list, show_sidebar=True
+    )
 
 
 @bp.route("/alerts/<int:alert_id>/status", methods=["POST"])
