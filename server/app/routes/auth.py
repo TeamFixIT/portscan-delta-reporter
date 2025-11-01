@@ -156,8 +156,8 @@ def oauth_callback(provider):
         user = User.create_user(
             username=username,
             email=email,
-            first_name=user_info.get("given_name"),
-            last_name=user_info.get("family_name"),
+            first_name=user_info.get("name").split(" ")[0],
+            last_name=user_info.get("name").split(" ")[1],
             auth_provider=provider,  # Set to provider name
         )
     logger.info(f"OAuth login for user: {user.username} via {provider}")
@@ -249,14 +249,6 @@ def register():
             # Auto-login the new user
             login_user(user)
             user.update_last_login()
-            if request.is_json:
-                return jsonify(
-                    {
-                        "success": True,
-                        "message": "Registration successful",
-                        "redirect": url_for("dashboard.index"),
-                    }
-                )
             flash(
                 "Registration successful ! Welcome to Port Scanner Delta Reporter.",
                 "success",

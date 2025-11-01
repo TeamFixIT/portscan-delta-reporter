@@ -65,3 +65,4 @@ config.yml
 
 # Backup files
 dump
+infra/server.env
