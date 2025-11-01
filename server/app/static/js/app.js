@@ -139,6 +139,31 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.appendChild(container);
     return container;
   };
+  document.querySelectorAll(".utc-time").forEach((el) => {
+    const raw = el.getAttribute("datetime");
+    if (!raw) return;
+    if (raw == "None") return;
+    // If it's a naive datetime (no timezone info), assume UTC for consistency
+    const utcString = raw.match(/(Z|[+-]\d{2}:\d{2})$/) ? raw : `${raw}Z`;
+
+    const localDate = new Date(utcString);
+
+    // Format for readability
+    const formatted = localDate.toLocaleString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+
+    // Replace text content
+    el.textContent = formatted;
+
+    // Optional: tooltip showing original UTC
+    el.title = `UTC: ${utcString}`;
+  });
 
   // -----------------------------
   // Initialize SSE Connection

@@ -4,7 +4,7 @@ API routes for scan management
 
 from flask import Blueprint, request, jsonify, current_app, redirect, url_for, flash
 from flask_login import login_required, current_user
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import and_, or_
 from app import db
 from app.models.scan import Scan
@@ -184,7 +184,9 @@ def create_scan():
 
         if scan.is_scheduled and scan.is_active:
             # Use initial_interval if provided for immediate first execution
-            scan.next_run = datetime.utcnow() + timedelta(minutes=initial_interval)
+            scan.next_run = datetime.now(timezone.utc) + timedelta(
+                minutes=initial_interval
+            )
 
         db.session.add(scan)
         db.session.commit()
@@ -263,7 +265,7 @@ def update_scan(scan_id):
         else:
             scan.is_scheduled = False
 
-        scan.updated_at = datetime.utcnow()
+        scan.updated_at = datetime.now(timezone.utc)
 
         # Handle scheduling changes
         if (
@@ -276,7 +278,7 @@ def update_scan(scan_id):
                 scheduler_service.unschedule_scan(scan_id)
 
             if scan.is_scheduled and scan.is_active:
-                scan.next_run = datetime.utcnow() + timedelta(
+                scan.next_run = datetime.now(timezone.utc) + timedelta(
                     minutes=scan.interval_minutes
                 )
                 scheduler_service.schedule_scan(scan)
@@ -332,7 +334,7 @@ def delete_scan(scan_id):
         scan.is_active = False
         scan.is_scheduled = False
         scan.next_run = None
-        scan.updated_at = datetime.utcnow()
+        scan.updated_at = datetime.now(timezone.utc)
         db.session.commit()
 
         return (
@@ -388,13 +390,13 @@ def toggle_scan(scan_id):
 
         # Toggle active status
         scan.is_active = not scan.is_active
-        scan.updated_at = datetime.utcnow()
+        scan.updated_at = datetime.now(timezone.utc)
 
         # Handle scheduling
         if scan.is_scheduled:
             if scan.is_active:
-                if not scan.next_run or scan.next_run <= datetime.utcnow():
-                    scan.next_run = datetime.utcnow() + timedelta(
+                if not scan.next_run or scan.next_run <= datetime.now(timezone.utc):
+                    scan.next_run = datetime.now(timezone.utc) + timedelta(
                         minutes=scan.interval_minutes
                     )
                 scheduler_service.schedule_scan(scan)

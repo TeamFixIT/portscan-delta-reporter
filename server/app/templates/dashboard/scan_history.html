@@ -1,13 +1,6 @@
 {% extends "base.html" %} {% block title %}Scan History - {{ scan.target }}{% endblock %} {% block
 extra_css %}
 <style>
-  .scan-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-  }
   .timeline {
     position: relative;
     padding: 2rem 0;
@@ -167,18 +160,17 @@ extra_css %}
 {% endblock %} {% block content %}
 <div class="container-fluid py-4">
   <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb">
+  <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Home</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
       <li class="breadcrumb-item">
-        <a href="{{ url_for('dashboard.reports') }}">Security Overview</a>
+        <a href="{{ url_for('dashboard.reports') }}">Delta Reports</a>
       </li>
       <li class="breadcrumb-item active">Scan History</li>
     </ol>
   </nav>
-
   <!-- Header -->
-  <div class="scan-header">
+  <div class="detail-header">
     <div class="row align-items-center">
       <div class="col-md-8">
         <h1 class="mb-2"><i class="fas fa-history me-2"></i>Scan History</h1>
@@ -188,62 +180,98 @@ extra_css %}
         </p>
         <p class="mb-0">
           <i class="fas fa-chart-line me-2"></i>
-          <strong>Total Reports:</strong> {{ reports|length }}
+          <strong>Total Reports:</strong> <span id="total-reports">{{ reports|length }}</span>
         </p>
       </div>
-      <div class="col-md-4 text-md-end mt-3 mt-md-0">
-        <a href="{{ url_for('dashboard.reports') }}" class="btn">
-          <i class="fas fa-arrow-left me-2"></i>Back to Overview
-        </a>
-      </div>
     </div>
   </div>
-
   {% if reports|length > 0 %}
-  <!-- Summary Box -->
-  <div class="summary-box">
-    <div class="row">
-      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-        <div class="text-center">
-          <h3 class="mb-1 text-primary">{{ reports|sum(attribute='new_ports_count') }}</h3>
-          <small class="text-muted">Total New Ports</small>
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card border-danger">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-danger">
+            <div class="h5 mb-0" id="total-new-ports">
+              {{ reports|sum(attribute='new_ports_count') }}
+            </div>
+            <small class="text-muted">New Open Ports</small>
+          </div>
         </div>
       </div>
-      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-        <div class="text-center">
-          <h3 class="mb-1 text-success">{{ reports|sum(attribute='closed_ports_count') }}</h3>
-          <small class="text-muted">Total Closed Ports</small>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-success">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-success">
+            <div class="h5 mb-0" id="total-closed-ports">
+              {{ reports|sum(attribute='closed_ports_count') }}
+            </div>
+            <small class="text-muted">Closed Ports</small>
+          </div>
         </div>
       </div>
-      <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-        <div class="text-center">
-          <h3 class="mb-1 text-warning">{{ reports|sum(attribute='changed_services_count') }}</h3>
-          <small class="text-muted">Service Changes</small>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-warning">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-warning">
+            <div class="h5 mb-0" id="total-service-changes">
+              {{ reports|sum(attribute='changed_services_count') }}
+            </div>
+            <small class="text-muted">Service Changes</small>
+          </div>
         </div>
       </div>
-      <div class="col-md-3 col-sm-6">
-        <div class="text-center">
-          <h3 class="mb-1 text-info">
-            {{ reports|sum(attribute='new_hosts_count') +
-            reports|sum(attribute='removed_hosts_count') }}
-          </h3>
-          <small class="text-muted">Host Changes</small>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-info">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-info">
+            <div class="h5 mb-0" id="total-host-changes">
+              {{ reports|sum(attribute='new_hosts_count') +
+              reports|sum(attribute='removed_hosts_count') }}
+            </div>
+            <small class="text-muted">Host Changes</small>
+          </div>
         </div>
       </div>
     </div>
   </div>
-
-  <!-- Filter Tabs -->
-  <div class="filter-tabs">
-    <button class="filter-tab active" data-filter="all">
-      <i class="fas fa-th me-1"></i>All Reports
-    </button>
-    <button class="filter-tab" data-filter="changes">
-      <i class="fas fa-exclamation-triangle me-1"></i>Only Changes
-    </button>
-    <button class="filter-tab" data-filter="critical">
-      <i class="fas fa-shield-alt me-1"></i>Critical Only
-    </button>
+  <!-- Filter Controls -->
+  <div class="d-flex flex-wrap gap-3 align-items-center mb-4">
+    <!-- STATUS FILTER -->
+    <div>
+      <select id="status-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Statuses</option>
+        <option value="critical">Critical Only</option>
+        <option value="changes">Changes Only</option>
+        <option value="stable">Stable Only</option>
+      </select>
+    </div>
+    <!-- CHANGE TYPE FILTER -->
+    <div>
+      <select id="change-type-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Change Types</option>
+        <option value="new_ports">New Ports Only</option>
+        <option value="new_hosts">New Hosts Only</option>
+        <option value="service_changes">Service Changes Only</option>
+        <option value="closed_ports">Closed Ports Only</option>
+      </select>
+    </div>
+    <!-- SORT DROPDOWN -->
+    <div>
+      <select id="sort-filter" class="form-select form-select-sm">
+        <option value="recent" selected>Most Recent</option>
+        <option value="oldest">Oldest</option>
+        <option value="most_changes">Most Changes</option>
+        <option value="least_changes">Least Changes</option>
+      </select>
+    </div>
+    <!-- RESET FILTERS -->
+    <div>
+      <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
+    </div>
   </div>
 
   <!-- Timeline -->
@@ -251,25 +279,30 @@ extra_css %}
     {% for report in reports %} {% set has_changes = report.new_ports_count > 0 or
     report.closed_ports_count > 0 or report.changed_services_count > 0 or report.new_hosts_count > 0
     or report.removed_hosts_count > 0 %} {% set is_critical = report.new_ports_count > 0 %}
-
     <div
       class="timeline-item"
       data-has-changes="{{ 'true' if has_changes else 'false' }}"
-      data-is-critical="{{ 'true' if is_critical else 'false' }}">
+      data-is-critical="{{ 'true' if is_critical else 'false' }}"
+      data-new-ports="{{ report.new_ports_count }}"
+      data-closed-ports="{{ report.closed_ports_count }}"
+      data-changed-services="{{ report.changed_services_count }}"
+      data-new-hosts="{{ report.new_hosts_count }}"
+      data-removed-hosts="{{ report.removed_hosts_count }}"
+      data-created-at="{{ report.created_at.strftime('%Y-%m-%dT%H:%M:%S') }}">
       <div
         class="timeline-dot {% if is_critical %}critical{% elif has_changes %}has-changes{% else %}no-changes{% endif %}"></div>
-
-      <div class="timeline-card">
-        <div class="timeline-card-header">
+      <div class="card">
+        <div class="card-header">
           <div class="d-flex justify-content-between align-items-center">
             <div>
               <h5 class="mb-1">
                 <i class="fas fa-calendar-alt text-primary me-2"></i>
-                {{ report.created_at.strftime('%B %d, %Y') }}
+                <time class="utc-time" datetime="{{ report.created_at }}">
+                  {{ report.created_at}}
+                </time>
               </h5>
-              <small class="text-muted"> {{ report.created_at.strftime('%H:%M:%S') }} </small>
             </div>
-            <div>
+            <h5>
               {% if is_critical %}
               <span class="badge bg-danger">
                 <i class="fas fa-exclamation-circle me-1"></i>Critical
@@ -281,10 +314,9 @@ extra_css %}
               {% else %}
               <span class="badge bg-success"> <i class="fas fa-check-circle me-1"></i>Stable </span>
               {% endif %}
-            </div>
+            </h5>
           </div>
         </div>
-
         <div class="timeline-card-body">
           {% if has_changes %}
           <!-- Change Badges -->
@@ -316,7 +348,6 @@ extra_css %}
             </span>
             {% endif %}
           </div>
-
           <!-- Stats Grid -->
           <div class="stats-grid">
             <div class="stat-box">
@@ -344,7 +375,6 @@ extra_css %}
             <strong>No changes detected</strong> - Network remained stable
           </div>
           {% endif %}
-
           <!-- Comparison Info -->
           {% if report.delta_data and report.delta_data.baseline and report.delta_data.current %}
           <div class="comparison-info">
@@ -363,7 +393,6 @@ extra_css %}
             {% endif %}
           </div>
           {% endif %}
-
           <!-- Action Buttons -->
           <div class="d-flex gap-2 mt-3 pt-3 border-top">
             <a
@@ -387,7 +416,6 @@ extra_css %}
     </div>
     {% endfor %}
   </div>
-
   {% else %}
   <!-- Empty State -->
   <div class="empty-timeline">
@@ -405,33 +433,102 @@ extra_css %}
 </div>
 {% endblock %} {% block extra_js %}
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    // Filter functionality
-    const filterTabs = document.querySelectorAll(".filter-tab");
-    const timelineItems = document.querySelectorAll(".timeline-item");
+  document.addEventListener("DOMContentLoaded", () => {
+    const timelineItems = Array.from(document.querySelectorAll(".timeline-item"));
+    const statusFilter = document.getElementById("status-filter");
+    const changeTypeFilter = document.getElementById("change-type-filter");
+    const sortFilter = document.getElementById("sort-filter");
+    const resetFilters = document.getElementById("reset-filters");
+    const totalReportsEl = document.getElementById("total-reports");
 
-    filterTabs.forEach((tab) => {
-      tab.addEventListener("click", function () {
-        // Update active state
-        filterTabs.forEach((t) => t.classList.remove("active"));
-        this.classList.add("active");
+    function applyFilters() {
+      const statusValue = statusFilter.value;
+      const changeTypeValue = changeTypeFilter.value;
 
-        const filter = this.dataset.filter;
+      let visibleCount = 0;
 
-        timelineItems.forEach((item) => {
-          const hasChanges = item.dataset.hasChanges === "true";
-          const isCritical = item.dataset.isCritical === "true";
+      timelineItems.forEach((item) => {
+        const isCritical = item.dataset.isCritical === "true";
+        const hasChanges = item.dataset.hasChanges === "true";
+        const newPorts = parseInt(item.dataset.newPorts);
+        const closedPorts = parseInt(item.dataset.closedPorts);
+        const changedServices = parseInt(item.dataset.changedServices);
+        const newHosts = parseInt(item.dataset.newHosts);
+        const removedHosts = parseInt(item.dataset.removedHosts);
 
-          if (filter === "all") {
-            item.style.display = "block";
-          } else if (filter === "changes") {
-            item.style.display = hasChanges ? "block" : "none";
-          } else if (filter === "critical") {
-            item.style.display = isCritical ? "block" : "none";
-          }
-        });
+        let visible = true;
+
+        // Status filter
+        if (statusValue === "critical" && !isCritical) visible = false;
+        else if (statusValue === "changes" && (!hasChanges || isCritical)) visible = false;
+        else if (statusValue === "stable" && (hasChanges || isCritical)) visible = false;
+
+        // Change type filter
+        if (changeTypeValue !== "all") {
+          if (changeTypeValue === "new_ports" && newPorts === 0) visible = false;
+          else if (changeTypeValue === "closed_ports" && closedPorts === 0) visible = false;
+          else if (changeTypeValue === "service_changes" && changedServices === 0) visible = false;
+          else if (changeTypeValue === "new_hosts" && newHosts === 0) visible = false;
+        }
+
+        item.style.display = visible ? "" : "none";
+        if (visible) visibleCount++;
       });
+
+      // Update summary total
+      totalReportsEl.textContent = visibleCount;
+    }
+
+    function applySorting() {
+      const sortValue = sortFilter.value;
+
+      const sorted = [...timelineItems].sort((a, b) => {
+        const dateA = new Date(a.dataset.createdAt).getTime();
+        const dateB = new Date(b.dataset.createdAt).getTime();
+
+        const totalChangesA =
+          parseInt(a.dataset.newPorts) +
+          parseInt(a.dataset.closedPorts) +
+          parseInt(a.dataset.changedServices) +
+          parseInt(a.dataset.newHosts) +
+          parseInt(a.dataset.removedHosts);
+        const totalChangesB =
+          parseInt(b.dataset.newPorts) +
+          parseInt(b.dataset.closedPorts) +
+          parseInt(b.dataset.changedServices) +
+          parseInt(b.dataset.newHosts) +
+          parseInt(b.dataset.removedHosts);
+
+        if (sortValue === "recent") return dateB - dateA;
+        else if (sortValue === "oldest") return dateA - dateB;
+        else if (sortValue === "most_changes") return totalChangesB - totalChangesA;
+        else if (sortValue === "least_changes") return totalChangesA - totalChangesB;
+        return 0;
+      });
+
+      const timelineContainer = document.querySelector(".timeline");
+      sorted.forEach((item) => timelineContainer.appendChild(item));
+    }
+
+    function resetAllFilters() {
+      statusFilter.value = "all";
+      changeTypeFilter.value = "all";
+      sortFilter.value = "recent";
+      applySorting();
+      applyFilters();
+    }
+
+    statusFilter.addEventListener("change", applyFilters);
+    changeTypeFilter.addEventListener("change", applyFilters);
+    sortFilter.addEventListener("change", () => {
+      applySorting();
+      applyFilters();
     });
+    resetFilters.addEventListener("click", resetAllFilters);
+
+    // Initialize
+    applySorting();
+    applyFilters();
   });
 </script>
 {% endblock %}

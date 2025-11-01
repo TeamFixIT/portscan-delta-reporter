@@ -7,7 +7,7 @@ Key updates for logging:
 - Log job lifecycle events (added, removed, executed, failed)
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -46,7 +46,7 @@ def _check_client_heartbeats_job():
             from app.models.client import Client
 
             heartbeat_timeout = timedelta(minutes=3)
-            cutoff_time = datetime.utcnow() - heartbeat_timeout
+            cutoff_time = datetime.now(timezone.utc) - heartbeat_timeout
 
             stale_clients = Client.query.filter(
                 Client.status == "online", Client.last_seen < cutoff_time
@@ -90,7 +90,7 @@ def _execute_scan(scan_id):
 
     import ipaddress
     import requests
-    from datetime import datetime, timedelta
+    from datetime import datetime, timezone, timedelta
     import uuid
     import json
 
@@ -140,7 +140,7 @@ def _execute_scan(scan_id):
                 raise ValueError(f"No valid targets parsed for scan {scan_id}")
 
             # Find all online clients
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             clients = Client.query.filter(
                 Client.status.in_(["online", "idle"]),
                 Client.last_seen >= now - timedelta(minutes=5),
@@ -180,7 +180,7 @@ def _execute_scan(scan_id):
             scan_result = ScanResult(
                 scan_id=scan_id,
                 status="pending",
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(timezone.utc),
             )
             db.session.add(scan_result)
             db.session.flush()
@@ -190,7 +190,6 @@ def _execute_scan(scan_id):
             logger.info(
                 f"Created scan result (ID: {result_id}, Group: {task_group_id})"
             )
-
             assigned_targets = set()
             triggered_clients = 0
 
@@ -269,8 +268,12 @@ def _execute_scan(scan_id):
                 scan_result.type = "full"
 
             # Finalize and commit
+            print(f"{scan_result.started_at} awdaiwjdoijawodij")
             scan.update_last_run()
-            scan.next_run = datetime.utcnow() + timedelta(minutes=scan.interval_minutes)
+            print(f"{scan_result.started_at} awdaiwjdoijawodij")
+            scan.next_run = datetime.now(timezone.utc) + timedelta(
+                minutes=scan.interval_minutes
+            )
             db.session.commit()
 
             logger.info(
@@ -426,10 +429,10 @@ class SchedulerService:
                 logger.debug(f"Removed existing job for scan {scan.id}")
 
             # Calculate first run time
-            if scan.next_run and scan.next_run > datetime.utcnow():
+            if scan.next_run and scan.next_run > datetime.now(timezone.utc):
                 first_run_time = scan.next_run
             else:
-                first_run_time = datetime.utcnow() + timedelta(seconds=30)
+                first_run_time = datetime.now(timezone.utc) + timedelta(seconds=30)
 
             # Add job to scheduler
             job = self.scheduler.add_job(

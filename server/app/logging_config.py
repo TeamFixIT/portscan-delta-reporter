@@ -12,7 +12,7 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class ColoredFormatter(logging.Formatter):

@@ -1,70 +1,63 @@
-<div class="card">
-    <p class="text-muted mb-4">
-        <i class="bi bi-info-circle me-1"></i>
-        Changes here will take effect only after restarting the application.
-    </p>
-
-    <form id="envConfigForm">
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="flask_env" class="form-label">Flask Environment</label>
-                <select class="form-select" id="flask_env" name="FLASK_ENV">
-                    <option value="development" {% if env_config.FLASK_ENV == 'development' %}selected{% endif %}>Development</option>
-                    <option value="production" {% if env_config.FLASK_ENV == 'production' %}selected{% endif %}>Production</option>
-                    <option value="testing" {% if env_config.FLASK_ENV == 'testing' %}selected{% endif %}>Testing</option>
-                </select>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <label for="host" class="form-label">Host</label>
-                <input type="text" class="form-control" id="host" name="HOST"
-                        value="{{ env_config.HOST or '0.0.0.0' }}" readonly>
-            </div>
-
-            <div class="col-md-3 mb-3">
-                <label for="port" class="form-label">Port</label>
-                <input type="number" class="form-control" id="port" name="PORT"
-                        value="{{ env_config.PORT or '5000' }}" readonly>
-            </div>
+<form id="envConfigForm">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="flask_env" class="form-label">Flask Environment</label>
+        <select class="form-select" id="flask_env" name="FLASK_ENV">
+                <option value="development" {% if env_config.FLASK_ENV == 'development' %}selected{% endif %}>Development</option>
+                <option value="production" {% if env_config.FLASK_ENV == 'production' %}selected{% endif %}>Production</option>
+                <option value="testing" {% if env_config.FLASK_ENV == 'testing' %}selected{% endif %}>Testing</option>
+            </select>
         </div>
 
-        <div class="mb-3">
-            <label for="db_uri" class="form-label">
-                Database URI
-                <i class="bi bi-question-circle text-muted" data-bs-toggle="tooltip"
-                    title="SQLite: sqlite:////path/to/db.db | PostgreSQL: postgresql://user:pass@host/dbname"></i>
-            </label>
-            <div class="input-group">
-                <input type="text" class="form-control font-monospace" id="db_uri"
-                        name="SQLALCHEMY_DATABASE_URI" value="{{ env_config.SQLALCHEMY_DATABASE_URI }}" readonly>
-                <button class="btn btn-outline-secondary" type="button" id="testDbBtn">
-                    <i class="bi bi-arrow-repeat me-1"></i>Test
-                </button>
-            </div>
+        <div class="col-md-3 mb-3">
+            <label for="host" class="form-label">Host</label>
+            <input type="text" class="form-control" id="host" name="HOST"
+                    value="{{ env_config.HOST or '0.0.0.0' }}" readonly>
         </div>
 
-        <div class="mb-3">
-            <label for="secret_key" class="form-label">Secret Key</label>
-            <div class="input-group">
-                <input type="password" class="form-control font-monospace" id="secret_key"
-                        name="SECRET_KEY" placeholder="Leave empty to keep current" disabled>
-                <button class="btn btn-outline-secondary" type="button" id="generateKeyBtn">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Generate New
-                </button>
-            </div>
-            <div class="form-text text-danger">
-                <i class="bi bi-exclamation-triangle me-1"></i>
-                Changing this invalidates all existing sessions.
-            </div>
+        <div class="col-md-3 mb-3">
+            <label for="port" class="form-label">Port</label>
+            <input type="number" class="form-control" id="port" name="PORT"
+                    value="{{ env_config.PORT or '5000' }}" readonly>
         </div>
+    </div>
 
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-save me-1"></i>Save Configuration
-            </button>
-            <button type="button" class="btn btn-secondary" id="reloadEnvBtn">
-                <i class="bi bi-arrow-clockwise me-1"></i>Reload Values
+    <div class="mb-3">
+        <label for="db_uri" class="form-label">
+            Database URI
+            <i class="bi bi-question-circle text-muted" data-bs-toggle="tooltip"
+                title="SQLite: sqlite:////path/to/db.db | PostgreSQL: postgresql://user:pass@host/dbname"></i>
+        </label>
+        <div class="input-group">
+            <input type="text" class="form-control font-monospace" id="db_uri"
+                    name="SQLALCHEMY_DATABASE_URI" value="{{ env_config.SQLALCHEMY_DATABASE_URI }}" readonly>
+            <button class="btn btn-outline-secondary" type="button" id="testDbBtn">
+                <i class="bi bi-arrow-repeat me-1"></i>Test
             </button>
         </div>
-    </form>
-</div>
+    </div>
+
+    <div class="mb-3">
+        <label for="secret_key" class="form-label">Secret Key</label>
+        <div class="input-group">
+            <input type="password" class="form-control font-monospace" id="secret_key"
+                    name="SECRET_KEY" placeholder="Leave empty to keep current" disabled>
+            <button class="btn btn-outline-secondary" type="button" id="generateKeyBtn">
+                <i class="bi bi-arrow-clockwise me-1"></i>Generate New
+            </button>
+        </div>
+        <div class="form-text text-danger">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Changing this invalidates all existing sessions.
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Save Configuration
+        </button>
+        <button type="button" class="btn btn-secondary" id="reloadEnvBtn">
+            <i class="bi bi-arrow-clockwise me-1"></i>Reload Values
+        </button>
+    </div>
+</form>

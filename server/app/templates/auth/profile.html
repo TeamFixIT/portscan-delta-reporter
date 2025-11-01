@@ -102,8 +102,9 @@
         <div class="col-md-6">
           <label class="fw-semibold text-muted small">Last Login</label>
           <div>
-            {% if user.last_login %} {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }} {% else
-            %}Never{% endif %}
+            <time class="utc-time" datetime="{{ user.last_login }}">
+              {{ user.last_login or 'Never' }}
+            </time>
           </div>
         </div>
       </div>

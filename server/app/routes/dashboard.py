@@ -27,7 +27,7 @@ import csv
 import json
 import io
 import click
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from app import admin_required
 
 bp = Blueprint("dashboard", __name__)
@@ -39,7 +39,7 @@ def index():
     """Dashboard home"""
     active_clients = Client.query.filter_by(status="online").count()
     recent_scans = Scan.query.filter(
-        Scan.last_run >= datetime.utcnow() - timedelta(hours=24),
+        Scan.last_run >= datetime.now(timezone.utc) - timedelta(hours=24),
         Scan.user_id == current_user.id,
     ).count()
     reports_count = (

@@ -1,41 +1,37 @@
-<div class="card">
-  <form id="securityConfigsForm">
-    <div class="mb-3">
-      <div class="form-check">
-        <input
-          class="form-check-input"
-          type="checkbox"
-          id="session_cookie_secure"
-          name="SESSION_COOKIE_SECURE"
-          {%
-          if
-          env_config.SESSION_COOKIE_SECURE
-          %}checked{%
-          endif
-          %} />
-        <label class="form-check-label" for="session_cookie_secure">
-          Require HTTPS for Session Cookies
-        </label>
-        <div class="form-text">Enable this in production when using HTTPS</div>
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="session_lifetime" class="form-label">Session Lifetime (hours)</label>
+<form id="securityConfigsForm">
+  <div class="mb-3">
+    <div class="form-check">
       <input
-        type="number"
-        class="form-control"
-        id="session_lifetime"
-        name="PERMANENT_SESSION_LIFETIME"
-        min="1"
-        max="168"
-        value="{{ env_config.PERMANENT_SESSION_LIFETIME }}"
-        readonly />
-      <div class="form-text">How long users stay logged in (1–168 hours)</div>
+        class="form-check-input"
+        type="checkbox"
+        id="session_cookie_secure"
+        name="SESSION_COOKIE_SECURE"
+        {%
+        if
+        env_config.SESSION_COOKIE_SECURE
+        %}checked{%
+        endif
+        %} />
+      <label class="form-check-label" for="session_cookie_secure">
+        Require HTTPS for Session Cookies
+      </label>
+      <div class="form-text">Enable this in production when using HTTPS</div>
     </div>
+  </div>
 
-    <button type="submit" class="btn btn-primary">
-      <i class="bi bi-save me-1"></i>Save Configs
-    </button>
-  </form>
-</div>
+  <div class="mb-3">
+    <label for="session_lifetime" class="form-label">Session Lifetime (hours)</label>
+    <input
+      type="number"
+      class="form-control"
+      id="session_lifetime"
+      name="PERMANENT_SESSION_LIFETIME"
+      min="1"
+      max="168"
+      value="{{ env_config.PERMANENT_SESSION_LIFETIME }}"
+      readonly />
+    <div class="form-text">How long users stay logged in (1–168 hours)</div>
+  </div>
+
+  <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Save Configs</button>
+</form>

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from app import db
 from app.models.scan_result import ScanResult
 from app.models.delta_report import DeltaReport
@@ -228,7 +228,7 @@ class DeltaReportService:
         delta_data = {
             "scanner": {
                 "name": "nmap",
-                "comparison_time": datetime.utcnow().isoformat(),
+                "comparison_time": datetime.now(timezone.utc).isoformat(),
             },
             "baseline": {
                 "result_id": baseline.id,
@@ -302,7 +302,7 @@ class DeltaReportService:
         Returns:
             A dictionary containing the change summary.
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         # Get all delta reports for this scan within the timeframe
         reports = DeltaReport.query.filter(
@@ -372,7 +372,7 @@ class DeltaReportService:
             "scan_id": scan_id,
             "days": days,
             "period_start": cutoff_date.isoformat(),
-            "period_end": datetime.utcnow().isoformat(),
+            "period_end": datetime.now(timezone.utc).isoformat(),
             "total_reports": len(reports),
             "reports_with_changes": reports_with_changes,
             "summary": {

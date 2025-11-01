@@ -5,7 +5,7 @@ Authentication routes
 import re
 import secrets
 from app.models.user import User
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import (
     Blueprint,
     render_template,
@@ -76,7 +76,7 @@ def login():
                 sse_manager.redirect_user(user.id, "auth.login")
             new_token = secrets.token_hex(32)
             user.current_session_token = new_token
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             login_user(user, remember=remember)
             session["session_token"] = new_token

@@ -236,31 +236,6 @@ def create_app():
             click.echo("Database reset successfully.")
 
     @app.cli.command()
-    @click.option("--message", "-m", default=None, help="Migration message")
-    def new_migration(message):
-        """Create a new migration after model changes"""
-        from flask_migrate import migrate as create_migration
-
-        migrations_dir = BASE_DIR / "migrations"
-
-        if not migrations_dir.exists():
-            click.echo(
-                "Error: Migrations not initialised. Run 'flask setup' first.", err=True
-            )
-            return
-
-        if not message:
-            message = click.prompt("Enter migration message")
-
-        click.echo(f"Creating migration: {message}")
-        try:
-            create_migration(message=message, directory=str(migrations_dir))
-            click.echo("Migration created successfully.")
-            click.echo("\nTo apply the migration, run: flask db upgrade")
-        except Exception as e:
-            click.echo(f"✗ Error creating migration: {e}", err=True)
-
-    @app.cli.command()
     def create_admin():
         """Create admin user"""
         from app.models.user import User
@@ -302,7 +277,7 @@ def create_app():
             migrate_init(directory=str(migrations_dir))
             click.echo("Migrations directory created.")
         else:
-            click.echo("Migrations directory already exists.")
+            click.echo("Step 1/4: Migrations directory already exists.")
 
         # Step 2: Check if we need to create initial migration
         versions_dir = migrations_dir / "versions"
@@ -316,12 +291,12 @@ def create_app():
                 )
                 click.echo("Initial migration created.")
             except Exception as e:
-                click.echo(f"✗ Error creating migration: {e}", err=True)
+                click.echo(f"Error creating migration: {e}", err=True)
                 click.echo("\nTrying to create tables directly...")
                 db.create_all()
                 click.echo("Database tables created directly.")
         else:
-            click.echo("\nMigrations already exist.")
+            click.echo("\nStep 2/4: Migrations already exist.")
 
         # Step 3: Run migrations
         click.echo("\nStep 3/4: Applying migrations...")
@@ -337,6 +312,28 @@ def create_app():
                 click.echo("Creating tables directly...")
                 db.create_all()
                 click.echo("Database tables created.")
+
+        # Step 5: Verify setup
+        click.echo("\nStep 4/4: Verifying setup...")
+        inspector = db.inspect(db.engine)
+        tables = inspector.get_table_names()
+
+        required_tables = [
+            "alerts",
+            "users",
+            "scans",
+            "scan_tasks",
+            "scan_results",
+            "clients",
+            "delta_reports",
+        ]  # TODO keep up-to-date with latest tables
+
+        missing_tables = [t for t in required_tables if t not in tables]
+
+        if missing_tables:
+            click.echo(f"Warning: Missing tables: {', '.join(missing_tables)}")
+        else:
+            click.echo("All application tables present.")
 
         click.echo("\n" + "=" * 60)
         click.echo("Setup complete!")

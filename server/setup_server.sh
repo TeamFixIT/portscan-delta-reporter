@@ -30,7 +30,7 @@ fi
 # Install package
 echo ""
 echo "Installing package..."
-pip install -e .
+pip install .
 echo "✓ Package installed"
 
 # Check if .env exists
@@ -74,7 +74,7 @@ echo "Setup Complete!"
 echo "=========================================="
 echo ""
 echo "To start the server, run:"
-echo "  source venv/bin/activate"
+echo "  source venv/bin/activate or venv/Scripts/activate"
 echo "  portscanner-server"
 echo ""
 echo "Or simply:"

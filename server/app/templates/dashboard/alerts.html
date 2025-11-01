@@ -8,134 +8,136 @@
       <li class="breadcrumb-item active" aria-current="page">Alerts</li>
     </ol>
   </nav>
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="mb-0">Active Alerts</h2>
-    </div>
-    <button class="btn btn-outline-secondary" onclick="location.reload()">
-      <i class="bi bi-arrow-clockwise"></i> Refresh
-    </button>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Active Alerts</h2>
+    <button class="btn btn-outline-primary" onclick="location.reload()">Refresh</button>
   </div>
 
+  <!-- Filter Controls -->
+  <div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+  </div>
   {% if alerts %}
-  <div class="row">
-    {% for alert in alerts %}
-    <div class="col-12 mb-3">
-      <div
-        class="card border-{{
+    <div class="row">
+      {% for alert in alerts %}
+      <div class="col-12 mb-3">
+        <div
+          class="card border-{{
     'danger' if alert.criticality == 'critical' 
     else 'warning' if alert.criticality == 'high'
     else 'info' if alert.criticality == 'medium'
     else 'secondary'
   }} {% if alert.status == 'resolved' %}opacity-75 border-success{% endif %}">
-        <div
-          class="card-header d-flex justify-content-between align-items-center 
+          <div
+            class="card-header d-flex justify-content-between align-items-center 
           bg-{{ 
             'danger' if alert.criticality == 'critical' 
             else 'warning' if alert.criticality == 'high' 
             else 'info' if alert.criticality == 'medium' 
             else 'secondary' 
           }} text-white">
-          <div>
-            <i class="bi bi-shield-exclamation"></i>
-            <strong>{{ alert.device_ip }}</strong> — Port {{ alert.port }}
-            <span class="ms-2 badge bg-light text-dark">{{ alert.service }}</span>
-          </div>
-          <span class="badge bg-dark text-uppercase">{{ alert.criticality }}</span>
-        </div>
-
-        <div class="card-body">
-          <p class="mb-2">{{ alert.message }}</p>
-          <div class="d-flex flex-wrap text-muted small">
-            <div class="me-3">
-              <i class="bi bi-clock-history"></i>
-              Created: {{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
-            </div>
-            {% if alert.last_updated %}
-            <div class="me-3">
-              <i class="bi bi-arrow-repeat"></i>
-              Updated: {{ alert.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}
-            </div>
-            {% endif %}
             <div>
-              <i class="bi bi-check-circle"></i>
-              Status:
-              <span
-                class="badge {% if alert.status == 'warned' %}bg-warning text-dark {% elif alert.status == 'actioned' %}bg-success {% elif alert.status == 'ignored' %}bg-secondary {% elif alert.status == 'resolved' %}bg-success {% endif %}">
-                {{ alert.status | capitalize }}
-              </span>
+              <i class="bi bi-shield-exclamation"></i>
+              <strong>{{ alert.device_ip }}</strong> — Port {{ alert.port }}
+              <span class="ms-2 badge bg-light text-dark">{{ alert.service }}</span>
+            </div>
+            <span class="badge bg-dark text-uppercase">{{ alert.criticality }}</span>
+          </div>
+
+          <div class="card-body">
+            <p class="mb-2">{{ alert.message }}</p>
+            <div class="d-flex flex-wrap text-muted small">
+              <div class="me-3">
+                <i class="bi bi-clock-history"></i>
+                Created: {{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+              </div>
+              {% if alert.last_updated %}
+              <div class="me-3">
+                <i class="bi bi-arrow-repeat"></i>
+                Updated: {{ alert.last_updated.strftime('%Y-%m-%d %H:%M:%S') }}
+              </div>
+              {% endif %}
+              <div>
+                <i class="bi bi-check-circle"></i>
+                Status:
+                <span
+                  class="badge {% if alert.status == 'warned' %}bg-warning text-dark {% elif alert.status == 'actioned' %}bg-success {% elif alert.status == 'ignored' %}bg-secondary {% elif alert.status == 'resolved' %}bg-success {% endif %}">
+                  {{ alert.status | capitalize }}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="card-footer d-flex justify-content-end gap-2">
-          {% if alert.status == 'warned' %}
-          <button
-            class="btn btn-sm btn-outline-success"
-            onclick="updateAlertStatus('{{ alert.id }}', 'actioned')">
-            <i class="bi bi-check-circle"></i> Mark Actioned
-          </button>
-          <button
-            class="btn btn-sm btn-outline-secondary"
-            onclick="updateAlertStatus('{{ alert.id }}', 'ignored')">
-            <i class="bi bi-slash-circle"></i> Ignore
-          </button>
-          {% else %}
-          <span class="text-muted small"> <i class="bi bi-lock"></i> Closed </span>
-          {% endif %}
+          <div class="card-footer d-flex justify-content-end gap-2">
+            {% if alert.status == 'warned' %}
+            <button
+              class="btn btn-sm btn-outline-success"
+              onclick="updateAlertStatus('{{ alert.id }}', 'actioned')">
+              <i class="bi bi-check-circle"></i> Mark Actioned
+            </button>
+            <button
+              class="btn btn-sm btn-outline-secondary"
+              onclick="updateAlertStatus('{{ alert.id }}', 'ignored')">
+              <i class="bi bi-slash-circle"></i> Ignore
+            </button>
+            {% else %}
+            <span class="text-muted small"> <i class="bi bi-lock"></i> Closed </span>
+            {% endif %}
+          </div>
         </div>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
+    {% else %}
+    <div class="alert alert-success text-center">
+      <i class="bi bi-check2-circle"></i> No active alerts found.
+    </div>
+    {% endif %}
   </div>
-  {% else %}
-  <div class="alert alert-success text-center">
-    <i class="bi bi-check2-circle"></i> No active alerts found.
-  </div>
-  {% endif %}
-</div>
 
-<style>
-  .card {
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  }
-
-  .card-header {
-    font-weight: 500;
-  }
-
-  .card-footer button {
-    transition: all 0.2s ease-in-out;
-  }
-
-  .card-footer button:hover {
-    transform: scale(1.03);
-  }
-</style>
-
-<script>
-  async function updateAlertStatus(alertId, newStatus) {
-    try {
-      const response = await fetch(`alerts/${alertId}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      const result = await response.json();
-      if (response.ok) {
-        alert(`Alert ${alertId} marked as ${newStatus}.`);
-        location.reload();
-      } else {
-        alert("Failed to update alert: " + result.error);
-      }
-    } catch (err) {
-      console.error("Error updating alert:", err);
-      alert("Network error updating alert.");
+  <style>
+    .card {
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
     }
-  }
-</script>
-{% endblock %}
+
+    .card-header {
+      font-weight: 500;
+    }
+
+    .card-footer button {
+      transition: all 0.2s ease-in-out;
+    }
+
+    .card-footer button:hover {
+      transform: scale(1.03);
+    }
+  </style>
+
+  <script>
+    async function updateAlertStatus(alertId, newStatus) {
+      try {
+        const response = await fetch(`alerts/${alertId}/status`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert(`Alert ${alertId} marked as ${newStatus}.`);
+          location.reload();
+        } else {
+          alert("Failed to update alert: " + result.error);
+        }
+      } catch (err) {
+        console.error("Error updating alert:", err);
+        alert("Network error updating alert.");
+      }
+    }
+  </script>
+  {% endblock %}
+</div>

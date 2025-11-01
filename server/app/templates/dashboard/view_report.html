@@ -1,12 +1,5 @@
 {% extends "base.html" %} {% block title %}Delta Report Details{% endblock %} {% block extra_css %}
 <style>
-  .detail-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
-  }
   .stat-card {
     border-left: 4px solid;
     transition: transform 0.2s;
@@ -58,12 +51,6 @@
     border-radius: 0.25rem;
     font-size: 0.8rem;
   }
-  .comparison-box {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    padding: 1rem;
-  }
   .change-indicator {
     display: inline-block;
     width: 8px;
@@ -105,14 +92,6 @@
     margin: 2rem 0 1rem 0;
   }
 
-  /* Filter Controls */
-  .filter-controls {
-    background: var(--bs-light);
-    border-radius: 0.5rem;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
   /* Filter Tags */
   .filter-tag {
     background: var(--bs-primary);
@@ -136,11 +115,11 @@
 {% endblock %} {% block content %}
 <div class="container-fluid py-4">
   <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb">
+  <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Home</a></li>
+      <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
       <li class="breadcrumb-item">
-        <a href="{{ url_for('dashboard.reports') }}">Security Overview</a>
+        <a href="{{ url_for('dashboard.reports') }}">Delta Reports</a>
       </li>
       <li class="breadcrumb-item active">Report #{{ report.id }}</li>
     </ol>
@@ -157,7 +136,10 @@
         </p>
         <p class="mb-0">
           <i class="fas fa-clock me-2"></i>
-          <strong>Generated:</strong> {{ report.created_at.strftime('%B %d, %Y at %H:%M:%S') }}
+          <strong>Generated:</strong>
+          <time class="utc-time" datetime="{{ report.delta_data.baseline.completed_at }}">
+            {{ report.created_at }}
+          </time>
         </p>
       </div>
       <div class="col-md-4 text-md-end mt-3 mt-md-0">
@@ -173,119 +155,127 @@
             <i class="fas fa-download me-1"></i>JSON
           </a>
         </div>
-        <a
-          href="{{ url_for('dashboard.scan_history', scan_id=report.scan_id) }}"
-          class="btn btn-light ms-2">
-          <i class="fas fa-history me-1"></i>History
-        </a>
       </div>
     </div>
   </div>
 
-  <!-- Summary Statistics -->
-  <div class="row mb-4">
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card stat-card stat-card-new h-100">
-        <div class="card-body">
-          <h6 class="text-muted mb-2">New Open Ports</h6>
-          <h2 class="mb-0 text-danger">{{ report.new_ports_count }}</h2>
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card border-danger">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-danger">
+            <div class="h5 mb-0" id="total-new-ports">{{ report.new_ports_count }}</div>
+            <small class="text-muted">New Open Ports</small>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card stat-card stat-card-closed h-100">
-        <div class="card-body">
-          <h6 class="text-muted mb-2">Closed Ports</h6>
-          <h2 class="mb-0 text-success">{{ report.closed_ports_count }}</h2>
+    <div class="col-md-3 col-6">
+      <div class="card border-success">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-success">
+            <div class="h5 mb-0" id="total-closed-ports">{{ report.closed_ports_count }}</div>
+            <small class="text-muted">Closed Ports</small>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card stat-card stat-card-changed h-100">
-        <div class="card-body">
-          <h6 class="text-muted mb-2">Changed Services</h6>
-          <h2 class="mb-0 text-warning">{{ report.changed_services_count }}</h2>
+    <div class="col-md-3 col-6">
+      <div class="card border-warning">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-warning">
+            <div class="h5 mb-0" id="total-service-changes">
+              {{ report.changed_services_count }}
+            </div>
+            <small class="text-muted">Service Changes</small>
+          </div>
         </div>
       </div>
     </div>
-    <div class="col-md-3 col-sm-6 mb-3">
-      <div class="card stat-card stat-card-hosts h-100">
-        <div class="card-body">
-          <h6 class="text-muted mb-2">Host Changes</h6>
-          <h2 class="mb-0 text-info">{{ report.new_hosts_count + report.removed_hosts_count }}</h2>
+    <div class="col-md-3 col-6">
+      <div class="card border-info">
+        <div class="card-body d-flex align-items-center">
+          <div class="me-3 text-info">
+            <div class="h5 mb-0" id="total-service-changes">
+              {{ report.new_hosts_count + report.removed_hosts_count }}
+            </div>
+            <small class="text-muted">Host Changes</small>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Filter Controls -->
-  <div class="filter-controls">
-    <div class="d-flex flex-wrap gap-3 align-items-center">
-      <!-- SECTION FILTER -->
-      <div>
-        <select id="section-filter" class="form-select form-select-sm">
-          <option value="all" selected>All Sections</option>
-          <option value="new_hosts">New Hosts Only</option>
-          <option value="removed_hosts">Removed Hosts Only</option>
-          <option value="new_ports">New Ports Only</option>
-          <option value="closed_ports">Closed Ports Only</option>
-          <option value="changed_services">Service Changes Only</option>
-        </select>
-      </div>
-
-      <!-- HOST FILTER -->
-      <div>
-        <input
-          type="text"
-          id="host-filter"
-          class="form-control form-control-sm"
-          placeholder="Filter by host..." />
-      </div>
-
-      <!-- PORT FILTER -->
-      <div>
-        <input
-          type="text"
-          id="port-filter"
-          class="form-control form-control-sm"
-          placeholder="Filter by port..." />
-      </div>
-
-      <!-- SERVICE FILTER -->
-      <div>
-        <select id="service-filter" class="form-select form-select-sm">
-          <option value="all" selected>All Services</option>
-          <option value="http">HTTP</option>
-          <option value="https">HTTPS</option>
-          <option value="ssh">SSH</option>
-          <option value="ftp">FTP</option>
-          <option value="smtp">SMTP</option>
-          <option value="unknown">Unknown</option>
-        </select>
-      </div>
-
-      <!-- RESET FILTERS -->
-      <div>
-        <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
-      </div>
+  <div class="d-flex flex-wrap gap-3 mb-3 align-items-center">
+    <!-- SECTION FILTER -->
+    <div>
+      <select id="section-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Sections</option>
+        <option value="new_hosts">New Hosts Only</option>
+        <option value="removed_hosts">Removed Hosts Only</option>
+        <option value="new_ports">New Ports Only</option>
+        <option value="closed_ports">Closed Ports Only</option>
+        <option value="changed_services">Service Changes Only</option>
+      </select>
     </div>
 
-    <!-- Active Filters Display -->
-    <div id="active-filters" class="mt-2" style="display: none">
-      <small class="text-muted me-2">Active filters:</small>
-      <div id="filter-tags" class="d-inline"></div>
+    <!-- HOST FILTER -->
+    <div>
+      <input
+        type="text"
+        id="host-filter"
+        class="form-control form-control-sm"
+        placeholder="Filter by host..." />
     </div>
+
+    <!-- PORT FILTER -->
+    <div>
+      <input
+        type="text"
+        id="port-filter"
+        class="form-control form-control-sm"
+        placeholder="Filter by port..." />
+    </div>
+
+    <!-- SERVICE FILTER -->
+    <div>
+      <select id="service-filter" class="form-select form-select-sm">
+        <option value="all" selected>All Services</option>
+        <option value="http">HTTP</option>
+        <option value="https">HTTPS</option>
+        <option value="ssh">SSH</option>
+        <option value="ftp">FTP</option>
+        <option value="smtp">SMTP</option>
+        <option value="unknown">Unknown</option>
+      </select>
+    </div>
+
+    <!-- RESET FILTERS -->
+    <div>
+      <button id="reset-filters" class="btn btn-sm btn-outline-secondary">Reset Filters</button>
+    </div>
+  </div>
+
+  <!-- Active Filters Display -->
+  <div id="active-filters" class="mb-3" style="display: none">
+    <small class="text-muted me-2">Active filters:</small>
+    <div id="filter-tags" class="d-inline"></div>
   </div>
 
   <!-- Comparison Info -->
   {% if report.delta_data and report.delta_data.baseline and report.delta_data.current %}
   <div class="row mb-4">
     <div class="col-md-6 mb-3">
-      <div class="comparison-box">
-        <h6 class="text-muted mb-2"><i class="fas fa-history me-2"></i>Baseline Scan</h6>
+      <div class="card p-4">
+        <h6 class="text-muted mb-2"><i class="bi bi-clock-history me-2"></i>Baseline Scan</h6>
         <p class="mb-1"><strong>Result ID:</strong> #{{ report.delta_data.baseline.result_id }}</p>
         <p class="mb-1">
-          <strong>Completed:</strong> {{ report.delta_data.baseline.completed_at }}
+          <strong>Completed:</strong>
+          <time class="utc-time" datetime="{{ report.delta_data.baseline.completed_at }}">
+            {{ report.delta_data.baseline.completed_at }}
+          </time>
         </p>
         <p class="mb-0">
           <strong>Discovered:</strong>
@@ -295,10 +285,16 @@
       </div>
     </div>
     <div class="col-md-6 mb-3">
-      <div class="comparison-box">
-        <h6 class="text-muted mb-2"><i class="fas fa-clock me-2"></i>Current Scan</h6>
+      <div class="card p-4">
+        <h6 class="text-muted mb-2"><i class="bi bi-clock me-2"></i>Current Scan</h6>
         <p class="mb-1"><strong>Result ID:</strong> #{{ report.delta_data.current.result_id }}</p>
-        <p class="mb-1"><strong>Completed:</strong> {{ report.delta_data.current.completed_at }}</p>
+        <p class="mb-1">
+          <strong>Completed:</strong>
+          <time class="utc-time" datetime="{{ report.delta_data.current.completed_at }}">
+            {{ report.delta_data.current.completed_at }}
+          </time>
+        </p>
+
         <p class="mb-0">
           <strong>Discovered:</strong>
           {{ report.delta_data.current.total_hosts }} hosts, {{
@@ -517,7 +513,7 @@
   delta.new_down_hosts or delta.new_down_hosts|length == 0) and (not delta.added_ports or
   delta.added_ports|length == 0) and (not delta.removed_ports or delta.removed_ports|length == 0)
   and (not delta.changed_ports or delta.changed_ports|length == 0) ) %}
-  <div class="empty-section">
+  <div class="text-center p-3 text-muted">
     <i class="fas fa-check-circle fa-4x mb-3"></i>
     <h3>No Changes Detected</h3>
     <p>The network remained stable between these two scans.</p>

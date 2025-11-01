@@ -16,7 +16,7 @@ import time
 import threading
 import ipaddress
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 from queue import Queue
 import yaml
@@ -418,64 +418,6 @@ class PortScannerClient:
             """Get system information"""
             return jsonify(self.get_system_info())
 
-    def _register_with_server(self) -> bool:
-        """Register this client with the server"""
-        max_attempts = self.config.get("retry_attempts", 3)
-        retry_delay = self.config.get("retry_delay", 5)
-
-        for attempt in range(max_attempts):
-            try:
-                url = f"{self.config['server_url']}/api/clients/register"
-                data = {
-                    "client_id": self.client_id,
-                    "hostname": self.hostname,
-                    "ip_address": self._get_ip_address(),
-                    "scan_range": self.scan_range,
-                    "port": self.config.get("client_port"),
-                    "capabilities": {
-                        "max_concurrent_scans": self.config.get(
-                            "max_concurrent_scans", 2
-                        ),
-                        "supported_scan_types": ["tcp", "udp", "syn"],
-                        "nmap_version": (
-                            nmap.__version__
-                            if hasattr(nmap, "__version__")
-                            else "unknown"
-                        ),
-                    },
-                }
-
-                response = requests.post(url, json=data, timeout=10)
-
-                if response.status_code == 200:
-                    response_data = response.json()
-                    self.approved = response_data.get("approved", False)
-
-                    if self.approved:
-                        logger.info(
-                            f"Successfully registered and approved with server as {self.client_id}"
-                        )
-                    else:
-                        logger.info(
-                            f"Registered with server as {self.client_id} but awaiting approval"
-                        )
-
-                    self.registered = True
-                    return True
-                else:
-                    logger.warning(
-                        f"Registration failed with status {response.status_code}: {response.text}"
-                    )
-
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"Registration attempt {attempt + 1} failed: {e}")
-
-            if attempt < max_attempts - 1:
-                time.sleep(retry_delay)
-
-        logger.error("Failed to register with server after all attempts")
-        return False
-
     def _start_heartbeat(self):
         """Start heartbeat thread to maintain connection with server"""
 
@@ -602,7 +544,7 @@ class PortScannerClient:
                         "total_open_ports": 0,
                     },
                     "error_message": "Client is not approved",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
                 self.send_scan_results(result_payload)
                 return
@@ -644,7 +586,7 @@ class PortScannerClient:
                 "scan_duration": scan_duration,
                 "parsed_results": callback.parsed_results,
                 "summary_stats": callback.summary_stats,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
             # Send results to server
@@ -679,7 +621,7 @@ class PortScannerClient:
                     "total_open_ports": 0,
                 },
                 "error_message": str(e),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             self.send_scan_results(result_payload)
 

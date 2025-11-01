@@ -86,8 +86,14 @@
               {{ 'Yes' if scan.is_scheduled else 'No' }}
             </span>
           </td>
-          <td>{{ scan.last_run or 'Never' }}</td>
-          <td>{{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+          <td>
+            <time class="utc-time" datetime="{{ scan.last_run or 'Never' }}">
+              {{ scan.last_run or 'Never' }}
+            </time>
+          </td>
+          <td>
+            <time class="utc-time" datetime="{{ scan.created_at  }}"> {{ scan.created_at }} </time>
+          </td>
           <td class="text-center">
             <div class="btn-group btn-group-sm" role="group">
               <button

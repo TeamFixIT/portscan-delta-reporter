@@ -1,5 +1,5 @@
 # services/alert_service.py
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 from app.models.alert import Alert
 
