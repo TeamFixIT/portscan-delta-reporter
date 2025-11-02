@@ -12,6 +12,7 @@ from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
 from app.models.client import Client
 from app.scheduler import scheduler_service
+from app.scheduler import _execute_scan
 import uuid
 import json
 
@@ -165,7 +166,6 @@ def create_scan():
         ports = request.form.get("ports", "1-65535")
         scan_arguments = request.form.get("scan_arguments", "")
         interval_minutes = int(request.form.get("interval_minutes", 10080))
-        initial_interval = int(request.form.get("initial_interval", 1))
         is_active = "is_active" in request.form
         is_scheduled = "is_scheduled" in request.form
 
@@ -185,7 +185,7 @@ def create_scan():
         if scan.is_scheduled and scan.is_active:
             # Use initial_interval if provided for immediate first execution
             scan.next_run = datetime.now(timezone.utc) + timedelta(
-                minutes=initial_interval
+                minutes=interval_minutes
             )
 
         db.session.add(scan)
@@ -348,7 +348,7 @@ def delete_scan(scan_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@bp.route("/scans/<int:scan_id>/execute", methods=["POST"])
+@bp.route("/scans/<int:scan_id>/execute", methods=["GET"])
 @login_required
 def execute_scan(scan_id):
     """Manually trigger a scan execution"""
@@ -362,12 +362,13 @@ def execute_scan(scan_id):
         if not scan:
             return jsonify({"status": "error", "message": "Scan not found"}), 404
 
-        from app.scheduler import _execute_scan
-
         result = _execute_scan(scan_id)
 
-        status_code = 200 if result["status"] == "success" else 500
-        return jsonify(result), status_code
+        flash(
+            result["message"],
+            "success" if result.get("status") == "success" else "danger",
+        )
+        return redirect(url_for("dashboard.scans"))
 
     except Exception as e:
         current_app.logger.error(f"Failed to execute scan: {str(e)}")

@@ -161,11 +161,13 @@ def oauth_callback(provider):
             auth_provider=provider,  # Set to provider name
         )
     logger.info(f"OAuth login for user: {user.username} via {provider}")
+
     if user and user.current_session_token:
         sse_manager.redirect_user(user.id, "auth.login")
     # Generate session token for single-session logic
     new_token = secrets.token_hex(32)
     user.current_session_token = new_token
+    user.last_login = datetime.now(timezone.utc)
     db.session.commit()
     # Log in with Flask-Login
     login_user(user, remember=False)
@@ -253,12 +255,12 @@ def register():
                 "Registration successful ! Welcome to Port Scanner Delta Reporter.",
                 "success",
             )
-            return render_template("dashboard/onboarding.html", show_sidebar=True)
         except Exception as e:
             error = f"Registration failed: {str(e)}"
             if request.is_json:
                 return jsonify({"success": False, "error": error}), 500
             flash(error, "error")
+        return render_template("dashboard/onboarding.html", show_sidebar=True)
     return render_template("auth/register.html")
 
 

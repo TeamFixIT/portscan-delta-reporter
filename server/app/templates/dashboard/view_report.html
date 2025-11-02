@@ -566,15 +566,14 @@
         service: serviceValue,
       };
 
-      // Show/hide sections based on section filter
+      // Process all sections
       document.querySelectorAll(".filterable-section").forEach((section) => {
         const sectionType = section.dataset.sectionType;
 
+        // Show/hide entire section based on section filter
         if (sectionValue === "all" || sectionValue === sectionType) {
           section.style.display = "block";
-
-          // Apply row-level filtering within visible sections
-          applyRowFilters(section, hostValue, portValue, serviceValue);
+          filterSectionItems(section, hostValue, portValue, serviceValue);
         } else {
           section.style.display = "none";
         }
@@ -582,7 +581,57 @@
 
       updateActiveFiltersDisplay();
     }
+    function filterSectionItems(section, hostValue, portValue, serviceValue) {
+      let visibleCount = 0;
+      let totalCount = 0;
 
+      // Filter host items (for new/removed hosts sections)
+      const hostItems = section.querySelectorAll(".host-item");
+      if (hostItems.length > 0) {
+        totalCount = hostItems.length;
+        hostItems.forEach((item) => {
+          const host = item.dataset.host.toLowerCase();
+          const visible = !hostValue || host.includes(hostValue);
+          item.style.display = visible ? "" : "none";
+          if (visible) visibleCount++;
+        });
+      }
+
+      // Filter port rows (for port tables)
+      const portRows = section.querySelectorAll(".port-row");
+      if (portRows.length > 0) {
+        totalCount = portRows.length;
+        visibleCount = 0;
+        portRows.forEach((row) => {
+          const host = row.dataset.host.toLowerCase();
+          const port = row.dataset.port;
+          const service = row.dataset.service;
+
+          const hostMatch = !hostValue || host.includes(hostValue);
+          const portMatch = !portValue || port.includes(portValue);
+          const serviceMatch = serviceValue === "all" || service.includes(serviceValue);
+
+          const visible = hostMatch && portMatch && serviceMatch;
+          row.style.display = visible ? "" : "none";
+          if (visible) visibleCount++;
+        });
+      }
+
+      // Update section count display
+      updateSectionCount(section, visibleCount, totalCount);
+    }
+    function updateSectionCount(section, visibleCount, totalCount) {
+      const header = section.querySelector(".section-header small");
+      if (!header) return;
+
+      const originalText = header.textContent;
+      const match = originalText.match(/^(\d+)/);
+
+      if (match) {
+        const baseText = originalText.replace(/\d+.*$/, "").trim();
+        header.textContent = `${visibleCount} of ${totalCount} shown`;
+      }
+    }
     function applyRowFilters(section, hostValue, portValue, serviceValue) {
       // Filter host items (for new/removed hosts sections)
       section.querySelectorAll(".host-item").forEach((item) => {

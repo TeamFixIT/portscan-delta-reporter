@@ -1,5 +1,7 @@
-{% extends "base.html" %} {% block content %}
-<div class="container mt-4">
+{% extends "base.html" %} {% block title %}Scan Details - {{ scan.name }}{% endblock %} {% block
+content %}
+<div class="container-fluid mt-4">
+  <!-- Breadcrumb -->
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{ url_for('dashboard.scans') }}">Scans</a></li>
@@ -8,223 +10,399 @@
     </ol>
   </nav>
 
-  <h2>Scan Details: {{ scan.name }}</h2>
-  <p class="text-muted">Created on {{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title">Scan Information</h5>
-      <table class="table table-sm table-borderless mb-0">
-        <tr>
-          <th>Name:</th>
-          <td>{{ scan.name }}</td>
-        </tr>
-        <tr>
-          <th>Description:</th>
-          <td>{{ scan.description or 'None' }}</td>
-        </tr>
-        <tr>
-          <th>Target:</th>
-          <td>{{ scan.target }}</td>
-        </tr>
-        <tr>
-          <th>Ports:</th>
-          <td>{{ scan.ports }}</td>
-        </tr>
-        <tr>
-          <th>Arguments:</th>
-          <td>{{ scan.scan_arguments }}</td>
-        </tr>
-        <tr>
-          <th>Interval:</th>
-          <td>{{ scan.interval_minutes }} minutes</td>
-        </tr>
-        <tr>
-          <th>Active:</th>
-          <td>{{ 'Yes' if scan.is_active else 'No' }}</td>
-        </tr>
-        <tr>
-          <th>Scheduled:</th>
-          <td>{{ 'Yes' if scan.is_scheduled else 'No' }}</td>
-        </tr>
-        <tr>
-          <th>Last Run:</th>
-          <td>{{ scan.last_run or 'Never' }}</td>
-        </tr>
-        <tr>
-          <th>Next Run:</th>
-          <td>{{ scan.next_run or 'Not scheduled' }}</td>
-        </tr>
-        <tr>
-          <th>Updated At:</th>
-          <td>{{ scan.updated_at }}</td>
-        </tr>
-      </table>
+  <!-- Header -->
+  <div class="row align-items-center mb-4">
+    <div class="col-md-8">
+      <h2 class="mb-2"><i class="fas fa-radar me-2"></i>{{ scan.name }}</h2>
+      <p class="text-muted mb-0">
+        <i class="fas fa-clock me-2"></i>Created on {{ scan.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }}
+      </p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+      <span class="badge bg-{{ 'success' if scan.is_active else 'secondary' }} me-2">
+        {{ 'Active' if scan.is_active else 'Inactive' }}
+      </span>
+      <span class="badge bg-{{ 'primary' if scan.is_scheduled else 'secondary' }}">
+        {{ 'Scheduled' if scan.is_scheduled else 'Manual' }}
+      </span>
     </div>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-body">
-      <h5 class="card-title">Associated Tasks</h5>
-      {% if tasks_pagination.items %}
-      <table class="table table-striped table-sm">
-        <thead>
-          <tr>
-            <th>Task ID</th>
-            <th>Client</th>
-            <th>Status</th>
-            <th>Priority</th>
-            <th>Created</th>
-            <th>Completed</th>
-            <th>Group</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for task in tasks_pagination.items %}
-          <tr>
-            <td>{{ task.task_id }}</td>
-            <td>{{ task.client_id }}</td>
-            <td>
-              <span
-                class="badge {% if task.status == 'completed' %}bg-success {% elif task.status == 'failed' %}bg-danger {% elif task.status == 'assigned' %}bg-warning {% else %}bg-secondary{% endif %}">
-                {{ task.status }}
-              </span>
-            </td>
-            <td>{{ task.priority }}</td>
-            <td>{{ task.created_at }}</td>
-            <td>{{ task.completed_at or 'N/A' }}</td>
-            <td>{{ task.task_group_id }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <!-- Pagination controls -->
-      <nav>
-        <ul class="pagination pagination-sm justify-content-end">
-          {% if tasks_pagination.has_prev %}
-          <li class="page-item">
-            <a
-              class="page-link"
-              href="{{ url_for('dashboard.view_scan', scan_id=scan.id, task_page=tasks_pagination.prev_num) }}"
-              >Previous</a
-            >
-          </li>
-          {% endif %} {% if tasks_pagination.has_next %}
-          <li class="page-item">
-            <a
-              class="page-link"
-              href="{{ url_for('dashboard.view_scan', scan_id=scan.id, task_page=tasks_pagination.next_num) }}"
-              >Next</a
-            >
-          </li>
-          {% endif %}
-        </ul>
-      </nav>
-      {% else %}
-      <p class="text-muted mb-0">No tasks created for this scan yet.</p>
-      {% endif %}
+  <!-- Summary Cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+      <div class="card border-primary">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <div class="text-muted small">Total Results</div>
+              <div class="h4 mb-0">{{ results_pagination.total }}</div>
+            </div>
+            <div class="text-primary">
+              <i class="fas fa-file-alt fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="card border-success">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <div class="text-muted small">Completed</div>
+              <div class="h4 mb-0">
+                {{ results_pagination.items | selectattr('status', 'equalto', 'completed') | list |
+                length }}
+              </div>
+            </div>
+            <div class="text-success">
+              <i class="fas fa-check-circle fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="card border-warning">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <div class="text-muted small">Pending</div>
+              <div class="h4 mb-0">
+                {{ results_pagination.items | selectattr('status', 'equalto', 'pending') | list |
+                length }}
+              </div>
+            </div>
+            <div class="text-warning">
+              <i class="fas fa-clock fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+      <div class="card border-info">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-grow-1">
+              <div class="text-muted small">Interval</div>
+              <div class="h4 mb-0">{{ scan.interval_minutes }}m</div>
+            </div>
+            <div class="text-info">
+              <i class="fas fa-sync-alt fa-2x"></i>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div class="card">
+  <!-- Scan Configuration -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="fas fa-cog me-2"></i>Scan Configuration</h5>
+    </div>
     <div class="card-body">
-      <h5 class="card-title">Scan Results</h5>
-
-      {% if results_pagination.items %} {% for result in results_pagination.items %} {% set
-      result_index = loop.index %} {# store outer loop index manually #}
-
-      <div class="mb-4 border rounded p-3 bg-body">
-        <h6>
-          <strong>Result ID:</strong> {{ result.result_id }}
-          <span
-            class="badge {% if result.status == 'completed' %}bg-success {% elif result.status == 'failed' %}bg-danger {% elif result.status == 'pending' %}bg-warning {% else %}bg-secondary{% endif %}">
-            {{ result.status }}
-          </span>
-          <span
-            class="badge {% if result.type == 'full' %}bg-success {% elif result.type == 'partial' %}bg-warning {% else %}bg-secondary{% endif %}">
-            {{ result.type }}
-          </span>
-        </h6>
-
-        {% if result.parsed_results %}
-        <div class="table-responsive">
-          <table class="table table-bordered table-sm align-middle">
-            <thead class="table">
-              <tr>
-                <th>Target</th>
-                <th>Hostname</th>
-                <th>State</th>
-                <th>Open Ports</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for target, data in result.parsed_results.items() %} {% set collapse_id =
-              "details-" ~ result_index ~ "-" ~ loop.index %}
-              <tr>
-                <td><code>{{ target }}</code></td>
-                <td>{{ data.hostname or 'N/A' }}</td>
-                <td>
-                  <span
-                    class="badge {% if data.state == 'up' %}bg-success{% else %}bg-secondary{% endif %}">
-                    {{ data.state }}
-                  </span>
-                </td>
-                <td>
-                  {% if data.open_ports %} {{ data.open_ports | join(', ') }} {% else %}
-                  <span class="text-muted">None</span>
-                  {% endif %}
-                </td>
-                <td>
-                  {% if data.port_details %}
-                  <button
-                    class="btn btn-sm btn-outline-primary"
-                    type="button"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#{{ collapse_id }}"
-                    aria-expanded="false"
-                    aria-controls="{{ collapse_id }}">
-                    View Details
-                  </button>
-                  <div class="collapse mt-2" id="{{ collapse_id }}">
-                    <table class="table table-sm mb-0">
-                      <thead>
-                        <tr>
-                          <th>Port</th>
-                          <th>Protocol</th>
-                          <th>Service</th>
-                          <th>Product</th>
-                          <th>Version</th>
-                          <th>Extra Info</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {% for port, p in data.port_details.items() %}
-                        <tr>
-                          <td>{{ port }}</td>
-                          <td>{{ p.protocol }}</td>
-                          <td>{{ p.name or 'N/A' }}</td>
-                          <td>{{ p.product or 'N/A' }}</td>
-                          <td>{{ p.version or 'N/A' }}</td>
-                          <td>{{ p.extrainfo or 'N/A' }}</td>
-                        </tr>
-                        {% endfor %}
-                      </tbody>
-                    </table>
-                  </div>
-                  {% else %}
-                  <span class="text-muted">No details</span>
-                  {% endif %}
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
+      <div class="row">
+        <div class="col-md-6">
+          <table class="table table-sm table-borderless mb-0">
+            <tr>
+              <th width="40%">Target:</th>
+              <td><code>{{ scan.target }}</code></td>
+            </tr>
+            <tr>
+              <th>Ports:</th>
+              <td><code>{{ scan.ports }}</code></td>
+            </tr>
+            <tr>
+              <th>Arguments:</th>
+              <td><code>{{ scan.scan_arguments }}</code></td>
+            </tr>
+            <tr>
+              <th>Description:</th>
+              <td>{{ scan.description or 'None' }}</td>
+            </tr>
           </table>
         </div>
-        {% endif %}
+        <div class="col-md-6">
+          <table class="table table-sm table-borderless mb-0">
+            <tr>
+              <th width="40%">Last Run:</th>
+              <td>{{ scan.last_run or 'Never' }}</td>
+            </tr>
+            <tr>
+              <th>Next Run:</th>
+              <td>{{ scan.next_run or 'Not scheduled' }}</td>
+            </tr>
+            <tr>
+              <th>Updated At:</th>
+              <td>{{ scan.updated_at }}</td>
+            </tr>
+            <tr>
+              <th>Active:</th>
+              <td>
+                <span class="badge bg-{{ 'success' if scan.is_active else 'secondary' }}">
+                  {{ 'Yes' if scan.is_active else 'No' }}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
-      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Filter Controls -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label small">Status</label>
+          <select id="status-filter" class="form-select form-select-sm">
+            <option value="all" selected>All Statuses</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Type</label>
+          <select id="type-filter" class="form-select form-select-sm">
+            <option value="all" selected>All Types</option>
+            <option value="full">Full Scan</option>
+            <option value="partial">Partial Scan</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Host Filter</label>
+          <input
+            type="text"
+            id="host-filter"
+            class="form-control form-control-sm"
+            placeholder="Filter by host IP..." />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Port Filter</label>
+          <input
+            type="text"
+            id="port-filter"
+            class="form-control form-control-sm"
+            placeholder="Filter by port..." />
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col">
+          <button id="reset-filters" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-undo me-1"></i>Reset Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan Results -->
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0"><i class="fas fa-list me-2"></i>Scan Results</h5>
+    </div>
+    <div class="card-body">
+      {% if results_pagination.items %}
+      <div id="results-container">
+        {% for result in results_pagination.items %} {% set result_index = loop.index %}
+
+        <div
+          class="result-item border rounded mb-3"
+          data-status="{{ result.status }}"
+          data-type="{{ result.type }}"
+          data-result-id="{{ result.result_id }}">
+          <!-- Result Header (Always Visible) -->
+          <div class="p-3 bg-light border-bottom">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <h6 class="mb-1">
+                  <i class="fas fa-hashtag me-1"></i>
+                  Result ID: {{ result.result_id }}
+                  <span
+                    class="badge bg-{{ 'success' if result.status == 'completed' else 'danger' if result.status == 'failed' else 'warning' }} ms-2">
+                    {{ result.status }}
+                  </span>
+                  <span
+                    class="badge bg-{{ 'success' if result.type == 'full' else 'warning' }} ms-1">
+                    {{ result.type }}
+                  </span>
+                </h6>
+                <p class="text-muted small mb-0">
+                  <i class="fas fa-clock me-1"></i>
+                  {% if result.completed_at %} Completed: {{ result.completed_at }} {% else %}
+                  Created: {{ result.created_at }} {% endif %}
+                </p>
+              </div>
+              <div class="col-md-4 text-md-end">
+                <button
+                  class="btn btn-sm btn-outline-primary toggle-result"
+                  data-bs-toggle="collapse"
+                  data-bs-target="#result-{{ result_index }}"
+                  aria-expanded="false">
+                  <i class="fas fa-chevron-down me-1"></i>View Details
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Result Details (Collapsible) -->
+          <div class="collapse" id="result-{{ result_index }}">
+            <div class="p-3">
+              <!-- Parsed Results -->
+              {% if result.parsed_results %}
+              <h6 class="border-bottom pb-2 mb-3">
+                <i class="fas fa-network-wired me-2"></i>Discovered Hosts
+              </h6>
+              <div class="table-responsive mb-4">
+                <table class="table table-sm table-hover">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Target</th>
+                      <th>Hostname</th>
+                      <th>State</th>
+                      <th>Open Ports</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for target, data in result.parsed_results.items() %} {% set collapse_id =
+                    "details-" ~ result_index ~ "-" ~ loop.index %}
+                    <tr class="host-row" data-host="{{ target }}">
+                      <td><code class="host-value">{{ target }}</code></td>
+                      <td>{{ data.hostname or 'N/A' }}</td>
+                      <td>
+                        <span
+                          class="badge bg-{{ 'success' if data.state == 'up' else 'secondary' }}">
+                          {{ data.state }}
+                        </span>
+                      </td>
+                      <td>
+                        {% if data.open_ports %}
+                        <span class="port-summary">
+                          {% for port in data.open_ports[:3] %}
+                          <span class="badge bg-primary me-1 port-value">{{ port }}</span>
+                          {% endfor %} {% if data.open_ports|length > 3 %}
+                          <span class="badge bg-secondary"
+                            >+{{ data.open_ports|length - 3 }} more</span
+                          >
+                          {% endif %}
+                        </span>
+                        {% else %}
+                        <span class="text-muted">None</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if data.port_details %}
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          type="button"
+                          data-bs-toggle="collapse"
+                          data-bs-target="#{{ collapse_id }}">
+                          <i class="fas fa-info-circle me-1"></i>Port Details
+                        </button>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% if data.port_details %}
+                    <tr>
+                      <td colspan="5" class="p-0 border-0">
+                        <div class="collapse" id="{{ collapse_id }}">
+                          <div class="p-3 bg-light">
+                            <table class="table table-sm table-bordered mb-0">
+                              <thead>
+                                <tr>
+                                  <th>Port</th>
+                                  <th>Protocol</th>
+                                  <th>Service</th>
+                                  <th>Product</th>
+                                  <th>Version</th>
+                                  <th>Extra Info</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {% for port, p in data.port_details.items() %}
+                                <tr class="port-detail-row" data-port="{{ port }}">
+                                  <td><span class="badge bg-primary">{{ port }}</span></td>
+                                  <td>{{ p.protocol }}</td>
+                                  <td>{{ p.name or 'N/A' }}</td>
+                                  <td>{{ p.product or 'N/A' }}</td>
+                                  <td>{{ p.version or 'N/A' }}</td>
+                                  <td>{{ p.extrainfo or 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endif %} {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% endif %}
+
+              <!-- Associated Tasks -->
+              <h6 class="border-bottom pb-2 mb-3">
+                <i class="fas fa-tasks me-2"></i>Associated Tasks
+              </h6>
+              {% set result_tasks = tasks_pagination.items | selectattr('scan_result_id', 'equalto',
+              result.id) | list %} {% if result_tasks %}
+              <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Task ID</th>
+                      <th>Client</th>
+                      <th>Status</th>
+                      <th>Priority</th>
+                      <th>Created</th>
+                      <th>Completed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for task in result_tasks %}
+                    <tr>
+                      <td><code>{{ task.task_id }}</code></td>
+                      <td>{{ task.client_id }}</td>
+                      <td>
+                        <span
+                          class="badge bg-{{ 'success' if task.status == 'completed' else 'danger' if task.status == 'failed' else 'warning' if task.status == 'assigned' else 'secondary' }}">
+                          {{ task.status }}
+                        </span>
+                      </td>
+                      <td>
+                        <span class="badge bg-info">{{ task.priority }}</span>
+                      </td>
+                      <td>
+                        <time class="utc-time" datetime="{{ task.created_at }}"
+                          >{{ task.created_at if task.created_at else 'N/A' }}</time
+                        >
+                      </td>
+                      <td>
+                        <time class="utc-time" datetime="{{ task.completed_at }}">
+                          {{ task.completed_at if task.completed_at else 'N/A' }}
+                        </time>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <p class="text-muted mb-0">No tasks associated with this result.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
 
       <!-- Pagination controls -->
       <nav>
@@ -234,24 +412,147 @@
             <a
               class="page-link"
               href="{{ url_for('dashboard.view_scan', scan_id=scan.id, result_page=results_pagination.prev_num) }}">
-              Previous
+              <i class="fas fa-chevron-left me-1"></i>Previous
             </a>
           </li>
-          {% endif %} {% if results_pagination.has_next %}
+          {% endif %}
+
+          <li class="page-item disabled">
+            <span class="page-link">
+              Page {{ results_pagination.page }} of {{ results_pagination.pages }}
+            </span>
+          </li>
+
+          {% if results_pagination.has_next %}
           <li class="page-item">
             <a
               class="page-link"
               href="{{ url_for('dashboard.view_scan', scan_id=scan.id, result_page=results_pagination.next_num) }}">
-              Next
+              Next<i class="fas fa-chevron-right ms-1"></i>
             </a>
           </li>
           {% endif %}
         </ul>
       </nav>
       {% else %}
-      <p class="text-muted mb-0">No results available.</p>
+      <div class="text-center py-5">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted mb-0">No results available for this scan yet.</p>
+      </div>
       {% endif %}
     </div>
   </div>
+
+  <!-- Action Buttons -->
+  <div class="row mt-4">
+    <div class="col text-center">
+      <a href="{{ url_for('dashboard.scans') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Scans
+      </a>
+    </div>
+  </div>
 </div>
-{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const statusFilter = document.getElementById("status-filter");
+    const typeFilter = document.getElementById("type-filter");
+    const hostFilter = document.getElementById("host-filter");
+    const portFilter = document.getElementById("port-filter");
+    const resetFilters = document.getElementById("reset-filters");
+
+    // Apply filters
+    function applyFilters() {
+      const statusValue = statusFilter.value.toLowerCase();
+      const typeValue = typeFilter.value.toLowerCase();
+      const hostValue = hostFilter.value.toLowerCase().trim();
+      const portValue = portFilter.value.trim();
+
+      document.querySelectorAll(".result-item").forEach((item) => {
+        const status = item.dataset.status.toLowerCase();
+        const type = item.dataset.type.toLowerCase();
+
+        // Status and type filtering
+        const statusMatch = statusValue === "all" || status === statusValue;
+        const typeMatch = typeValue === "all" || type === typeValue;
+
+        if (!statusMatch || !typeMatch) {
+          item.style.display = "none";
+          return;
+        }
+
+        // Host and port filtering within the result
+        if (hostValue || portValue) {
+          let hasMatchingHost = false;
+
+          item.querySelectorAll(".host-row").forEach((row) => {
+            const host = row.dataset.host.toLowerCase();
+            const hostMatch = !hostValue || host.includes(hostValue);
+
+            let portMatch = true;
+            if (portValue) {
+              const portBadges = row.querySelectorAll(".port-value");
+              portMatch = Array.from(portBadges).some((badge) =>
+                badge.textContent.includes(portValue)
+              );
+            }
+
+            if (hostMatch && portMatch) {
+              row.style.display = "";
+              hasMatchingHost = true;
+            } else {
+              row.style.display = "none";
+            }
+          });
+
+          item.style.display = hasMatchingHost ? "" : "none";
+        } else {
+          // Show all hosts if no host/port filter
+          item.querySelectorAll(".host-row").forEach((row) => {
+            row.style.display = "";
+          });
+          item.style.display = "";
+        }
+      });
+    }
+
+    // Reset all filters
+    function resetAllFilters() {
+      statusFilter.value = "all";
+      typeFilter.value = "all";
+      hostFilter.value = "";
+      portFilter.value = "";
+      applyFilters();
+    }
+
+    // Update toggle button text
+    document.querySelectorAll(".toggle-result").forEach((btn) => {
+      btn.addEventListener("click", function () {
+        const icon = this.querySelector("i");
+        const isExpanded = this.getAttribute("aria-expanded") === "true";
+
+        setTimeout(() => {
+          if (isExpanded) {
+            icon.className = "fas fa-chevron-up me-1";
+            this.innerHTML = '<i class="fas fa-chevron-up me-1"></i>Hide Details';
+          } else {
+            icon.className = "fas fa-chevron-down me-1";
+            this.innerHTML = '<i class="fas fa-chevron-down me-1"></i>View Details';
+          }
+        }, 10);
+      });
+    });
+
+    // Event listeners
+    statusFilter.addEventListener("change", applyFilters);
+    typeFilter.addEventListener("change", applyFilters);
+    hostFilter.addEventListener("input", applyFilters);
+    portFilter.addEventListener("input", applyFilters);
+    resetFilters.addEventListener("click", resetAllFilters);
+
+    // Initialize
+    applyFilters();
+  });
+</script>
+{% endblock %} {% endblock %}

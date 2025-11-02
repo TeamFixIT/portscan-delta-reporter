@@ -218,11 +218,8 @@
     btn.addEventListener("click", function () {
       const scanId = this.dataset.scanId;
       btn.disabled = true;
-      fetch(`/api/scans/${scanId}/execute`, { method: "POST" })
-        .then((resp) => resp.json())
-        .then((data) => alert(data.message || "Scan execution started."))
-        .catch((err) => alert("Error: " + err))
-        .finally(() => (btn.disabled = false));
+      // Let the browser handle the redirect and flash
+      window.location.href = `/api/scans/${scanId}/execute`;
     });
   });
 

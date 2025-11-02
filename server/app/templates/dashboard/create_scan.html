@@ -42,32 +42,16 @@
         value="-T4 --host-timeout 30s --max-retries 1" />
     </div>
 
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <label for="interval_minutes" class="form-label">Interval (minutes)</label>
-        <input
-          type="number"
-          class="form-control"
-          id="interval_minutes"
-          name="interval_minutes"
-          value="10080"
-          required />
-        <div class="form-text">Weekly = 10080 minutes</div>
-      </div>
-
-      <div class="col-md-6 mb-3">
-        <label for="initial_interval" class="form-label">Initial Interval (minutes)</label>
-        <input
-          type="number"
-          class="form-control"
-          id="initial_interval"
-          name="initial_interval"
-          value="1"
-          required />
-        <div class="form-text">
-          Used for the first scan scheduling. Defaults to 1 minute if not provided.
-        </div>
-      </div>
+    <div class="mb-3">
+      <label for="interval_minutes" class="form-label">Interval (minutes)</label>
+      <input
+        type="number"
+        class="form-control"
+        id="interval_minutes"
+        name="interval_minutes"
+        value="10080"
+        required />
+      <div class="form-text">Weekly = 10080 minutes</div>
     </div>
 
     <div class="form-check mb-2">
