@@ -1,4 +1,5 @@
-{% for provider in enabled_providers %} {% include 'auth/_sso_button.html' %} {% endfor %}
+{% if enabled_providers %} {% for provider in enabled_providers %} {% include
+'auth/_sso_button.html' %} {% endfor %}
 
 <!-- Divider -->
 <div class="position-relative my-4">
@@ -8,7 +9,7 @@
     Or sign in with username
   </span>
 </div>
-
+{% endif %}
 <!-- Local Login Form -->
 <form method="POST" id="loginForm" action="{{ url_for('auth.login') }}">
   <div class="mb-3">
