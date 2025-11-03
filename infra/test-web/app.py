@@ -5,8 +5,13 @@ import subprocess
 app = Flask(__name__)
 CORS(app)
 
-# Configuration for the 5 Docker socat services
-SOCAT_SERVICES = ["socat1", "socat2", "socat3", "socat4", "socat5"]
+# Configuration for the 4 Docker socat services
+SOCAT_SERVICES = [
+    "grandma_house",
+    "ferris_bueller_house",
+    "teamfixit_mansion",
+    "brady_bunch_house",
+]
 
 # Track PIDs by service and port
 port_processes = {}  # {service_name: {port: pid}}

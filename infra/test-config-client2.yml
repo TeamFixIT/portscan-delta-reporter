@@ -4,7 +4,7 @@
 server_url: "http://server:5000" # Change to your server address
 
 client_port: 8080
-client_host: "172.20.0.101"
+client_host: "172.20.0.8"
 client_id: "rpi-test-client-002"
 hostname: "rpi-docker-client-2"
 
@@ -20,4 +20,4 @@ retry_attempts: 3
 retry_delay: 5
 
 # Scan range for this client (optional, e.g. '192.168.1.0/24')
-scan_range: "172.20.0.16/28"
+scan_range: "172.20.0.8/29"

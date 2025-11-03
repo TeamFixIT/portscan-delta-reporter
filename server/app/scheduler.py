@@ -429,7 +429,7 @@ class SchedulerService:
                 logger.debug(f"Removed existing job for scan {scan.id}")
 
             # Calculate first run time
-            if scan.next_run and scan.next_run > datetime.now(timezone.utc):
+            if scan.next_run and scan.next_run > datetime.now():
                 first_run_time = scan.next_run
             else:
                 first_run_time = datetime.now(timezone.utc) + timedelta(seconds=30)
