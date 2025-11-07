@@ -1,6 +1,6 @@
-# Flask WebSocket Production Setup Guide
+# Flask Production Setup Guide
 
-Complete guide for deploying a Flask application with WebSockets using Gunicorn, Gevent, and Nginx on Ubuntu.
+Complete guide for deploying a Flask application using Gunicorn, Gevent, and Nginx on Ubuntu.
 
 ## Table of Contents
 1. [Prerequisites](#prerequisites)
@@ -19,7 +19,7 @@ Complete guide for deploying a Flask application with WebSockets using Gunicorn,
 
 - Ubuntu 20.04 LTS or newer
 - Non-root user with sudo privileges
-- Flask application with WebSocket support (Flask-SocketIO)
+- Flask application
 - Basic understanding of Linux command line
 
 ---
@@ -92,7 +92,7 @@ pip install .[dev]
 ```
 
 The `pyproject.toml` includes all required dependencies:
-- Flask and Flask extensions (Flask-SocketIO, Flask-SQLAlchemy, etc.)
+- Flask and Flask extensions (Flask-SQLAlchemy, etc.)
 - Gunicorn with gevent worker
 - Database tools (Alembic, SQLAlchemy)
 - Additional utilities (pandas, numpy, python-nmap, etc.)
@@ -160,7 +160,7 @@ import multiprocessing
 bind = "127.0.0.1:8000"
 
 # Worker configuration
-workers = 1  # Use 1 worker with gevent for WebSockets
+workers = 1  # Use 1 worker with gevent
 worker_class = "gevent"
 worker_connections = 1000
 
@@ -237,7 +237,7 @@ WantedBy=multi-user.target
 
 ```ini
 [Unit]
-Description=Portscan Delta Reporter Flask SocketIO Application
+Description=Portscan Delta Reporter Flask Application
 After=network.target
 
 [Service]
@@ -343,39 +343,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
-        proxy_read_timeout 86400s;  # 24 hours for WebSocket
         
-        # Disable buffering for WebSocket
-        proxy_buffering off;
-    }
-
-    # Socket.IO endpoint
-    location /socket.io/ {
-        proxy_pass http://flask_backend/socket.io/;
-        
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        
-        proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 86400s;
-        
-        proxy_buffering off;
     }
 
     # Static files (if applicable)
@@ -641,20 +612,6 @@ sudo chmod -R 755 /path/to/your/app
 sudo -u www-data cat /path/to/static/file.js
 ```
 
-### WebSocket Connection Failed
-
-```bash
-# Check nginx WebSocket configuration
-sudo nginx -t
-
-# Test WebSocket endpoint directly
-curl -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" \
-    http://localhost:8000/socket.io/
-
-# Check browser console for errors
-# Look for CORS or connection upgrade errors
-```
-
 ### High Memory/CPU Usage
 
 ```bash
@@ -663,9 +620,6 @@ top -u yourusername
 
 # View application logs for errors
 sudo journalctl -u portscan-reporter -f
-
-# Consider increasing workers (for non-WebSocket endpoints)
-# Edit gunicorn_config.py and increase workers = 2
 ```
 
 ### Can't Connect from External Network
@@ -742,14 +696,12 @@ sudo systemctl start fail2ban
 
 ### Gunicorn Workers
 
-For CPU-bound tasks (non-WebSocket endpoints), increase workers:
+For CPU-bound tasks, increase workers:
 
 ```python
 # gunicorn_config.py
 workers = (2 * multiprocessing.cpu_count()) + 1
 ```
-
-For WebSocket-heavy apps, keep workers = 1 with gevent.
 
 ### Nginx Caching
 
@@ -811,14 +763,12 @@ curl http://localhost/
 - [ ] Firewall configured
 - [ ] SSL/HTTPS configured (if needed)
 - [ ] Application accessible from browser
-- [ ] WebSockets working correctly
 - [ ] Logs being generated properly
 
 ---
 
 ## Additional Resources
 
-- [Flask-SocketIO Documentation](https://flask-socketio.readthedocs.io/)
 - [Gunicorn Documentation](https://docs.gunicorn.org/)
 - [Nginx Documentation](https://nginx.org/en/docs/)
 - [Let's Encrypt Documentation](https://letsencrypt.org/docs/)

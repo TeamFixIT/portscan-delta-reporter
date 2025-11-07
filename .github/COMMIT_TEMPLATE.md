@@ -90,7 +90,7 @@ Include when applicable:
 
 ### Technology Stack
 
-- **Backend**: Flask, SQLAlchemy, Flask-Login, SocketIO
+- **Backend**: Flask, SQLAlchemy, Flask-Login
 - **Frontend**: Jinja2 templates, Bootstrap, vanilla JS
 - **Client**: Python, nmap, psutil
 - **Database**: SQLite (dev), PostgreSQL (prod)
