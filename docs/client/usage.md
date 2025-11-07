@@ -324,7 +324,7 @@ Quick checks:
 ## Support
 
 Need help?
-- **Issues**: [GitHub Issues](https://github.com/yourusername/portscanner-delta-reporter/issues)
+- **Issues**: [GitHub Issues](https://github.com/TeamFixIT/portscanner-delta-reporter/issues)
 - **Documentation**: [Full Docs](../)
 
 ---

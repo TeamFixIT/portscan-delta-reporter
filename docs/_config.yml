@@ -7,14 +7,10 @@ theme: jekyll-theme-cayman
 navigation:
   - title: Home
     url: /
-  - title: Getting Started
-    url: /getting-started
   - title: Server
     url: /server/
   - title: Client
     url: /client/
-  - title: Architecture
-    url: /architecture
 
 # Build settings
 markdown: kramdown

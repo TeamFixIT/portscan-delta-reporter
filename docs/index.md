@@ -15,13 +15,6 @@ A distributed network scanning system with push-based client architecture and ce
 - **Real-time Monitoring**: Track scan progress and client health
 - **Comprehensive Results**: Detailed port information, service detection, and OS fingerprinting
 
-## Quick Links
-
-- [Getting Started](getting-started.md)
-- [Server Documentation](server/)
-- [Client Documentation](client/)
-- [System Architecture](architecture.md)
-
 ## Components
 
 ### Server
@@ -62,7 +55,7 @@ Quick installation for testing:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/portscanner-delta-reporter.git
+git clone https://github.com/TeamFixIT/portscanner-delta-reporter.git
 cd portscanner-delta-reporter
 
 # Install server
@@ -80,8 +73,8 @@ For detailed installation instructions, see [Getting Started](getting-started.md
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/portscanner-delta-reporter/issues)
-- **Documentation**: [Full Documentation](https://yourusername.github.io/portscanner-delta-reporter/)
+- **Issues**: [GitHub Issues](https://github.com/TeamFixIT/portscanner-delta-reporter/issues)
+- **Documentation**: [Full Documentation](https://teamfixit.github.io/portscan-delta-reporter/)
 
 ## License
 

@@ -23,7 +23,7 @@ PortScan Delta Reporter is a tool developed by **TeamFixIT** for Murdoch Univers
 - **nmap / python-nmap** (port scanning)
 - **SQLite** (storing baseline + scan results)
 - **Flask** (web interface)
-- **ReportLab / Pandas** (report generation)
+- **Pandas** (report generation)
 
 ---
 
@@ -148,21 +148,17 @@ python client_agent.py
 │  │  ├─ routes/                  # REST + web routes
 │  │  ├─ templates/               # Jinja2/HTML templates for UI
 │  │  ├─ static/                  # CSS/JS
-│  │  ├─ utils/                   # helpers: validation, ip-clamp, delta
 │  ├─ migrations/                 # alembic/flyway (if needed)
-│  ├─ tests/
+│  ├─ tests/                      # TODO create tests for server!
 │  └─ requirements.txt
-├─ client/                        # Pi4 scanning client
+├─ client/                        # Scanning client
 │  ├─ client_agent.py
 │  ├─ config.example.yml
 │  ├─ utils/
 │  ├─ tests/
 │  └─ requirements.txt
-├─ infra/                         # k8s / systemd service files / docker-compose
+├─ infra/                         # docker-compose
 ├─ docs/                          # design docs, API spec
-├─ output/                        # generated PDFs, reports
-├─ scan_results/                  # JSON blobs (or can be outside repo)
-├─ uploads/                       # uploaded files (if any)
 ├─ .github/                       # CI workflows
 └─ README.md
 ```
