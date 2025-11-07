@@ -1,115 +1,114 @@
 ---
 layout: default
-title: Client Configuration
+title: Configuration
+parent: Client
+nav_order: 2
 ---
 
 # Client Configuration
 
 The client agent is configured via `config.yml`.
 
-## Configuration File
+---
 
-Create `config.yml` in the client directory:
+### Interactive Configuration Wizard (Recommended)
 
-```yaml
-# Server connection
-server_url: http://localhost:5000
-
-# Client settings
-client_port: 8080
-client_host: 0.0.0.0
-
-# Scanning configuration
-max_concurrent_scans: 2
-scan_range: "192.168.1.0/24"  # Optional: restrict scanning to this range
-
-# Connection settings
-heartbeat_interval: 60        # Seconds between heartbeats
-check_approval_interval: 30   # Check approval status frequency
-
-# Retry settings
-retry_attempts: 3
-retry_delay: 5                # Seconds between retries
-```
-
-## Configuration Options
-
-### server_url
-- **Type**: String (URL)
-- **Required**: Yes
-- **Default**: `http://localhost:5000`
-- **Description**: URL of the central server
-
-### client_port
-- **Type**: Integer
-- **Required**: No
-- **Default**: `8080`
-- **Description**: Port for client HTTP server
-
-### max_concurrent_scans
-- **Type**: Integer
-- **Required**: No
-- **Default**: `2`
-- **Description**: Maximum number of parallel scans
-
-### scan_range
-- **Type**: String (CIDR notation)
-- **Required**: No
-- **Default**: `null` (no restriction)
-- **Description**: Restrict scanning to specific IP range
-- **Example**: `10.0.0.0/8`, `192.168.1.0/24`
-
-### heartbeat_interval
-- **Type**: Integer (seconds)
-- **Required**: No
-- **Default**: `60`
-- **Description**: Frequency of status updates to server
-
-## Environment Variables
-
-You can override configuration with environment variables:
+The easiest way to configure the client:
 
 ```bash
-export PORTSCANNER_SERVER_URL=http://server:5000
-export PORTSCANNER_CLIENT_PORT=9090
-export PORTSCANNER_MAX_SCANS=4
+portscanner-client-config
 ```
 
-## Security Considerations
+The wizard will guide you through:
+1. Server connection details
+2. Client identification
+3. Scan settings
+4. Network options
+5. Connection parameters
 
-1. **Firewall Rules**: Ensure client can reach server
-2. **Port Access**: Client port must be accessible from server
-3. **Scan Range**: Use `scan_range` to prevent unauthorized scanning
-4. **Approval**: Always use the approval system in production
+### Manual Configuration
 
-## Example Configurations
+If you prefer to configure manually:
 
-### Development Setup
+```bash
+# Copy example configuration
+cp config.example.yml config.yml
+
+# Edit with your preferred editor
+nano config.yml
+```
+
+Example `config.yml`:
+
 ```yaml
-server_url: http://localhost:5000
+# Server Connection
+server_url: "http://localhost:5000"
 client_port: 8080
-max_concurrent_scans: 1
-heartbeat_interval: 30
+client_host: "0.0.0.0"
+
+# Client Identification (optional - auto-detected if not set)
+client_id: "CUSTOM_ID"          # Default: MAC address
+hostname: "scanner-01"           # Default: system hostname
+
+# Scanning Configuration
+chunk_size: 1                    # Targets processed per chunk
+per_target_timeout: 120          # Timeout per target (seconds)
+progress_report_interval: 10     # Progress update frequency (seconds)
+
+# Connection Settings
+heartbeat_interval: 60           # Heartbeat frequency (seconds)
+check_approval_interval: 30      # Check approval status (seconds)
+retry_attempts: 3                # Connection retry attempts
+retry_delay: 5                   # Delay between retries (seconds)
+
+# Optional: Restrict Scanning Range
+scan_range: "192.168.1.0/24"    # CIDR notation, null = no restriction
 ```
 
-### Production Setup
-```yaml
-server_url: https://scanner-server.company.com
-client_port: 8443
-client_host: 0.0.0.0
-max_concurrent_scans: 4
-scan_range: "10.0.0.0/8"
-heartbeat_interval: 60
-check_approval_interval: 30
-retry_attempts: 5
-retry_delay: 10
-```
+### Configuration Options Explained
 
-### High-Volume Scanner
-```yaml
-server_url: http://scanner-server:5000
-client_port: 8080
-max_concurrent_scans: 8
-heartbeat_interval: 120
-retry_attempts: 3
+#### Server Connection
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `server_url` | URL of the central server | `http://localhost:5000` |
+| `client_port` | Port for client HTTP server | `8080` |
+| `client_host` | Bind address for client server | `0.0.0.0` |
+
+#### Client Identification
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `client_id` | Unique client identifier | MAC address |
+| `hostname` | Display name for client | System hostname |
+
+#### Scanning Configuration
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `chunk_size` | Targets per scanning chunk | `1` |
+| `per_target_timeout` | Timeout for each target | `120` seconds |
+| `progress_report_interval` | How often to report progress | `10` seconds |
+
+#### Connection Settings
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `heartbeat_interval` | Frequency of heartbeat messages | `60` seconds |
+| `check_approval_interval` | Check approval status frequency | `30` seconds |
+| `retry_attempts` | Connection retry attempts | `3` |
+| `retry_delay` | Delay between retries | `5` seconds |
+
+#### Security Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `scan_range` | Restrict scanning to IP range (CIDR) | `null` (unrestricted) |
+
+### Reconfigure Anytime
+
+You can re-run the configuration wizard at any time:
+
+```bash
+portscanner-client-config
 ```

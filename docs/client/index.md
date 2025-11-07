@@ -1,6 +1,8 @@
 ---
 layout: default
-title: Client Documentation
+title: Client
+nav_order: 3
+has_children: true
 ---
 
 # Client Agent Documentation
@@ -13,6 +15,7 @@ The Port Scanner Client Agent is a distributed scanning component that performs 
 - [Configuration](configuration.md)
 - [Usage](usage.md)
 - [Troubleshooting](troubleshooting.md)
+- [Architecture](architecture.md)
 
 ## Overview
 
@@ -35,41 +38,40 @@ The client agent:
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip install .
 
-# Create configuration
-cp config.example.yml config.yml
-# Edit config.yml with your settings
+# Run config wizard
+portscanner-client-config
 
 # Run client (requires root for SYN scans)
-sudo python client_agent.py
+portscanner-client
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│         Client Agent                │
-│                                     │
+┌────────────────────────────────────┐
+│         Client Agent               │
+│                                    │
 │  ┌──────────────────────────────┐  │
 │  │   Flask HTTP Server          │  │
 │  │   - /health                  │  │
 │  │   - /scan (receive tasks)    │  │
 │  │   - /approve                 │  │
 │  └──────────────────────────────┘  │
-│                                     │
+│                                    │
 │  ┌──────────────────────────────┐  │
 │  │   Scan Executor              │  │
 │  │   - ThreadPoolExecutor       │  │
 │  │   - Nmap Integration         │  │
 │  └──────────────────────────────┘  │
-│                                     │
+│                                    │
 │  ┌──────────────────────────────┐  │
 │  │   Heartbeat Service          │  │
 │  │   - Registration             │  │
 │  │   - Status Updates           │  │
 │  └──────────────────────────────┘  │
-└─────────────────────────────────────┘
+└────────────────────────────────────┘
 ```
 
 ## Endpoints
@@ -96,4 +98,3 @@ Marks client as approved (called by server).
 
 - [Installation Guide](installation.md) - Detailed installation instructions
 - [Configuration](configuration.md) - Configuration options
-- [Usage Examples](usage.md) - Common usage patterns
