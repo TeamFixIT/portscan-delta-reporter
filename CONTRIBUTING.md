@@ -5,7 +5,7 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-## 🔀 Workflow
+## Workflow
 
 1. **Sync main**
 
@@ -59,7 +59,7 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-## ✅ Code Standards
+## Code Standards
 
 - Follow project coding style (linting, formatting).
 - Document new functions/classes.
@@ -67,7 +67,7 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-## 🛡 Branch Protection Rules
+## Branch Protection Rules
 
 - **No direct pushes to `main`**.
 - **All changes must go through PRs**.
@@ -75,7 +75,7 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-## 💬 Communication
+## Communication
 
 - Use GitHub Issues to track bugs/features.
 - Use Pull Request comments for code discussions.
@@ -83,5 +83,5 @@ We’re a team of 6 collaborating on this repo. To keep our workflow clean, plea
 
 ---
 
-Thanks for contributing! 🚀
+Thanks for contributing!
 — The TeamFixIT Crew

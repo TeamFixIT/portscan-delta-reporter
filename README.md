@@ -1,175 +1,148 @@
-# PortScan Delta Reporter
-
-PortScan Delta Reporter is a tool developed by **TeamFixIT** for Murdoch University. Its purpose is to automate network port scanning, track changes over time, and generate clear reports highlighting differences (deltas) between scans.
+# Port Scanner Delta Reporter — *TeamFixIT Legacy Project*
+--------------------------------
+| **Version:** | `v1.0.0-alpha`                                                       |
+| ------------ | -------------------------------------------------------------------- |
+| **Status:**  | *Archived (Demo & Portfolio Purposes Only)*                          |
+| **License:** | MIT                                                                  |
+| **Authors:** | *TeamFixIT — Murdoch University, Bachelor of Information Technology* |
 
 ---
 
-## Features
+## Overview
 
-- **Automated Port Scanning** – Runs scans against defined hosts and IP ranges using `nmap`.
-- **Baseline Storage** – Stores results from the first scan as a reference point.
-- **Delta Detection** – Compares new scan results with the baseline to identify:
-  - Newly opened ports
-  - Closed ports
-  - Service version changes
-- **Reporting** – Generates human-readable reports in PDF/CSV/HTML.
-- **Scheduling** – Supports automated recurring scans (via cron or scheduler).
+**Port Scanner Delta Reporter** represents the culmination of our capstone project at **Murdoch University**, developed by **TeamFixIT** — a small but passionate group of aspiring cybersecurity professionals.
+
+Built with **Flask**, this system was designed to **record, compare, and visualise port scan results over time**, providing clear insight into changes in network exposure and configuration drift.
+
+Though now archived, this repository stands as a **symbol of growth, teamwork, and technical excellence**, reflecting the dedication and problem-solving spirit that brought TeamFixIT together.
+
+---
+
+## Project Vision
+
+In a world where network visibility is critical, *Port Scanner Delta Reporter* was created to:
+
+* Simplify **tracking changes** in open ports and services between scans
+* Offer a **web-based dashboard** for viewing deltas and history
+* Enable **forensic insight** into evolving network surfaces
+* Lay the groundwork for a **modular, scalable** security monitoring platform
+
+This project showcases not just our technical proficiency — but our ability to **collaborate, plan, and execute** a complete software lifecycle.
 
 ---
 
 ## Tech Stack
 
-- **Python** (backend logic)
-- **nmap / python-nmap** (port scanning)
-- **SQLite** (storing baseline + scan results)
-- **Flask** (web interface)
-- **Pandas** (report generation)
+| Component           | Description               |
+| ------------------- | ------------------------- |
+| **Language**        | Python 3.9+               |
+| **Framework**       | Flask                     |
+| **Database**        | SQLAlchemy + SQLite (dev) |
+| **Frontend**        | HTML / CSS / Bootstrap    |
+| **Deployment**      | Gunicorn / systemd        |
+| **Version Control** | Git + GitHub              |
 
 ---
 
-## Project Goals
+## Core Features
 
-This project is being built as part of an academic engagement with Murdoch University. The client, **Communications and Service Manager Jarren Beveridge**, requires a solution that:
-
-- Clearly reports on network changes
-- Provides actionable insights without excessive technical jargon
-- Can be run and understood by non-technical stakeholders
+* Modular Flask architecture (blueprints, routes, models, services)
+* Delta reporting — track differences between port scan results
+* Scheduled scan management via background jobs
+* Role-based admin system
+* Database migration & seeding commands
+* CLI utilities for setup, admin creation, and database resets
 
 ---
 
-## Getting Started
-
-### Prerequisites
-
-- **Python 3.8+** (Python 3.10+ recommended)
-- **nmap** installed on system
-- **Git**
-
-### Cross-Platform Manual Installation
-
-**Server Setup:**
-
-**macOS/Linux/WSL:**
-
+## Quick Start (For Demo Purposes)
 ```bash
-# Navigate to server directory
+git clone https://github.com/TeamFixIT/portscan-delta-reporter.git
+cd portscan-delta-reporter
+```
+### Server Setup
+```bash
 cd server
-
-# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# initialise database
-python run.py init-db
-
-# Start server
-python run.py
-```
-
-**Windows:**
-
-```bash
-# Navigate to server directory
-cd server
-
-# Create and activate virtual environment
-python -m venv venv
-source venv/Scripts/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Define flask app entry
-export FLASK_APP=run.py
-
-# Setup flask app
-flask db init
-flask db migrate -m 'Initial migration'
-flask db upgrade
+pip install -e .
+cp .env.example .env
+flask setup
 flask create-admin
-
-# Start server
-python run.py
+portscanner-server
 ```
-
-**Client Setup:**
-
+### Client Setup (New Terminal)
 ```bash
-# Navigate to client directory
 cd client
-
-# Create and activate virtual environment
 python3 -m venv venv
-source venv/bin/activate  # macOS/Linux
-# OR
-source venv/Scripts/activate  # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy and edit config
-cp config.example.yml config.yml  # macOS/Linux
-# OR
-cp config.example.yml config.yml  # Windows
-# Edit config.yml with your server details
-
-# Start client
-python client_agent.py
+source venv/bin/activate
+pip install -e .
+portscanner-client-config
+portscanner-client
 ```
 
-### VS Code Integration
 
-**Quick Setup & Development:**
+Then visit:
+**[http://127.0.0.1:5000](http://127.0.0.1:5000)**
 
-1. **Install recommended extensions** (prompted when opening workspace)
-2. **Use Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`):
-   - `Tasks: Run Task` → Select Initial DB Setup + Create Admin User + Start All Services (in order)
-   - `Python: Select Interpreter` → Choose venv interpreter
+---
 
-**Available Tasks:**
-
-- **Setup Server** - Create venv and install dependencies
-- **Setup Client** - Create venv and install dependencies
-- **Start Server** - Launch Flask development server
-- **Start Client** - Launch scanning client agent
-- **Initial DB Setup** - Create database tables
-
-## Folder Structure
+## Project Structure
 
 ```
-/ (root)
-├─ server/                        # Main server app (Flask)
-│  ├─ app/
-│  │  ├─ __init__.py
-│  │  ├─ models/                  # DB models (SQLAlchemy)
-│  │  ├─ routes/                  # REST + web routes
-│  │  ├─ templates/               # Jinja2/HTML templates for UI
-│  │  ├─ static/                  # CSS/JS
-│  ├─ migrations/                 # alembic/flyway (if needed)
-│  ├─ tests/                      # TODO create tests for server!
-│  └─ requirements.txt
-├─ client/                        # Scanning client
-│  ├─ client_agent.py
-│  ├─ config.example.yml
-│  ├─ utils/
-│  ├─ tests/
-│  └─ requirements.txt
-├─ infra/                         # docker-compose
-├─ docs/                          # design docs, API spec
-├─ .github/                       # CI workflows
-└─ README.md
+server/
+├── app/
+│   ├── __init__.py
+│   ├── models/
+│   ├── routes/
+│   ├── services/
+│   ├── static/
+│   └── templates/
+├── run.py
+├── pyproject.toml
+├── .env.example
+└── README.md
 ```
+
+---
+
+## TeamFixIT — The People Behind the Project
+
+This project would not exist without the creativity, resilience, and collaboration of its contributors:
+
+| Name                       | Role                         | Contribution                                                                                                                                            |
+| -------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Jared Stanbrook**        | Project Activity Coordinator | Lead developer and architect; implemented most backend code, integrations, and system logic; coordinated software design and development direction.     |
+| **Numan Sayyed**           | Secretary                    | Supported project documentation and organisation; contributed to meeting notes and version tracking.                                                    |
+| **Joey Kennedy**           | Communications Officer       | Assisted with UI design and Flask templates; helped coordinate collaboration and document flow between members.                                         |
+| **Andrew Percy**           | Software Coordinator         | Contributed to technical diagrams and research; assisted with software design decisions influenced by Jared’s architecture.                             |
+| **Solomon Spilsbury-Slee** | Document Controller          | Led creation and structuring of project documentation; ensured consistency across deliverables; collaborated closely with Joey and Jared for alignment. |
+| **Louis Wang**             | Security Coordinator         | Contributed to documentation and research on security considerations within the project.                                                                |
+
+
+---
+
+## Project Legacy
+
+> *"Port Scanner Delta Reporter taught us how to think like engineers, plan like professionals, and collaborate like a real team."*
+
+This project became more than just a deliverable — it was a **shared journey** of late nights, debugging marathons, and creative breakthroughs.
+It inspired TeamFixIT’s founding principles:
+
+> **Integrity, Curiosity, and Teamwork.**
+
+As we archive this repository, we do so with immense pride — as a public record of what passion and persistence can create.
+
 ---
 
 ## License
 
-This project is developed for academic purposes by **TeamFixIT**. Licensing details to be confirmed.
+This project is released under the **MIT License**.
+You are welcome to explore, learn from, and adapt our work — with attribution to **TeamFixIT**.
 
 ---
 
-## Authors
+## Final Words
 
-- TeamFixIT (Murdoch University)
+> “Failure is only the start of programming it’s a lot about getting hit down and getting back up and tying again!”
+> — *Jared Stanbrook, 04/10/2025*
