@@ -55,7 +55,7 @@ This project showcases not just our technical proficiency — but our ability to
 
 ---
 
-## Quick Start (For Demo Purposes)
+## Quick Start (Development)
 ```bash
 git clone https://github.com/TeamFixIT/portscan-delta-reporter.git
 cd portscan-delta-reporter
@@ -85,6 +85,47 @@ portscanner-client
 Then visit:
 **[http://127.0.0.1:5000](http://127.0.0.1:5000)**
 
+### Nmap Privileges
+Nmap may require elevated privileges for certain scans. Recommended options:
+- Run the client with sufficient privileges (e.g., sudo on Linux), or
+- Grant capabilities to the `nmap` binary: `sudo setcap cap_net_raw,cap_net_admin+eip $(which nmap)`
+
+### Scheduler Notes
+The server automatically starts APScheduler when `SCHEDULER_ENABLED=true`. A lock file prevents double starts
+across Flask reloaders or gunicorn workers. The default gunicorn config uses one worker to avoid overlap.
+
+### Retention & Raw Output Storage
+Retention settings and raw scan payload storage are controlled via environment variables (server `.env`) and
+client `config.yml` settings. See `server/.env.example` and `client/config.example.yml` for defaults.
+
+## Production Deployment
+### Gunicorn (recommended)
+```bash
+cd server
+python3 -m venv venv
+source venv/bin/activate
+pip install -e .
+cp .env.example .env
+gunicorn -c gunicorn_config.py "app:create_app()"
+```
+
+### Systemd (example)
+```ini
+[Unit]
+Description=Port Scanner Delta Reporter
+After=network.target
+
+[Service]
+User=portscan
+WorkingDirectory=/opt/portscan-delta-reporter/server
+Environment="FLASK_ENV=production"
+ExecStart=/opt/portscan-delta-reporter/server/venv/bin/gunicorn -c gunicorn_config.py "app:create_app()"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
 ---
 
 ## Project Structure
@@ -102,6 +143,13 @@ server/
 ├── pyproject.toml
 ├── .env.example
 └── README.md
+```
+
+## Upgrade Notes (Schema Changes)
+Newer versions store optional raw scan payloads in `scan_results.target_results`. If you already have a database,
+run a migration or apply the following SQLite change:
+```sql
+ALTER TABLE scan_results ADD COLUMN target_results JSON;
 ```
 
 ---

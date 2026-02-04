@@ -2,6 +2,9 @@ from datetime import datetime
 from app import db
 from typing import Dict, Optional
 from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey, JSON
+from app.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ScanResult(db.Model):
@@ -35,6 +38,8 @@ class ScanResult(db.Model):
     #   }
     # }
     parsed_results = db.Column(db.JSON, default=dict)
+    # Raw per-target results payloads for debugging
+    target_results = db.Column(db.JSON, default=dict)
 
     # Summary statistics
     total_targets = db.Column(db.Integer, default=0)
@@ -74,7 +79,6 @@ class ScanResult(db.Model):
         """
         try:
             target = result_data.get("target")
-            print(target)
             client_id = result_data.get("client_id")
             status = result_data.get("status", "completed")
             if not target or not client_id:
@@ -96,7 +100,7 @@ class ScanResult(db.Model):
                 "nmap_output": result_data.get("nmap_output", {}),
                 "error_message": result_data.get("error_message"),
             }
-            print(self.target_results[target])
+            logger.debug("Stored raw result for target %s", target)
 
             # Parse and store breakdown for easy querying
             if status == "completed" and "nmap_output" in result_data:
@@ -132,7 +136,7 @@ class ScanResult(db.Model):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error updating scan result: {e}")
+            logger.error("Error updating scan result: %s", e, exc_info=True)
             return False
 
     def _parse_nmap_output(self, nmap_output: Dict) -> Dict:
@@ -222,7 +226,7 @@ class ScanResult(db.Model):
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error marking target as failed: {e}")
+            logger.error("Error marking target as failed: %s", e, exc_info=True)
             return False
 
     def mark_complete(self):

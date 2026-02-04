@@ -21,7 +21,6 @@ class Config:
         db_dir.mkdir(exist_ok=True)
         db_path = db_dir / "app.db"
         db_uri = f"sqlite:///{db_path}"
-        print(db_uri)
 
     if db_uri.startswith("sqlite:///") and ":memory:" not in db_uri:
         db_path = db_uri.replace("sqlite:///", "", 1)
@@ -33,6 +32,28 @@ class Config:
     )
     SESSION_TYPE = os.getenv("SESSION_TYPE", "filesystem")
     SESSION_FILE_DIR = os.getenv("SESSION_FILE_DIR", "/tmp/flask_session")
+    SCHEDULER_ENABLED = os.getenv("SCHEDULER_ENABLED", "true").lower() in (
+        "true",
+        "1",
+        "yes",
+        "on",
+    )
+    SCHEDULER_LOCK_FILE = os.getenv(
+        "SCHEDULER_LOCK_FILE", str(BASE_DIR / "instance" / "scheduler.lock")
+    )
+    RETENTION_MAX_RESULTS = int(os.getenv("RETENTION_MAX_RESULTS", "0")) or None
+    RETENTION_MAX_REPORTS = int(os.getenv("RETENTION_MAX_REPORTS", "0")) or None
+    RETENTION_DAYS = int(os.getenv("RETENTION_DAYS", "0")) or None
+    RETENTION_CLEANUP_INTERVAL_HOURS = int(
+        os.getenv("RETENTION_CLEANUP_INTERVAL_HOURS", "24")
+    )
+    STORE_RAW_RESULTS = os.getenv("STORE_RAW_RESULTS", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+        "on",
+    )
+    SCAN_TOOL_VERSION = os.getenv("SCAN_TOOL_VERSION", "unknown")
 
     # Email, and Entra ID configs
     MAIL_SERVER = os.getenv("MAIL_SERVER")
@@ -94,6 +115,14 @@ EDITABLE_ENV_VARS = [
     ("PORT", False),
     ("SECRET_KEY", True),  # True = sensitive
     ("SECURITY_PASSWORD_SALT", True),
+    ("SCHEDULER_ENABLED", False),
+    ("SCHEDULER_LOCK_FILE", False),
+    ("RETENTION_MAX_RESULTS", False),
+    ("RETENTION_MAX_REPORTS", False),
+    ("RETENTION_DAYS", False),
+    ("RETENTION_CLEANUP_INTERVAL_HOURS", False),
+    ("STORE_RAW_RESULTS", False),
+    ("SCAN_TOOL_VERSION", False),
     ("ENTRA_CLIENT_ID", False),
     ("ENTRA_CLIENT_SECRET", True),
     ("ENTRA_TENANT_ID", False),

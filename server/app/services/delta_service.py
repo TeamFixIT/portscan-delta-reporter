@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from flask import current_app, has_app_context
 from app import db
 from app.models.scan_result import ScanResult
 from app.models.delta_report import DeltaReport
@@ -26,10 +27,10 @@ class DeltaReportService:
         """
         try:
             # Get the current scan result
-            print(f"Generating delta report for scan result {current_result_id}...")
+            logger.info("Generating delta report for scan result %s", current_result_id)
             current_result = ScanResult.query.get(current_result_id)
             if not current_result:
-                print(f"Error: Current result {current_result_id} not found")
+                logger.error("Current result %s not found", current_result_id)
                 return None
 
             # Find the previous scan result for the same scan_id
@@ -37,8 +38,9 @@ class DeltaReportService:
 
             # If no baseline exists, we can't generate a delta report
             if not baseline_result:
-                print(
-                    f"No previous result found for scan_id {current_result.scan_id}, skipping delta report"
+                logger.info(
+                    "No previous result found for scan_id %s, skipping delta report",
+                    current_result.scan_id,
                 )
                 return None
 
@@ -63,12 +65,12 @@ class DeltaReportService:
             db.session.add(delta_report)
             db.session.commit()
 
-            print(f"Delta report generated: {delta_report.id}")
+            logger.info("Delta report generated: %s", delta_report.id)
             return delta_report
 
         except Exception as e:
             db.session.rollback()
-            print(f"Error generating delta report: {e}")
+            logger.error("Error generating delta report: %s", e, exc_info=True)
             return None
 
     @staticmethod
@@ -111,8 +113,8 @@ class DeltaReportService:
         current_hosts = set(current_parsed.keys())
 
         # Calculate host changes
-        new_hosts = list(current_hosts - baseline_hosts)
-        removed_hosts = list(baseline_hosts - current_hosts)
+        new_hosts = sorted(current_hosts - baseline_hosts)
+        removed_hosts = sorted(baseline_hosts - current_hosts)
         common_hosts = baseline_hosts & current_hosts
 
         # Calculate port and service changes
@@ -120,7 +122,7 @@ class DeltaReportService:
         removed_ports = []
         changed_ports = []
 
-        for host in common_hosts:
+        for host in sorted(common_hosts):
             baseline_host = baseline_parsed[host]
             current_host = current_parsed[host]
 
@@ -224,11 +226,55 @@ class DeltaReportService:
                     }
                 )
 
+        added_ports.sort(key=lambda item: (item["host"], item["port"]))
+        removed_ports.sort(key=lambda item: (item["host"], item["port"]))
+        changed_ports.sort(key=lambda item: (item["host"], item["port"]))
+
+        scan_metadata = {}
+        if has_app_context():
+            scan_record = Scan.query.get(current.scan_id)
+            if scan_record:
+                scan_metadata = {
+                    "scan_id": scan_record.id,
+                    "name": scan_record.name,
+                    "target": scan_record.target,
+                    "ports": scan_record.ports,
+                    "scan_arguments": scan_record.scan_arguments,
+                }
+
+        scan_tool_version = "unknown"
+        if has_app_context():
+            scan_tool_version = current_app.config.get(
+                "SCAN_TOOL_VERSION", scan_tool_version
+            )
+
         # Build delta data structure
         delta_data = {
             "scanner": {
                 "name": "nmap",
+                "version": scan_tool_version,
                 "comparison_time": datetime.now(timezone.utc).isoformat(),
+            },
+            "report": {
+                "scan_id": current.scan_id,
+                "baseline_result_id": baseline.id,
+                "current_result_id": current.id,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            "scan": scan_metadata,
+            "scan_window": {
+                "baseline_started_at": (
+                    baseline.started_at.isoformat() if baseline.started_at else None
+                ),
+                "baseline_completed_at": (
+                    baseline.completed_at.isoformat() if baseline.completed_at else None
+                ),
+                "current_started_at": (
+                    current.started_at.isoformat() if current.started_at else None
+                ),
+                "current_completed_at": (
+                    current.completed_at.isoformat() if current.completed_at else None
+                ),
             },
             "baseline": {
                 "result_id": baseline.id,

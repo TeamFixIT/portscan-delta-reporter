@@ -179,6 +179,38 @@ SCHEDULER_MAX_WORKERS=10
 
 # Timezone for scheduler
 SCHEDULER_TIMEZONE=UTC
+
+# Enable/disable scheduler autostart
+SCHEDULER_ENABLED=true
+
+# Lock file used to avoid double-start in multi-worker setups
+SCHEDULER_LOCK_FILE=./instance/scheduler.lock
+```
+
+### Retention Settings
+
+```bash
+# Keep last N scan results per scan (0 to disable)
+RETENTION_MAX_RESULTS=0
+
+# Keep last N delta reports per scan (0 to disable)
+RETENTION_MAX_REPORTS=0
+
+# Delete reports older than N days (0 to disable)
+RETENTION_DAYS=0
+
+# Cleanup interval in hours
+RETENTION_CLEANUP_INTERVAL_HOURS=24
+```
+
+### Raw Result Storage
+
+```bash
+# Persist raw scan payloads sent by clients
+STORE_RAW_RESULTS=false
+
+# Optional scanner version label for delta metadata
+SCAN_TOOL_VERSION=unknown
 ```
 
 ### Managing Scheduled Jobs

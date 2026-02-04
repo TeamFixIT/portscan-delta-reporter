@@ -9,16 +9,18 @@ It runs a web server to listen for push-based scan requests from the server and 
 import json
 import logging
 import socket
-import subprocess
 import os
 import sys
 import time
 import threading
 import ipaddress
-from dataclasses import dataclass, asdict
+import re
+import shlex
+import tempfile
+from pathlib import Path
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
-from queue import Queue
+from typing import Dict, List, Optional
 import yaml
 import requests
 import psutil
@@ -58,6 +60,8 @@ class ScanCallback:
 
     def __init__(self):
         self.parsed_results = {}
+        self.raw_results = {}
+        self.scan_metadata = {}
         self.summary_stats = {
             "total_targets": 0,
             "scanned_targets": 0,
@@ -71,9 +75,13 @@ class ScanCallback:
         """Callback function for nmap scan results"""
 
         try:
+            if scan_result.get("nmap"):
+                self.scan_metadata = scan_result["nmap"]
+
             # Extract scan data
             target_data = self._extract_scan_data(scan_result, host)
             self.parsed_results[host] = target_data
+            self.raw_results[host] = self._extract_raw_data(scan_result, host)
             # Update summary statistics
             if target_data["state"] == "up":
                 self.summary_stats["scanned_targets"] += 1
@@ -195,6 +203,17 @@ class ScanCallback:
                 "error": str(e),
             }
 
+    def _extract_raw_data(self, scan_results, target: str) -> Dict:
+        """Extract raw nmap scan data for a specific target."""
+        try:
+            return {
+                "nmap": scan_results.get("nmap", {}),
+                "scan": scan_results.get("scan", {}).get(target, {}),
+            }
+        except Exception as e:
+            logger.error(f"Error extracting raw scan data for {target}: {e}")
+            return {"error": str(e), "scan": {}, "nmap": {}}
+
 
 class PortScannerClient:
     """Client agent for performing network scans"""
@@ -246,6 +265,12 @@ class PortScannerClient:
             "client_host": "0.0.0.0",
             "scan_range": None,
             "check_approval_interval": 30,  # Check approval status every 30 seconds
+            "nmap_sudo": True,
+            "send_raw_results": False,
+            "raw_output_dir": "scan_outputs",
+            "raw_output_retention_days": 7,
+            "raw_output_retention_max_files": 100,
+            "allowed_nmap_arguments": [],
         }
 
         try:
@@ -258,6 +283,106 @@ class PortScannerClient:
             logger.error(f"Error loading config: {e}, using defaults")
 
         return default_config
+
+    def _sanitize_targets(self, targets: List[str]) -> List[str]:
+        """Validate targets and drop anything unsafe."""
+        safe_targets = []
+        for target in targets:
+            target = target.strip()
+            if not target:
+                continue
+            if self._is_valid_target(target):
+                safe_targets.append(target)
+            else:
+                logger.warning("Rejected invalid scan target: %s", target)
+        return safe_targets
+
+    def _is_valid_target(self, target: str) -> bool:
+        """Validate IPs or simple hostnames."""
+        try:
+            ipaddress.ip_address(target)
+            return True
+        except ValueError:
+            pass
+
+        hostname_pattern = re.compile(r"^[a-zA-Z0-9.-]+$")
+        return bool(hostname_pattern.match(target))
+
+    def _sanitize_ports(self, ports: Optional[str]) -> Optional[str]:
+        """Validate port list format (e.g., 22,80,443 or 1-1024)."""
+        if not ports:
+            return None
+        ports = ports.strip()
+        if not re.match(r"^[0-9,\-]+$", ports):
+            raise ValueError(f"Invalid port specification: {ports}")
+        return ports
+
+    def _sanitize_scan_arguments(self, scan_arguments: Optional[str]) -> str:
+        """Sanitize scan arguments to avoid unsafe tokens."""
+        if not scan_arguments:
+            return ""
+        tokens = shlex.split(scan_arguments)
+        allowed_tokens = self.config.get("allowed_nmap_arguments") or []
+        if allowed_tokens:
+            for token in tokens:
+                token_flag = token.split("=", maxsplit=1)[0]
+                if token_flag not in allowed_tokens:
+                    raise ValueError(f"Disallowed nmap argument: {token_flag}")
+
+        safe_token_pattern = re.compile(r"^[a-zA-Z0-9=,./:_-]+$")
+        for token in tokens:
+            if not safe_token_pattern.match(token):
+                raise ValueError(f"Unsafe nmap argument: {token}")
+        return " ".join(tokens)
+
+    def _persist_raw_results(self, payload: Dict) -> Optional[Path]:
+        """Persist raw scan output to disk for debugging."""
+        output_dir = self.config.get("raw_output_dir")
+        if not output_dir:
+            return None
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        filename = f"scan_{payload.get('scan_id', 'unknown')}_{timestamp}.json"
+        target_file = output_path / filename
+
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            delete=False,
+            dir=str(output_path),
+            prefix=".tmp_scan_",
+            suffix=".json",
+        ) as temp_file:
+            json.dump(payload, temp_file, indent=2)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+            temp_name = temp_file.name
+
+        Path(temp_name).replace(target_file)
+        self._prune_raw_outputs(output_path)
+        return target_file
+
+    def _prune_raw_outputs(self, output_path: Path) -> None:
+        """Remove old raw output files based on retention settings."""
+        retention_days = self.config.get("raw_output_retention_days")
+        max_files = self.config.get("raw_output_retention_max_files")
+
+        candidates = sorted(
+            output_path.glob("scan_*.json"), key=lambda path: path.stat().st_mtime
+        )
+
+        if retention_days:
+            cutoff = time.time() - (retention_days * 86400)
+            for path in list(candidates):
+                if path.stat().st_mtime < cutoff:
+                    path.unlink(missing_ok=True)
+                    candidates.remove(path)
+
+        if max_files and len(candidates) > max_files:
+            for path in candidates[: len(candidates) - max_files]:
+                path.unlink(missing_ok=True)
 
     def _setup_routes(self):
         """Setup Flask routes for handling incoming requests"""
@@ -553,29 +678,45 @@ class PortScannerClient:
                 f"Starting scan {scan_request.scan_id} with {len(scan_request.targets)} targets"
             )
 
-            # TODO Sanitize scan arguments
-            scan_args = scan_request.scan_arguments
+            safe_targets = self._sanitize_targets(scan_request.targets)
+            if not safe_targets:
+                raise ValueError("No valid scan targets provided")
+
+            scan_args = self._sanitize_scan_arguments(scan_request.scan_arguments)
+            ports_to_scan = self._sanitize_ports(scan_request.ports)
+            scan_timeout = scan_request.timeout or 300
+            use_sudo = bool(self.config.get("nmap_sudo", True))
 
             # Perform scan for all targets
-            targets_str = " ".join(scan_request.targets)
+            targets_str = " ".join(safe_targets)
             logger.info(f"Scanning targets: {targets_str}")
-            logger.info(f"Ports: {scan_request.ports}")
+            logger.info(f"Ports: {ports_to_scan}")
             logger.info(f"Arguments: {scan_args}")
-
-            # Handle empty ports string
-            ports_to_scan = scan_request.ports if scan_request.ports else None
 
             # Use PortScannerYield to scan hosts sequentially
             for host, scan_result in self.nm.scan(
                 hosts=targets_str,
                 ports=ports_to_scan,
                 arguments=scan_args,
-                sudo=True,
-                timeout=600,
+                sudo=use_sudo,
+                timeout=scan_timeout,
             ):
                 callback.callback_result(host, scan_result)
 
             scan_duration = time.time() - start_time
+            raw_payload = {
+                "scan_id": scan_request.scan_id,
+                "task_id": scan_request.task_id,
+                "result_id": scan_request.result_id,
+                "client_id": self.client_id,
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "nmap": callback.scan_metadata,
+                "hosts": callback.raw_results,
+            }
+            raw_file = self._persist_raw_results(raw_payload)
+            if raw_file:
+                logger.info("Saved raw scan output to %s", raw_file)
+
             # Prepare result payload
             result_payload = {
                 "scan_id": scan_request.scan_id,
@@ -588,6 +729,8 @@ class PortScannerClient:
                 "summary_stats": callback.summary_stats,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
+            if self.config.get("send_raw_results"):
+                result_payload["raw_results"] = callback.raw_results
 
             # Send results to server
             success = self.send_scan_results(result_payload)
