@@ -7,6 +7,7 @@ Port Scanner Delta Reporter server.
 
 import os
 import click
+import uuid
 from pathlib import Path
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
@@ -15,7 +16,7 @@ from functools import wraps
 from flask_migrate import Migrate
 from flask_session import Session
 from dotenv import load_dotenv
-from flask import request, session, flash, redirect, url_for
+from flask import request, session, flash, redirect, url_for, g
 from flask_login import current_user, logout_user
 from authlib.integrations.flask_client import OAuth
 
@@ -85,17 +86,16 @@ def create_app():
     from app import models
 
     with app.app_context():
-        if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-            try:
-                setup_logging(
-                    app=app,
-                    log_level=os.getenv("LOG_LEVEL", "INFO"),
-                    log_dir=os.getenv("LOG_DIR", BASE_DIR / "logs"),
-                )
-                scheduler_service.start()
+        try:
+            setup_logging(
+                app=app,
+                log_level=os.getenv("LOG_LEVEL", "INFO"),
+                log_dir=os.getenv("LOG_DIR", BASE_DIR / "logs"),
+            )
+            if scheduler_service.start():
                 logger.info("Scheduler service started successfully")
-            except Exception as e:
-                logger.error(f"Failed to start scheduler: {str(e)}")
+        except Exception as e:
+            logger.error(f"Failed to start scheduler: {str(e)}", exc_info=True)
 
     # Registration logic for OAuth providers
     for name in app.config["ENABLED_PROVIDERS"]:
@@ -127,6 +127,16 @@ def create_app():
             logger.info(f"Registered OAuth provider: {name}")
         else:
             logger.info(f"Skipping unknown provider: {name}")
+
+    @app.before_request
+    def assign_request_id():
+        if not hasattr(g, "request_id"):
+            g.request_id = request.headers.get("X-Request-Id", str(uuid.uuid4()))
+
+    @app.after_request
+    def inject_request_id(response):
+        response.headers["X-Request-Id"] = g.request_id
+        return response
 
     @app.before_request
     def check_session_validity():

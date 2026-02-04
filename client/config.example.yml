@@ -11,12 +11,20 @@ client_host: "0.0.0.0" # Interface to bind to
 chunk_size: 10  # Number of targets per chunk (adjust based on network speed)
 per_target_timeout: 120  # Timeout per target in seconds
 progress_report_interval: 10  # Send progress updates every N seconds
+nmap_sudo: true  # Run nmap with sudo privileges
+allowed_nmap_arguments: []  # Optional allowlist (e.g., ["-sS", "-sV", "-T4"])
+send_raw_results: false  # Send raw nmap payloads to the server
 
 # Heartbeat and retry settings
 heartbeat_interval: 60
 check_approval_interval: 30
 retry_attempts: 3
 retry_delay: 5
+
+# Raw output storage
+raw_output_dir: "scan_outputs"
+raw_output_retention_days: 7
+raw_output_retention_max_files: 100
 
 # Scan range for this client (optional, e.g. '192.168.1.0/24')
 # scan_range: "192.168.0.0/24"

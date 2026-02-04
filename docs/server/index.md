@@ -121,6 +121,11 @@ Detailed configuration options:
 - Scheduler settings
 - Security hardening
 
+### [Data Schemas](data-schemas.md)
+Reference for scan result and delta report payloads:
+- Client → server result payload
+- Delta report metadata and summary structure
+
 ### [API Reference](api-reference.md)
 Complete REST API documentation:
 - Authentication endpoints

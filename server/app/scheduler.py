@@ -8,6 +8,8 @@ Key updates for logging:
 """
 
 from datetime import datetime, timezone, timedelta
+import os
+from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.executors.pool import ThreadPoolExecutor
@@ -18,7 +20,6 @@ from apscheduler.events import (
     EVENT_JOB_ADDED,
     EVENT_JOB_REMOVED,
 )
-from flask import current_app
 from sqlalchemy import and_
 import uuid
 import json
@@ -79,6 +80,23 @@ def _check_client_heartbeats_job():
         except Exception as e:
             logger.error(f"Error checking client heartbeats: {str(e)}", exc_info=True)
             db.session.rollback()
+
+
+def _retention_cleanup_job():
+    """Standalone function to prune old scan results/reports (called by scheduler)."""
+    global _app_instance
+
+    if _app_instance is None:
+        logger.error("App instance not set for retention cleanup")
+        return
+
+    with _app_instance.app_context():
+        try:
+            from app.services.retention_service import RetentionService
+
+            RetentionService().cleanup()
+        except Exception as e:
+            logger.error(f"Error during retention cleanup: {str(e)}", exc_info=True)
 
 
 def _execute_scan(scan_id):
@@ -268,9 +286,7 @@ def _execute_scan(scan_id):
                 scan_result.type = "full"
 
             # Finalize and commit
-            print(f"{scan_result.started_at} awdaiwjdoijawodij")
             scan.update_last_run()
-            print(f"{scan_result.started_at} awdaiwjdoijawodij")
             scan.next_run = datetime.now(timezone.utc) + timedelta(
                 minutes=scan.interval_minutes
             )
@@ -306,6 +322,7 @@ class SchedulerService:
     def __init__(self, app=None):
         self.scheduler = None
         self.app = app
+        self._lock_handle = None
         if app:
             self.init_app(app)
 
@@ -358,25 +375,109 @@ class SchedulerService:
 
     def start(self):
         """Start the scheduler"""
-        if not self.scheduler.running:
-            self.scheduler.start()
-            logger.info("=" * 60)
-            logger.info("Scheduler started")
+        if not self.scheduler:
+            logger.error("Scheduler not initialized; call init_app() first")
+            return False
+        if self.scheduler.running:
+            return True
+        if not self._should_start_in_this_process():
+            return False
+        if not self._acquire_lock():
+            return False
 
-            # Load existing scheduled scans
-            self._load_scheduled_scans()
+        self.scheduler.start()
+        logger.info("=" * 60)
+        logger.info("Scheduler started")
 
-            # Schedule heartbeat check
-            self.schedule_client_heartbeats_check()
+        # Load existing scheduled scans
+        self._load_scheduled_scans()
 
-            logger.info("=" * 60)
+        # Schedule heartbeat check
+        self.schedule_client_heartbeats_check()
+
+        # Schedule retention cleanup if configured
+        self.schedule_retention_cleanup()
+
+        logger.info("=" * 60)
+        return True
 
     def shutdown(self, wait=True):
         """Shutdown the scheduler"""
         if self.scheduler and self.scheduler.running:
             logger.info("Shutting down scheduler...")
             self.scheduler.shutdown(wait=wait)
+            self._release_lock()
             logger.info("Scheduler shutdown complete")
+
+    def is_running(self) -> bool:
+        """Check if the scheduler is running."""
+        return bool(self.scheduler and self.scheduler.running)
+
+    def _should_start_in_this_process(self) -> bool:
+        """Return True if scheduler autostart is enabled and safe."""
+        if not self.app:
+            logger.error("Scheduler has no Flask app context; not starting")
+            return False
+        if not self.app.config.get("SCHEDULER_ENABLED", True):
+            logger.info("Scheduler autostart disabled by config")
+            return False
+        if self.app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+            logger.info("Skipping scheduler start in reloader parent process")
+            return False
+        return True
+
+    def _acquire_lock(self) -> bool:
+        """Acquire a process-wide scheduler lock to prevent double starts."""
+        lock_path = Path(
+            self.app.config.get(
+                "SCHEDULER_LOCK_FILE", Path(self.app.instance_path) / "scheduler.lock"
+            )
+        )
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock_handle = lock_path.open("a+")
+
+        if os.name == "posix":
+            import fcntl
+
+            try:
+                fcntl.flock(self._lock_handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                logger.warning(
+                    "Scheduler lock already held; skipping scheduler start"
+                )
+                return False
+        elif os.name == "nt":
+            import msvcrt
+
+            try:
+                msvcrt.locking(self._lock_handle.fileno(), msvcrt.LK_NBLCK, 1)
+            except OSError:
+                logger.warning(
+                    "Scheduler lock already held; skipping scheduler start"
+                )
+                return False
+        else:
+            logger.warning(
+                "Unknown OS for scheduler lock; starting without lock protection"
+            )
+        return True
+
+    def _release_lock(self):
+        """Release the scheduler lock if held."""
+        if not self._lock_handle:
+            return
+        try:
+            if os.name == "posix":
+                import fcntl
+
+                fcntl.flock(self._lock_handle, fcntl.LOCK_UN)
+            elif os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self._lock_handle.fileno(), msvcrt.LK_UNLCK, 1)
+        finally:
+            self._lock_handle.close()
+            self._lock_handle = None
 
     def _teardown(self, exception=None):
         """Cleanup on app teardown"""
@@ -412,6 +513,9 @@ class SchedulerService:
                 minutes=3,
                 id="check_heartbeats",
                 replace_existing=True,
+                misfire_grace_time=60,
+                coalesce=True,
+                max_instances=1,
             )
             logger.info("Scheduled client heartbeat check (every 3 minutes)")
         except Exception as e:
@@ -429,7 +533,7 @@ class SchedulerService:
                 logger.debug(f"Removed existing job for scan {scan.id}")
 
             # Calculate first run time
-            if scan.next_run and scan.next_run > datetime.now():
+            if scan.next_run and scan.next_run > datetime.now(timezone.utc):
                 first_run_time = scan.next_run
             else:
                 first_run_time = datetime.now(timezone.utc) + timedelta(seconds=30)
@@ -445,6 +549,8 @@ class SchedulerService:
                 next_run_time=first_run_time,
                 replace_existing=True,
                 max_instances=1,
+                misfire_grace_time=60,
+                coalesce=True,
             )
 
             logger.info(
@@ -456,6 +562,34 @@ class SchedulerService:
 
         except Exception as e:
             logger.error(f"Failed to schedule scan {scan.id}: {str(e)}", exc_info=True)
+            return None
+
+    def schedule_retention_cleanup(self):
+        """Schedule retention cleanup job if configured."""
+        max_results = self.app.config.get("RETENTION_MAX_RESULTS")
+        max_reports = self.app.config.get("RETENTION_MAX_REPORTS")
+        retention_days = self.app.config.get("RETENTION_DAYS")
+        if not any([max_results, max_reports, retention_days]):
+            logger.info("Retention cleanup disabled (no retention config set)")
+            return None
+
+        interval_hours = self.app.config.get("RETENTION_CLEANUP_INTERVAL_HOURS", 24)
+        try:
+            self.scheduler.add_job(
+                func=_retention_cleanup_job,
+                trigger="interval",
+                hours=interval_hours,
+                id="retention_cleanup",
+                replace_existing=True,
+                misfire_grace_time=300,
+                coalesce=True,
+                max_instances=1,
+            )
+            logger.info(
+                f"Scheduled retention cleanup (every {interval_hours} hours)"
+            )
+        except Exception as e:
+            logger.error(f"Failed to schedule retention cleanup: {e}", exc_info=True)
             return None
 
     def unschedule_scan(self, scan_id):

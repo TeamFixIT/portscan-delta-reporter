@@ -13,6 +13,7 @@ import logging.handlers
 import os
 from pathlib import Path
 from datetime import datetime, timezone
+from flask import g, has_request_context
 
 
 class ColoredFormatter(logging.Formatter):
@@ -40,6 +41,16 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 
+class RequestIdFilter(logging.Filter):
+    """Inject a request_id into log records when available."""
+
+    def filter(self, record):
+        record.request_id = "-"
+        if has_request_context():
+            record.request_id = getattr(g, "request_id", "-")
+        return True
+
+
 def setup_logging(app=None, log_level=None, log_dir=None):
     """
     Configure logging for the entire application.
@@ -65,8 +76,12 @@ def setup_logging(app=None, log_level=None, log_dir=None):
     log_dir.mkdir(parents=True, exist_ok=True)
 
     # Create formatters
-    detailed_format = "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s"
-    console_format = "[%(asctime)s] [%(levelname_colored)s] [%(name)s] %(message)s"
+    detailed_format = (
+        "[%(asctime)s] [%(levelname)s] [%(name)s] [%(request_id)s] %(message)s"
+    )
+    console_format = (
+        "[%(asctime)s] [%(levelname_colored)s] [%(name)s] [%(request_id)s] %(message)s"
+    )
     date_format = "%Y-%m-%d %H:%M:%S"
 
     # Console formatter with colors
@@ -82,10 +97,13 @@ def setup_logging(app=None, log_level=None, log_dir=None):
     # Remove existing handlers to avoid duplicates
     root_logger.handlers.clear()
 
+    request_filter = RequestIdFilter()
+
     # Console Handler (stdout)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(getattr(logging, log_level))
     console_handler.setFormatter(console_formatter)
+    console_handler.addFilter(request_filter)
     root_logger.addHandler(console_handler)
 
     # File Handler - Main application log
@@ -95,6 +113,7 @@ def setup_logging(app=None, log_level=None, log_dir=None):
     )
     file_handler.setLevel(getattr(logging, log_level))
     file_handler.setFormatter(file_formatter)
+    file_handler.addFilter(request_filter)
     root_logger.addHandler(file_handler)
 
     # File Handler - Error log (ERROR and above only)
@@ -107,6 +126,7 @@ def setup_logging(app=None, log_level=None, log_dir=None):
     )
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(file_formatter)
+    error_handler.addFilter(request_filter)
     root_logger.addHandler(error_handler)
 
     # File Handler - Scheduler log (separate file for scheduler events)
@@ -119,6 +139,7 @@ def setup_logging(app=None, log_level=None, log_dir=None):
     )
     scheduler_handler.setLevel(logging.INFO)
     scheduler_handler.setFormatter(file_formatter)
+    scheduler_handler.addFilter(request_filter)
 
     # Add scheduler handler only to scheduler loggers
     scheduler_logger = logging.getLogger("app.scheduler")

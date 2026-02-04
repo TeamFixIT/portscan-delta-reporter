@@ -14,6 +14,7 @@ from app.models.client import Client
 from app.models.scan import Scan
 from app.models.scan_task import ScanTask
 from app.models.scan_result import ScanResult
+from app.models.delta_report import DeltaReport
 from app.services.sse_service import sse_manager
 
 import uuid
@@ -371,8 +372,18 @@ def receive_scan_results(client_id):
 
         flag_modified(scan_result, "parsed_results")
 
-        print(f"Final merged IPs: {list(existing_results.keys())}")
-        logger.info(f"Total IPs after merge: {len(existing_results)}")
+        raw_results = data.get("raw_results")
+        if raw_results and current_app.config.get("STORE_RAW_RESULTS", False):
+            existing_raw = (
+                dict(scan_result.target_results) if scan_result.target_results else {}
+            )
+            for host, raw_data in raw_results.items():
+                existing_raw[host] = raw_data
+            scan_result.target_results = existing_raw
+            flag_modified(scan_result, "target_results")
+
+        logger.debug("Final merged IPs: %s", list(existing_results.keys()))
+        logger.info("Total IPs after merge: %s", len(existing_results))
 
         # Recompute summary statistics based on parsed_results
         total_targets = len(existing_results)
@@ -481,6 +492,8 @@ def receive_scan_results(client_id):
 def health_check():
     """Health check endpoint with system stats"""
     try:
+        from app.scheduler import scheduler_service
+
         # Count active clients (seen in last 5 minutes)
         threshold = datetime.now(timezone.utc) - timedelta(minutes=5)
         active_clients = Client.query.filter(Client.last_seen >= threshold).count()
@@ -488,6 +501,13 @@ def health_check():
         # Count pending tasks
         pending_tasks = ScanTask.query.filter_by(status="pending").count()
         running_tasks = ScanTask.query.filter_by(status="running").count()
+
+        latest_result = (
+            ScanResult.query.order_by(ScanResult.created_at.desc()).first()
+        )
+        latest_report = (
+            DeltaReport.query.order_by(DeltaReport.created_at.desc()).first()
+        )
 
         return (
             jsonify(
@@ -499,6 +519,18 @@ def health_check():
                         "active_clients": active_clients,
                         "pending_tasks": pending_tasks,
                         "running_tasks": running_tasks,
+                        "scheduler_running": scheduler_service.is_running(),
+                        "latest_scan_result_id": (
+                            latest_result.id if latest_result else None
+                        ),
+                        "latest_scan_completed_at": (
+                            latest_result.completed_at.isoformat()
+                            if latest_result and latest_result.completed_at
+                            else None
+                        ),
+                        "latest_delta_report_id": (
+                            latest_report.id if latest_report else None
+                        ),
                     },
                 }
             ),
